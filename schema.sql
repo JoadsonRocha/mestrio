@@ -180,3 +180,92 @@ BEGIN
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+
+-- ==========================================
+-- 5. MÓDULO DE ADMINISTRAÇÃO / MODERAÇÃO
+-- ==========================================
+-- Para bancos já existentes, execute o arquivo `supabase/admin.sql`
+-- (idempotente). O bloco abaixo cobre instalações novas.
+
+ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved'
+  CHECK (status IN ('pending', 'approved', 'rejected', 'expired', 'suspended'));
+ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT DEFAULT 'Wrench',
+  sort_order INTEGER DEFAULT 0,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+INSERT INTO categories (slug, name, icon, sort_order, active) VALUES
+  ('electrician', 'Eletricista', 'Zap', 1, true),
+  ('plumber', 'Encanador', 'Droplets', 2, true),
+  ('painter', 'Pintor', 'Paintbrush', 3, true),
+  ('cleaning', 'Faxina', 'Brush', 4, true),
+  ('handyman', 'Marido de Aluguel', 'Wrench', 5, true),
+  ('moving', 'Mudanças', 'Truck', 6, true),
+  ('gardener', 'Jardineiro', 'Leaf', 7, true),
+  ('assembly', 'Montagem de Móveis', 'Package', 8, true)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO app_settings (key, value) VALUES ('ad_duration_days', '30')
+ON CONFLICT (key) DO NOTHING;
+
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Categorias são públicas para leitura"
+  ON categories FOR SELECT USING (true);
+CREATE POLICY "Somente admin insere categorias"
+  ON categories FOR INSERT WITH CHECK (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+CREATE POLICY "Somente admin atualiza categorias"
+  ON categories FOR UPDATE USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+CREATE POLICY "Somente admin deleta categorias"
+  ON categories FOR DELETE USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+
+CREATE POLICY "Configurações são públicas para leitura"
+  ON app_settings FOR SELECT USING (true);
+CREATE POLICY "Somente admin altera configurações"
+  ON app_settings FOR ALL USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'))
+  WITH CHECK (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+
+DROP POLICY IF EXISTS "Anúncios são públicos para leitura" ON service_ads;
+CREATE POLICY "Anúncios visíveis: aprovados, do provedor ou admin"
+  ON service_ads FOR SELECT USING (
+    (status = 'approved' AND (expires_at IS NULL OR expires_at > timezone('utc'::text, now())))
+    OR auth.uid() = provider_id
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN')
+  );
+
+DROP POLICY IF EXISTS "Admin pode atualizar todos os anúncios" ON service_ads;
+CREATE POLICY "Admin pode atualizar todos os anúncios"
+  ON service_ads FOR UPDATE USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+
+DROP POLICY IF EXISTS "Admin pode deletar anúncios" ON service_ads;
+CREATE POLICY "Admin pode deletar anúncios"
+  ON service_ads FOR DELETE USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+
+DROP POLICY IF EXISTS "Admin pode atualizar perfis" ON profiles;
+CREATE POLICY "Admin pode atualizar perfis"
+  ON profiles FOR UPDATE USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));

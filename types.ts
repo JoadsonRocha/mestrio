@@ -14,6 +14,39 @@ export interface User {
   phone?: string;
   bio?: string;
   isCertified?: boolean;
+  isSuspended?: boolean;
+  createdAt?: string;
+}
+
+export type AdStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'suspended';
+
+export interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  providers: number;
+  clients: number;
+  admins: number;
+  newUsersWeek: number;
+  totalAds: number;
+  adsPending: number;
+  adsApproved: number;
+  adsRejected: number;
+  adsExpired: number;
+  adsSuspended: number;
+  newAdsWeek: number;
+  totalAppointments: number;
+  appointmentsPending: number;
+  appointmentsCompleted: number;
+  totalReviews: number;
+  avgRating: number;
 }
 
 export interface Review {
@@ -46,6 +79,9 @@ export interface ServiceAd {
   tags?: string[];
   isCertified?: boolean;
   providerAvatar?: string;
+  status?: AdStatus;
+  expiresAt?: string;
+  rejectionReason?: string;
 }
 
 export interface FilterState {
