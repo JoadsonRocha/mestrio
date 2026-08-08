@@ -70,7 +70,7 @@ const CategoryPage: React.FC = () => {
             </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Especialistas em {categoryObj.label}</h1>
             <p className="text-brand-100 text-lg md:text-xl max-w-2xl mx-auto font-light">
-                Encontre as melhores profissionais da área, avalie seus trabalhos e contrate com segurança.
+                Encontre os melhores prestadores da área, avalie seus trabalhos e contrate com segurança.
             </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ const CategoryPage: React.FC = () => {
                     <Search size={32} />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900">Nenhum serviço de {categoryObj.label}</h3>
-                <p className="mt-2 text-gray-500">Ainda não temos profissionais cadastradas nesta categoria.</p>
+                <p className="mt-2 text-gray-500">Ainda não temos prestadores cadastrados nesta categoria.</p>
             </div>
         )}
       </div>

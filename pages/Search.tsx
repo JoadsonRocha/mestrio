@@ -133,7 +133,7 @@ const SearchPage: React.FC = () => {
                         type="text" 
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Maquiagem, Cabelo, Depilação..."
+                        placeholder="Encanador, Eletricista, Faxina..."
                         className="w-full border-gray-300 rounded-xl focus:ring-brand-500 focus:border-brand-500 p-3 pl-10 border shadow-sm"
                     />
                     <Search className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />

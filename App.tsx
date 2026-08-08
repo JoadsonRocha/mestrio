@@ -44,7 +44,7 @@ const MainLayout: React.FC = () => {
 
   useEffect(() => {
     const found = PAGE_TITLES.find(p => p.match.test(location.pathname));
-    document.title = found ? `${found.title} | Mais Beleza` : 'Mais Beleza';
+    document.title = found ? `${found.title} | Mestrio` : 'Mestrio';
     window.scrollTo(0, 0);
   }, [location.pathname]);
 

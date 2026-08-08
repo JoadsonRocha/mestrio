@@ -126,9 +126,9 @@ const PublicProfile: React.FC = () => {
         {/* Sidebar Info */}
         <aside className="md:w-1/3">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
-                <h3 className="font-bold text-gray-900 text-lg mb-4">Sobre a profissional</h3>
+                <h3 className="font-bold text-gray-900 text-lg mb-4">Sobre o profissional</h3>
                 <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                    {profile.bio || "Esta profissional ainda não adicionou uma biografia."}
+                    {profile.bio || "Este profissional ainda não adicionou uma biografia."}
                 </p>
             </div>
         </aside>

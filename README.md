@@ -1,2 +1,2 @@
-# DexaComigo
-Plataforma de classificados para serviços autônomos com integração de IA.
+# Mestrio
+Marketplace geolocalizado conectando clientes a prestadores de serviços autônomos de serviços gerais.

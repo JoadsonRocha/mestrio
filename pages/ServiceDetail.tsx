@@ -142,7 +142,7 @@ const ServiceDetail: React.FC = () => {
           navigate('/login');
           return;
       }
-      const message = `Olá, vi seu anúncio "${ad.title}" no Mais Beleza e gostaria de mais informações.`;
+      const message = `Olá, vi seu anúncio "${ad.title}" no Mestrio e gostaria de mais informações.`;
       const url = `https://wa.me/${ad.whatsapp}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
   };
@@ -540,9 +540,9 @@ const ServiceDetail: React.FC = () => {
                                 <p className="font-bold text-gray-900 text-lg leading-tight">{ad.providerName}</p>
                                 <p className="text-xs text-gray-500 flex items-center mt-1">
                                     {ad.isCertified ? (
-                                        <><CheckCircle size={12} className="mr-1 text-brand-500"/> Profissional Certificada Mais Beleza</>
+                                        <><CheckCircle size={12} className="mr-1 text-brand-500"/> Profissional Verificado Mestrio</>
                                     ) : (
-                                        'Profissional Mais Beleza'
+                                        'Profissional Mestrio'
                                     )}
                                 </p>
                             </div>

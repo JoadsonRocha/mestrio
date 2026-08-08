@@ -37,7 +37,7 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold text-brand-600 tracking-tight">+B Mais <span className="text-gray-800">Beleza</span></span>
+              <span className="text-2xl font-bold text-brand-600 tracking-tight">Mestrio</span>
             </Link>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link to="/" className={`${isActive('/')} inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium`}>
@@ -51,10 +51,11 @@ export const Navbar: React.FC = () => {
                     Categorias
                 </button>
                 <div className="absolute left-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-1">
-                    <Link to="/categoria/cabelo" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Cabelo</Link>
-                    <Link to="/categoria/maquiagem" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Maquiagem</Link>
-                    <Link to="/categoria/unhas" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Manicure/Pedicure</Link>
-                    <Link to="/categoria/estetica" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Estética</Link>
+                    <Link to="/categoria/electrician" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Eletricista</Link>
+                    <Link to="/categoria/plumber" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Encanador</Link>
+                    <Link to="/categoria/cleaning" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Faxina</Link>
+                    <Link to="/categoria/handyman" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Marido de Aluguel</Link>
+                    <Link to="/categoria/moving" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Mudanças</Link>
                 </div>
               </div>
             </div>
@@ -154,9 +155,9 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-xl font-bold text-brand-400 mb-4">+B Mais Beleza</h3>
+            <h3 className="text-xl font-bold text-brand-400 mb-4">Mestrio</h3>
             <p className="text-gray-400 text-sm">
-              Conectando profissionais de beleza certificadas a clientes que desejam atendimento em domicílio. Beleza que cuida, liberdade que transforma.
+              Conectando clientes a prestadores de serviços autônomos de serviços gerais na sua região. Serviço de qualidade, perto de você.
             </p>
           </div>
           <div>
@@ -170,12 +171,12 @@ export const Footer: React.FC = () => {
           </div>
           <div>
             <h4 className="text-lg font-semibold mb-4">Contato</h4>
-            <p className="text-gray-400 text-sm">suporte@maisbeleza.com.br</p>
+            <p className="text-gray-400 text-sm">suporte@mestrio.com.br</p>
             <p className="text-gray-400 text-sm mt-2">São Paulo, Brasil</p>
           </div>
         </div>
         <div className="mt-8 border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-          &copy; {new Date().getFullYear()} Mais Beleza. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Mestrio. Todos os direitos reservados.
         </div>
       </div>
     </footer>

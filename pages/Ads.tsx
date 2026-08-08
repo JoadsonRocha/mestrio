@@ -119,7 +119,7 @@ const Ads: React.FC = () => {
                 <Megaphone size={28} className="text-gray-400" />
               </div>
               <p className="text-gray-500">Nenhum anúncio publicado ainda.</p>
-              <p className="text-gray-400 text-sm mt-1">Comece a gerar renda e autonomia. Crie seu primeiro anúncio de beleza em domicílio agora!</p>
+              <p className="text-gray-400 text-sm mt-1">Comece a gerar renda e autonomia. Crie seu primeiro anúncio de serviços gerais agora!</p>
               <Link to="/create-ad" className="inline-block mt-4 text-brand-600 font-medium hover:underline">Criar meu primeiro anúncio</Link>
             </div>
           ) : (

@@ -25,7 +25,7 @@ const CreateAd: React.FC = () => {
 
   const [formData, setFormData] = useState({
     title: '',
-    category: 'hair',
+    category: 'electrician',
     price: '',
     priceUnit: 'job',
     location: '',
@@ -305,8 +305,8 @@ const CreateAd: React.FC = () => {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="bg-brand-700 py-6 px-8">
-                <h1 className="text-2xl font-bold text-white">{isEditing ? 'Editar Anúncio' : 'Anunciar Serviço de Beleza'}</h1>
-                <p className="text-brand-100">{isEditing ? 'Atualize as informações do seu serviço.' : 'Preencha os dados para que clientes te encontrem para atendimento em domicílio.'}</p>
+                <h1 className="text-2xl font-bold text-white">{isEditing ? 'Editar Anúncio' : 'Anunciar Serviço'}</h1>
+                <p className="text-brand-100">{isEditing ? 'Atualize as informações do seu serviço.' : 'Preencha os dados para que clientes te encontrem na sua região.'}</p>
             </div>
             
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -319,7 +319,7 @@ const CreateAd: React.FC = () => {
                         name="title"
                         required
                         className="w-full border border-gray-300 rounded-md p-2 focus:ring-brand-500 focus:border-brand-500"
-                        placeholder="Ex: Maquiagem para Noivas, Mechas e Luzes..."
+                        placeholder="Ex: Troca de torneira, Instalação elétrica, Pintura de parede..."
                         value={formData.title}
                         onChange={handleInputChange}
                     />
@@ -407,7 +407,7 @@ const CreateAd: React.FC = () => {
                 {/* Tags Section */}
                 <div className="bg-white">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tags do Serviço (Opcional)</label>
-                    <p className="text-xs text-gray-500 mb-2">Digite uma característica (ex: vegano, domicílio) e aperte Enter ou Vírgula.</p>
+                    <p className="text-xs text-gray-500 mb-2">Digite uma característica (ex: urgente, material incluso) e aperte Enter ou Vírgula.</p>
                     <div className="border border-gray-300 rounded-md p-2 focus-within:ring-1 focus-within:ring-brand-500 focus-within:border-brand-500 flex flex-wrap gap-2 items-center bg-white">
                         {tags.map(tag => (
                             <span key={tag} className="flex items-center bg-brand-50 text-brand-700 text-sm px-2 py-1 rounded-md border border-brand-100">
@@ -439,7 +439,7 @@ const CreateAd: React.FC = () => {
                          <input 
                             type="text" 
                             name="keywords"
-                            placeholder="Ex: vegano, hipoalergênico, material esterilizado"
+                            placeholder="Ex: atendimento rápido, garantia do serviço, material incluso"
                             className="w-full border border-indigo-200 rounded-md p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                             value={formData.keywords}
                             onChange={handleInputChange}

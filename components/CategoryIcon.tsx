@@ -1,15 +1,16 @@
 import React from 'react';
-import { Scissors, Brush, Droplet, Flower2, Eye, Sparkles, ArrowRight } from 'lucide-react';
+import { Zap, Droplets, Paintbrush, Brush, Wrench, Truck, Leaf, Package, ArrowRight } from 'lucide-react';
 
 export function categoryIcon(id: string, size = 20): React.ReactNode {
   switch (id) {
-    case 'hair': return <Scissors size={size} />;
-    case 'nails': return <Sparkles size={size} />;
-    case 'makeup': return <Brush size={size} />;
-    case 'hair-removal': return <Droplet size={size} />;
-    case 'eyebrows': return <Eye size={size} />;
-    case 'facial': return <Sparkles size={size} />;
-    case 'body': return <Flower2 size={size} />;
+    case 'electrician': return <Zap size={size} />;
+    case 'plumber': return <Droplets size={size} />;
+    case 'painter': return <Paintbrush size={size} />;
+    case 'cleaning': return <Brush size={size} />;
+    case 'handyman': return <Wrench size={size} />;
+    case 'moving': return <Truck size={size} />;
+    case 'gardener': return <Leaf size={size} />;
+    case 'assembly': return <Package size={size} />;
     default: return <ArrowRight size={size} />;
   }
 }

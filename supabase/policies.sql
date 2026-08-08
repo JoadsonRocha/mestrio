@@ -1,5 +1,5 @@
 -- =============================================
--- DexaComigo — Políticas RLS corrigidas
+-- Mestrio — Políticas RLS corrigidas
 -- Execute no Supabase → SQL Editor
 -- Aplica uma vez; as políticas são idempotentes (drop + create).
 -- =============================================

@@ -25,7 +25,7 @@ CREATE TABLE profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Tabela de Anúncios de Serviços (+B Mais Beleza)
+-- Tabela de Anúncios de Serviços (Mestrio)
 CREATE TABLE service_ads (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   provider_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,

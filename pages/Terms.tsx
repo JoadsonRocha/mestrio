@@ -10,10 +10,10 @@ const Terms: React.FC = () => {
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">1. Sobre o Mais Beleza</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">1. Sobre o Mestrio</h2>
             <p>
-              O Mais Beleza é uma plataforma de classificados que conecta profissionais de beleza
-              certificadas a clientes que desejam atendimento em domicílio. O Mais Beleza apenas
+              O Mestrio é uma plataforma de classificados geolocalizada que conecta clientes a
+              prestadores de serviços autônomos de serviços gerais na sua região. O Mestrio apenas
               facilita a conexão; os serviços são prestados diretamente entre o profissional e o cliente.
             </p>
           </section>
@@ -21,9 +21,9 @@ const Terms: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">2. Responsabilidade</h2>
             <p>
-              O Mais Beleza não é intermediador de pagamentos e não se responsabiliza por serviços
+              O Mestrio não é intermediador de pagamentos e não se responsabiliza por serviços
               contratados, valores acordados ou eventuais danos decorrentes da prestação de serviço
-              entre as partes. Recomendamos que o cliente verifique a certificação e o histórico da
+              entre as partes. Recomendamos que o cliente verifique o histórico e as avaliações do
               profissional antes de contratar.
             </p>
           </section>
@@ -33,7 +33,7 @@ const Terms: React.FC = () => {
             <p>
               Ao criar um anúncio, o profissional declara que as informações são verdadeiras e que
               possui as qualificações necessárias. É proibido publicar conteúdo ofensivo, ilegal ou
-              que viole direitos de terceiros. O Mais Beleza pode remover anúncios e suspender contas
+              que viole direitos de terceiros. O Mestrio pode remover anúncios e suspender contas
               que descumpram estas regras.
             </p>
           </section>
@@ -49,7 +49,7 @@ const Terms: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">5. Contato</h2>
             <p>
-              Dúvidas sobre estes termos: <a href="mailto:suporte@maisbeleza.com.br" className="text-brand-600 font-medium hover:underline">suporte@maisbeleza.com.br</a>
+              Dúvidas sobre estes termos: <a href="mailto:suporte@mestrio.com.br" className="text-brand-600 font-medium hover:underline">suporte@mestrio.com.br</a>
             </p>
           </section>
         </div>

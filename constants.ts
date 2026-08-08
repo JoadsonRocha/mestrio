@@ -1,10 +1,11 @@
 export const CATEGORIES = [
   { id: 'all', label: 'Todas' },
-  { id: 'hair', label: 'Cabeleireiro', icon: 'Scissors' },
-  { id: 'nails', label: 'Manicure e pedicure', icon: 'Sparkles' },
-  { id: 'makeup', label: 'Maquiagem', icon: 'Brush' },
-  { id: 'eyebrows', label: 'Designer de sobrancelhas', icon: 'Eye' },
-  { id: 'hair-removal', label: 'Depilação', icon: 'Droplet' },
-  { id: 'facial', label: 'Estética facial', icon: 'Sparkles' },
-  { id: 'body', label: 'Estética corporal', icon: 'Flower2' },
+  { id: 'electrician', label: 'Eletricista', icon: 'Zap' },
+  { id: 'plumber', label: 'Encanador', icon: 'Droplets' },
+  { id: 'painter', label: 'Pintor', icon: 'Paintbrush' },
+  { id: 'cleaning', label: 'Faxina', icon: 'Brush' },
+  { id: 'handyman', label: 'Marido de Aluguel', icon: 'Wrench' },
+  { id: 'moving', label: 'Mudanças', icon: 'Truck' },
+  { id: 'gardener', label: 'Jardineiro', icon: 'Leaf' },
+  { id: 'assembly', label: 'Montagem de Móveis', icon: 'Package' },
 ];

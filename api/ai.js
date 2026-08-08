@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       res.status(400).json({ error: 'Título é obrigatório' });
       return;
     }
-    prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o ID da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): hair, nails, makeup, eyebrows, hair-removal, facial, body.`;
+    prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o ID da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly.`;
   } else {
     const title = String(body.title || '').trim();
     const category = String(body.category || '').trim();
