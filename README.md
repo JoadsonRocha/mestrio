@@ -1,2 +1,2 @@
-# mentrio
-Serviços autonomos
+# DexaComigo
+Plataforma de classificados para serviços autônomos com integração de IA.
