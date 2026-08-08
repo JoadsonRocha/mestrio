@@ -16,9 +16,13 @@ export interface GetAdsParams {
 
 /**
  * GUIA DE CONFIGURAÇÃO SQL PARA O SUPABASE:
- * Execute o arquivo `supabase/policies.sql` no SQL Editor do Supabase.
- * Ele cria as políticas RLS corretas (cada usuário só altera o que é dele)
- * e habilita o Realtime para mensagens e agendamentos.
+ * Execute o arquivo `schema.sql` (raiz do projeto) no SQL Editor do Supabase.
+ * Ele cria as tabelas, políticas RLS (cada usuário só altera o que é dele),
+ * o modelo de dono/admin (RPCs SECURITY DEFINER), habilita o Realtime para
+ * mensagens e agendamentos e desbloqueia o módulo de moderação.
+ * Após criar o usuário admin, execute UMA vez:
+ *   UPDATE profiles SET role = 'ADMIN', is_owner = true
+ *   WHERE id = 'SEU_AUTH_UID';
  */
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
@@ -264,6 +268,7 @@ class Store {
       bio: data.bio,
       isCertified: data.is_certified || false,
       isSuspended: false,
+      isOwner: data.is_owner || false,
       createdAt: data.created_at
     };
   }
@@ -856,7 +861,7 @@ class Store {
   async getUsers(): Promise<User[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, created_at')
+      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, is_owner, created_at')
       .order('created_at', { ascending: false })
       .limit(300);
     if (error) { console.error("Store Error [getUsers]:", error); throw error; }
@@ -870,17 +875,39 @@ class Store {
       phone: u.phone,
       bio: u.bio,
       isSuspended: u.is_suspended || false,
+      isOwner: u.is_owner || false,
       createdAt: u.created_at
     }));
   }
 
-  async updateUserRole(id: string, role: UserRole): Promise<void> {
-    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
-    if (error) { console.error("Store Error [updateUserRole]:", error); throw error; }
+  /** Muda papel CLIENT/PROVIDER de um usuário — RPC (somente o dono). */
+  async setUserRole(id: string, role: UserRole): Promise<void> {
+    if (role === UserRole.ADMIN) throw new Error("Para promover admins, use a ação específica.");
+    const { error } = await supabase.rpc('set_user_role', { target_user: id, new_role: role });
+    if (error) { console.error("Store Error [setUserRole]:", error); throw error; }
   }
 
+  /** Promove a ADMIN — RPC (somente o dono). */
+  async promoteToAdmin(id: string): Promise<void> {
+    const { error } = await supabase.rpc('promote_to_admin', { target_user: id });
+    if (error) { console.error("Store Error [promoteToAdmin]:", error); throw error; }
+  }
+
+  /** Destitui um ADMIN — RPC (somente o dono; dono protegido). */
+  async demoteFromAdmin(id: string): Promise<void> {
+    const { error } = await supabase.rpc('demote_from_admin', { target_user: id });
+    if (error) { console.error("Store Error [demoteFromAdmin]:", error); throw error; }
+  }
+
+  /** Transfere a posse do projeto — RPC (somente o dono atual). */
+  async transferOwnership(newOwnerId: string): Promise<void> {
+    const { error } = await supabase.rpc('transfer_ownership', { new_owner: newOwnerId });
+    if (error) { console.error("Store Error [transferOwnership]:", error); throw error; }
+  }
+
+  /** Suspende/reativa usuário — RPC (admin ou dono). */
   async setUserSuspended(id: string, suspended: boolean): Promise<void> {
-    const { error } = await supabase.from('profiles').update({ is_suspended: suspended }).eq('id', id);
+    const { error } = await supabase.rpc('set_user_suspended', { target_user: id, suspended });
     if (error) { console.error("Store Error [setUserSuspended]:", error); throw error; }
   }
 

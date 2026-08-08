@@ -15,6 +15,7 @@ export interface User {
   bio?: string;
   isCertified?: boolean;
   isSuspended?: boolean;
+  isOwner?: boolean;
   createdAt?: string;
 }
 

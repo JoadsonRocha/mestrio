@@ -22,6 +22,7 @@ CREATE TABLE profiles (
   phone TEXT,
   bio TEXT,
   is_certified BOOLEAN DEFAULT false,
+  is_owner BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -113,20 +114,53 @@ CREATE POLICY "Profissionais deletam seus próprios anúncios" ON service_ads FO
 CREATE POLICY "Reviews são públicos para leitura" ON reviews FOR SELECT USING (true);
 CREATE POLICY "Usuários autenticados podem criar reviews" ON reviews FOR INSERT WITH CHECK (auth.uid() = author_id);
 
--- Políticas para Chat Sessions
-CREATE POLICY "Usuários autenticados podem ler sessões" ON chat_sessions FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Usuários autenticados podem criar sessões" ON chat_sessions FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Usuários autenticados podem atualizar sessões" ON chat_sessions FOR UPDATE USING (auth.role() = 'authenticated');
+-- Políticas para Chat Sessions (somente participantes)
+DROP POLICY IF EXISTS "Usuários autenticados podem ler sessões" ON chat_sessions;
+DROP POLICY IF EXISTS "Usuários autenticados podem criar sessões" ON chat_sessions;
+DROP POLICY IF EXISTS "Usuários autenticados podem atualizar sessões" ON chat_sessions;
+DROP POLICY IF EXISTS "Participante vê sessão" ON chat_sessions;
+DROP POLICY IF EXISTS "Participante cria sessão" ON chat_sessions;
+CREATE POLICY "Participante vê sessão" ON chat_sessions
+  FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
+  );
+CREATE POLICY "Participante cria sessão" ON chat_sessions
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Participante atualiza sessão" ON chat_sessions
+  FOR UPDATE USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
+  );
 
--- Políticas para Chat Participants
+-- Políticas para Chat Participants (somente participantes da própria sessão)
 ALTER TABLE chat_participants ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Usuários autenticados podem ler participantes" ON chat_participants FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Usuários autenticados podem inserir participantes" ON chat_participants FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Usuários autenticados podem ler participantes" ON chat_participants;
+DROP POLICY IF EXISTS "Usuários autenticados podem inserir participantes" ON chat_participants;
+DROP POLICY IF EXISTS "Participante vê participante" ON chat_participants;
+DROP POLICY IF EXISTS "Participante entra na sessão" ON chat_participants;
+CREATE POLICY "Participante vê participante" ON chat_participants
+  FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+  );
+CREATE POLICY "Participante entra na sessão" ON chat_participants
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Políticas para Messages
-CREATE POLICY "Usuários autenticados podem ler mensagens" ON messages FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Usuários enviam mensagens com seu próprio ID" ON messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
-CREATE POLICY "Usuários podem marcar mensagens como lidas" ON messages FOR UPDATE USING (auth.role() = 'authenticated');
+-- Políticas para Messages (somente participantes)
+DROP POLICY IF EXISTS "Usuários autenticados podem ler mensagens" ON messages;
+DROP POLICY IF EXISTS "Usuários enviam mensagens com seu próprio ID" ON messages;
+DROP POLICY IF EXISTS "Usuários podem marcar mensagens como lidas" ON messages;
+DROP POLICY IF EXISTS "Participante lê mensagens" ON messages;
+DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
+DROP POLICY IF EXISTS "Participante marca como lida" ON messages;
+CREATE POLICY "Participante lê mensagens" ON messages
+  FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+  );
+CREATE POLICY "Participante envia mensagem" ON messages
+  FOR INSERT WITH CHECK (auth.uid() = sender_id);
+CREATE POLICY "Participante marca como lida" ON messages
+  FOR UPDATE USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+  );
 
 -- Tabela de Agendamentos (Appointments)
 -- IF NOT EXISTS permite rodar o script novamente sem erro
@@ -184,8 +218,8 @@ END $$;
 -- ==========================================
 -- 5. MÓDULO DE ADMINISTRAÇÃO / MODERAÇÃO
 -- ==========================================
--- Para bancos já existentes, execute o arquivo `supabase/admin.sql`
--- (idempotente). O bloco abaixo cobre instalações novas.
+-- Idempotente (pode rodar de novo). Adiciona: status do anúncio,
+-- expiração, categorias, configurações e permissões (RLS) para o ADMIN.
 
 ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved'
   CHECK (status IN ('pending', 'approved', 'rejected', 'expired', 'suspended'));
@@ -265,7 +299,192 @@ CREATE POLICY "Admin pode deletar anúncios"
   ON service_ads FOR DELETE USING (auth.role() = 'authenticated'
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
 
-DROP POLICY IF EXISTS "Admin pode atualizar perfis" ON profiles;
-CREATE POLICY "Admin pode atualizar perfis"
-  ON profiles FOR UPDATE USING (auth.role() = 'authenticated'
+DROP POLICY IF EXISTS "Admin pode ver todos os agendamentos" ON appointments;
+CREATE POLICY "Admin pode ver todos os agendamentos"
+  ON appointments FOR SELECT USING (auth.role() = 'authenticated'
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+
+-- NOTA: NÃO criamos mais a policy ampla "Admin pode atualizar perfis".
+-- A gestão de papéis/suspensão agora é feita exclusivamente pelas funções
+-- RPC SECURITY DEFINER na seção 6 (modelo dono/admin); cada usuário edita
+-- apenas o próprio perfil.
+
+-- ==========================================
+-- 6. MODELO DONO (SUPER ADMIN) x ADMIN
+-- ==========================================
+-- Padrão inspirado no WordPress:
+--   • DONO (is_owner = true) = Super Admin: gerencia papéis, promove/
+--     demove admins e transfere a posse. Definido UMA vez (bootstrap).
+--   • ADMIN (role = 'ADMIN') = Administrator: modera conteúdo
+--     (anúncios, suspensão), mas NÃO pode alterar papéis.
+
+-- BOOTSTRAP (após criar um usuário, executar UMA vez via SQL Editor,
+-- substituindo SEU_AUTH_UID):
+-- UPDATE profiles SET role = 'ADMIN', is_owner = true
+-- WHERE id = 'SEU_AUTH_UID';
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT false;
+
+-- TRIGGER: rede de segurança contra escalonamento direto via REST.
+-- - Alterar role ou is_owner: somente o DONO.
+-- - Alterar is_suspended: admin ou dono.
+-- - auth.uid() NULL (SQL Editor / service role / rotinas) é permitido
+--   (bootstrap e automações confiáveis), mas o navegador autenticado
+--   com anon key nunca consegue escalar privilégio.
+CREATE OR REPLACE FUNCTION block_privilege_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF (NEW.role IS DISTINCT FROM OLD.role OR NEW.is_owner IS DISTINCT FROM OLD.is_owner) THEN
+    IF auth.uid() IS NOT NULL
+       AND NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+      RAISE EXCEPTION 'Somente o dono do projeto pode alterar papéis.';
+    END IF;
+  END IF;
+
+  IF NEW.is_suspended IS DISTINCT FROM OLD.is_suspended THEN
+    IF auth.uid() IS NOT NULL
+       AND NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
+                         FROM profiles WHERE id = auth.uid()), false) THEN
+      RAISE EXCEPTION 'Somente administradores podem suspender usuários.';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_profiles_privilege ON profiles;
+CREATE TRIGGER trg_profiles_privilege
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION block_privilege_escalation();
+
+-- FUNÇÕES RPC (SECURITY DEFINER): o anon key do navegador chama a função,
+-- que valida internamente quem é o chamador via auth.uid(). Só executa de
+-- fato se a permissão for válida.
+
+-- Mudar papel CLIENT/PROVIDER — só o dono (não permite ADMIN)
+CREATE OR REPLACE FUNCTION set_user_role(target_user uuid, new_role text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono do projeto pode alterar papéis.';
+  END IF;
+  IF new_role NOT IN ('CLIENT', 'PROVIDER') THEN
+    RAISE EXCEPTION 'Papel inválido. Use CLIENT ou PROVIDER.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user) THEN
+    RAISE EXCEPTION 'Usuário não encontrado.';
+  END IF;
+  UPDATE profiles SET role = new_role WHERE id = target_user;
+END;
+$$;
+
+-- Promover a ADMIN — só o dono
+CREATE OR REPLACE FUNCTION promote_to_admin(target_user uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono do projeto pode promover administradores.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user) THEN
+    RAISE EXCEPTION 'Usuário não encontrado.';
+  END IF;
+  UPDATE profiles SET role = 'ADMIN' WHERE id = target_user;
+END;
+$$;
+
+-- Destituir ADMIN — só o dono; o próprio dono não pode ser destituído
+CREATE OR REPLACE FUNCTION demote_from_admin(target_user uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono do projeto pode destituir administradores.';
+  END IF;
+  IF COALESCE((SELECT is_owner FROM profiles WHERE id = target_user), false) THEN
+    RAISE EXCEPTION 'O dono do projeto não pode ser destituído.';
+  END IF;
+  UPDATE profiles SET role = 'PROVIDER' WHERE id = target_user AND role = 'ADMIN';
+END;
+$$;
+
+-- Transferir a posse (como "transferir o site" no WordPress) — só o dono atual
+CREATE OR REPLACE FUNCTION transfer_ownership(new_owner uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono pode transferir a posse.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = new_owner) THEN
+    RAISE EXCEPTION 'Novo dono inválido.';
+  END IF;
+  UPDATE profiles SET is_owner = false WHERE id = auth.uid();
+  UPDATE profiles SET is_owner = true, role = 'ADMIN' WHERE id = new_owner;
+END;
+$$;
+
+-- Suspender/reativar usuário — admin ou dono
+CREATE OR REPLACE FUNCTION set_user_suspended(target_user uuid, suspended boolean)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
+                   FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente administradores podem suspender usuários.';
+  END IF;
+  UPDATE profiles SET is_suspended = suspended WHERE id = target_user;
+END;
+$$;
+
+-- PERMISSÕES: somente usuários autenticados podem chamar as funções
+REVOKE ALL ON FUNCTION set_user_role(uuid, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION promote_to_admin(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION demote_from_admin(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION transfer_ownership(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION set_user_suspended(uuid, boolean) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION set_user_role(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION promote_to_admin(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION demote_from_admin(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION transfer_ownership(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION set_user_suspended(uuid, boolean) TO authenticated;
+
+-- ==========================================
+-- 7. STORAGE (imagens de anúncios e avatares)
+-- ==========================================
+-- Opcional: crie os buckets 'ad-images' e 'avatars' no dashboard
+-- (Storage → New bucket → name: ad-images / avatars, Public bucket: sim),
+-- e então rode:
+-- create policy "Público lê imagens de anúncios" on storage.objects
+--   for select using (bucket_id = 'ad-images');
+-- create policy "Autenticado envia imagens de anúncios" on storage.objects
+--   for insert with check (bucket_id = 'ad-images' and auth.role() = 'authenticated');
+-- create policy "Público lê avatares" on storage.objects
+--   for select using (bucket_id = 'avatars');
+-- create policy "Autenticado envia avatares" on storage.objects
+--   for insert with check (bucket_id = 'avatars' and auth.role() = 'authenticated');

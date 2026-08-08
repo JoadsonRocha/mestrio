@@ -42,6 +42,7 @@ const OwnerDashboard: React.FC = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: 'Wrench' });
+  const [confirmingTransfer, setConfirmingTransfer] = useState<string | null>(null);
 
   const loadStats = useCallback(async () => {
     try { setStats(await store.getAdminStats()); } catch (e) { console.error(e); }
@@ -129,12 +130,39 @@ const OwnerDashboard: React.FC = () => {
   };
 
   // ---- Ações de usuários ----
+  // Papel CLIENT/PROVIDER: somente o DONO (RPC set_user_role)
   const handleRole = async (id: string, role: UserRole) => {
     try {
-      await store.updateUserRole(id, role);
+      await store.setUserRole(id, role);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
       toast('Papel atualizado.', 'success');
     } catch (e) { console.error(e); toast('Erro ao atualizar papel.', 'error'); }
+  };
+
+  // Promover/destituir ADMIN: somente o DONO (RPCs)
+  const handlePromote = async (id: string) => {
+    try {
+      await store.promoteToAdmin(id);
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, role: UserRole.ADMIN } : u));
+      toast('Usuário promovido a administrador.', 'success');
+    } catch (e) { console.error(e); toast('Erro ao promover. Somente o dono pode fazer isso.', 'error'); }
+  };
+
+  const handleDemote = async (id: string) => {
+    try {
+      await store.demoteFromAdmin(id);
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, role: UserRole.PROVIDER } : u));
+      toast('Administrador destituído.', 'success');
+    } catch (e) { console.error(e); toast('Erro ao destituir. Somente o dono pode fazer isso.', 'error'); }
+  };
+
+  // Transferir posse: somente o DONO (RPC transfer_ownership)
+  const handleTransfer = async (id: string) => {
+    try {
+      await store.transferOwnership(id);
+      toast('Posse transferida. Você agora é administrador.', 'success');
+      window.location.href = '/owner';
+    } catch (e) { console.error(e); toast('Erro ao transferir a posse.', 'error'); }
   };
 
   const handleSuspend = async (u: User) => {
@@ -215,9 +243,13 @@ const OwnerDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">Painel do Dono</h1>
-            <p className="text-sm text-gray-500">Gestão da plataforma Mestrio</p>
+            {user.isOwner ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold uppercase tracking-wide">Dono</span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 font-semibold uppercase tracking-wide">Admin</span>
+            )}
           </div>
           <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium">Voltar ao início →</Link>
         </div>
@@ -404,14 +436,36 @@ const OwnerDashboard: React.FC = () => {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100">
                   <h2 className="text-lg font-bold text-gray-900">Usuários ({users.length})</h2>
+                  {!user.isOwner && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Você é administrador. Somente o <strong>dono do projeto</strong> pode alterar papéis ou promover/destituir admins.
+                    </p>
+                  )}
+                  {user.isOwner && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Você é o <strong>dono</strong>. Ações de papel, admin e posse estão disponíveis para você.
+                    </p>
+                  )}
                 </div>
                 <div className="divide-y divide-gray-100">
                   {users.map(u => (
                     <div key={u.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
                       <img loading="lazy" decoding="async" src={u.avatar || 'https://via.placeholder.com/50'} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-gray-900 truncate">{u.name}</p>
+                          {u.isOwner && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Dono</span>
+                          )}
+                          {u.role === UserRole.ADMIN && !u.isOwner && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 font-medium">Admin</span>
+                          )}
+                          {u.role === UserRole.PROVIDER && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 font-medium">Profissional</span>
+                          )}
+                          {u.role === UserRole.CLIENT && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Cliente</span>
+                          )}
                           {u.isSuspended && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Suspenso</span>
                           )}
@@ -419,22 +473,64 @@ const OwnerDashboard: React.FC = () => {
                         <p className="text-xs text-gray-500">{u.email}</p>
                         <p className="text-xs text-gray-400 mt-0.5">Cadastrado em {u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '—'}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={u.role}
-                          onChange={e => handleRole(u.id, e.target.value as UserRole)}
-                          className="text-xs px-2 py-1.5 rounded border border-gray-200 bg-white text-gray-700"
-                        >
-                          {Object.values(UserRole).map(r => (
-                            <option key={r} value={r}>{r === 'PROVIDER' ? 'Profissional' : r === 'CLIENT' ? 'Cliente' : 'Admin'}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => handleSuspend(u)}
-                          className={`text-xs px-2 py-1.5 rounded flex items-center ${u.isSuspended ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'}`}
-                        >
-                          <Ban size={12} className="mr-1" /> {u.isSuspended ? 'Reativar' : 'Suspender'}
-                        </button>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {user.isOwner && !u.isOwner && u.role !== UserRole.ADMIN && (
+                          <select
+                            value={u.role === UserRole.ADMIN ? UserRole.PROVIDER : u.role}
+                            onChange={e => handleRole(u.id, e.target.value as UserRole)}
+                            className="text-xs px-2 py-1.5 rounded border border-gray-200 bg-white text-gray-700"
+                          >
+                            <option value={UserRole.PROVIDER}>Profissional</option>
+                            <option value={UserRole.CLIENT}>Cliente</option>
+                          </select>
+                        )}
+
+                        {user.isOwner && !u.isOwner && (
+                          u.role === UserRole.ADMIN ? (
+                            <button
+                              onClick={() => handleDemote(u.id)}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+                            >
+                              <X size={12} className="mr-1" /> Remover admin
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePromote(u.id)}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100"
+                            >
+                              <Shield size={12} className="mr-1" /> Promover a admin
+                            </button>
+                          )
+                        )}
+
+                        {user.isOwner && !u.isOwner && u.id !== user.id && (
+                          confirmingTransfer === u.id ? (
+                            <button
+                              onClick={() => handleTransfer(u.id)}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-red-600 text-white hover:bg-red-700"
+                            >
+                              Confirmar posse?
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => { setConfirmingTransfer(u.id); window.setTimeout(() => setConfirmingTransfer(prev => prev === u.id ? null : prev), 5000); }}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              title="Transferir a propriedade do projeto para este usuário"
+                            >
+                              <RefreshCw size={12} className="mr-1" /> Transferir posse
+                            </button>
+                          )
+                        )}
+
+                        {!u.isOwner && u.id !== user.id && (
+                          <button
+                            onClick={() => handleSuspend(u)}
+                            className={`text-xs px-2 py-1.5 rounded flex items-center ${u.isSuspended ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'}`}
+                          >
+                            <Ban size={12} className="mr-1" /> {u.isSuspended ? 'Reativar' : 'Suspender'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
