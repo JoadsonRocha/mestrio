@@ -30,6 +30,7 @@ const Ads: React.FC = () => {
 
     const load = async () => {
       try {
+        await store.expireAds().catch(() => undefined);
         const data = await store.getAds({ providerId: user.id });
         setAds(data);
       } catch (e) {
@@ -137,6 +138,18 @@ const Ads: React.FC = () => {
                       <Trash2 size={12} className="mr-1" /> {deletingId === ad.id ? 'Excluindo...' : confirmingId === ad.id ? 'Confirmar?' : 'Excluir'}
                     </button>
                   </div>
+                  {ad.status && ad.status !== 'approved' && (
+                    <div className={`absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded-full shadow font-medium ${
+                      ad.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      ad.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                      ad.status === 'suspended' ? 'bg-orange-100 text-orange-700' :
+                      'bg-gray-200 text-gray-600'
+                    }`}>
+                      {ad.status === 'pending' ? 'Em análise' :
+                       ad.status === 'rejected' ? 'Rejeitado' :
+                       ad.status === 'suspended' ? 'Suspenso' : 'Expirado'}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

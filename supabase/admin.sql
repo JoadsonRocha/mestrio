@@ -100,3 +100,9 @@ CREATE POLICY "Anúncios visíveis: aprovados, do provedor ou admin"
     OR auth.uid() = provider_id
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN')
   );
+
+-- 10) ADMIN PODE LER TODOS OS AGENDAMENTOS (para métricas / gestão)
+DROP POLICY IF EXISTS "Admin pode ver todos os agendamentos" ON appointments;
+CREATE POLICY "Admin pode ver todos os agendamentos"
+  ON appointments FOR SELECT USING (auth.role() = 'authenticated'
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));

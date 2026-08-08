@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Sparkles, Wand2, Upload, X, Clock, Calendar, Loader2, MapPin, LocateFixed } from 'lucide-react';
+import { Sparkles, Wand2, Upload, X, Clock, Calendar, Loader2, MapPin, LocateFixed, Info, AlertTriangle } from 'lucide-react';
 import { store, uploadImage } from '../services/store';
 import { generateServiceDescription, suggestCategory } from '../services/geminiService';
 import { CATEGORIES } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { AdStatus } from '../types';
 
 const DAYS_OF_WEEK = [
   { id: 'seg', label: 'Seg' },
@@ -52,6 +53,11 @@ const CreateAd: React.FC = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
+  // Moderation status (edit mode)
+  const [adStatus, setAdStatus] = useState<AdStatus | null>(null);
+  const [adRejectionReason, setAdRejectionReason] = useState<string | undefined>(undefined);
+  const [adExpiresAt, setAdExpiresAt] = useState<string | undefined>(undefined);
+
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
 
@@ -59,7 +65,7 @@ const CreateAd: React.FC = () => {
   React.useEffect(() => {
     if (isEditing && user) {
         setLoadingAd(true);
-        store.getAds().then(ads => {
+        store.getAds({ providerId: user.id }).then(ads => {
             const ad = ads.find(a => a.id === id);
             if (ad && ad.providerId === user.id) {
                 setFormData({
@@ -74,6 +80,9 @@ const CreateAd: React.FC = () => {
                 });
                 setImages(ad.images || []);
                 setTags(ad.tags || []);
+                setAdStatus(ad.status || null);
+                setAdRejectionReason(ad.rejectionReason);
+                setAdExpiresAt(ad.expiresAt);
                 
                 // Parse availability if possible, else leave defaults
                 // Format was: "Seg, Ter, 08:00 - 18:00"
@@ -268,7 +277,12 @@ const CreateAd: React.FC = () => {
               availability: availabilityString,
               tags: tags
           });
-          toast('Anúncio atualizado com sucesso!', 'success');
+          if (adStatus === 'rejected') {
+              await store.updateAdStatus(id, 'pending');
+              toast('Alterações enviadas para nova revisão!', 'success');
+          } else {
+              toast('Anúncio atualizado com sucesso!', 'success');
+          }
           navigate('/dashboard');
       } else {
           const newAd = await store.addAd({
@@ -285,7 +299,7 @@ const CreateAd: React.FC = () => {
               availability: availabilityString,
               tags: tags
           });
-          toast('Anúncio criado com sucesso!', 'success');
+          toast('Anúncio enviado para análise. Ele será publicado após a aprovação.', 'success');
           navigate('/dashboard');
       }
     } catch (err: any) {
@@ -308,6 +322,48 @@ const CreateAd: React.FC = () => {
                 <h1 className="text-2xl font-bold text-white">{isEditing ? 'Editar Anúncio' : 'Anunciar Serviço'}</h1>
                 <p className="text-brand-100">{isEditing ? 'Atualize as informações do seu serviço.' : 'Preencha os dados para que clientes te encontrem na sua região.'}</p>
             </div>
+
+            {isEditing && adStatus && adStatus !== 'approved' && (
+                <div className={`mx-8 mt-6 px-4 py-3 rounded-lg border flex items-start gap-2 text-sm ${
+                    adStatus === 'rejected'
+                        ? 'bg-red-50 border-red-200 text-red-700'
+                        : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                }`}>
+                    {adStatus === 'rejected'
+                        ? <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                        : <Info size={18} className="shrink-0 mt-0.5" />}
+                    <div>
+                        {adStatus === 'pending' && (
+                            <>
+                                <strong>Anúncio em análise.</strong> Ele ainda não está visível para o público. Você pode editar enquanto aguarda a aprovação.
+                            </>
+                        )}
+                        {adStatus === 'rejected' && (
+                            <>
+                                <strong>Anúncio rejeitado.</strong> Corrija as pendências abaixo e salve para reenviar à revisão.
+                                {adRejectionReason && <p className="mt-1 text-xs"><strong>Motivo:</strong> {adRejectionReason}</p>}
+                            </>
+                        )}
+                        {adStatus === 'suspended' && (
+                            <>
+                                <strong>Anúncio suspenso.</strong> Contate o suporte para resolver a situação.
+                                {adRejectionReason && <p className="mt-1 text-xs"><strong>Motivo:</strong> {adRejectionReason}</p>}
+                            </>
+                        )}
+                        {adStatus === 'expired' && (
+                            <>
+                                <strong>Anúncio expirado.</strong> Salve as alterações para solicitar a renovação na moderação.
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+            {isEditing && adStatus === 'approved' && adExpiresAt && (
+                <div className="mx-8 mt-6 px-4 py-3 rounded-lg border border-green-100 bg-green-50 text-green-700 text-sm flex items-center gap-2">
+                    <Info size={18} className="shrink-0" />
+                    Anúncio ativo. Expira em {new Date(adExpiresAt).toLocaleDateString('pt-BR')}.
+                </div>
+            )}
             
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
                 
@@ -583,7 +639,7 @@ const CreateAd: React.FC = () => {
                         disabled={submitting}
                         className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-md font-bold shadow-sm disabled:opacity-50"
                     >
-                        {submitting ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Publicar Anúncio')}
+                        {submitting ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Enviar para Análise')}
                     </button>
                 </div>
 

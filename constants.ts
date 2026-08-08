@@ -24,3 +24,14 @@ export const CATEGORY_ICON_OPTIONS: string[] = [
   'Hammer', 'Cog', 'Plug', 'Drill', 'Sparkles', 'Scissors', 'Sofa', 'Laptop',
   'Bike', 'KeyRound', 'Wifi', 'ShowerHead',
 ];
+
+// Compat com código legado que espera { id, label } (mantém 'all' = "Todos").
+export interface CategoryOption {
+  id: string;
+  label: string;
+}
+
+export const CATEGORIES: CategoryOption[] = [
+  { id: 'all', label: 'Todos' },
+  ...DEFAULT_CATEGORIES.map(c => ({ id: c.slug, label: c.name })),
+];

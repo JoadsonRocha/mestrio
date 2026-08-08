@@ -17,6 +17,7 @@ const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
+const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
@@ -32,6 +33,7 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/dashboard\/appointments/, title: 'Meus Agendamentos' },
   { match: /^\/dashboard\/ads/, title: 'Meus Anúncios' },
   { match: /^\/dashboard/, title: 'Meu Painel' },
+  { match: /^\/owner/, title: 'Painel do Dono' },
   { match: /^\/profile\/edit/, title: 'Editar Perfil' },
   { match: /^\/login/, title: 'Entrar' },
   { match: /^\/terms/, title: 'Termos de Uso' },
@@ -73,6 +75,7 @@ const MainLayout: React.FC = () => {
           <Route path="/chat/:id" element={<Navigate to="/dashboard/chat/:id" replace />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/owner" element={<OwnerDashboard />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

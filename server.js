@@ -1,0 +1,140 @@
+// Servidor de produção para o Railway:
+// serve o build (dist/) com fallback SPA + endpoints de API (/api/ai, /api/expire-ads) + healthcheck.
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+app.disable('x-powered-by');
+app.use(express.json({ limit: '1mb' }));
+
+const distDir = path.join(__dirname, 'dist');
+
+// Health check usado pelo Railway
+app.get('/healthz', (req, res) => res.status(200).json({ ok: true }));
+
+// ----------------------------------------------------------------
+// /api/ai — proxy para o Gemini (mesma lógica do antigo api/ai.js)
+// ----------------------------------------------------------------
+const MODEL = 'gemini-3-flash-preview';
+
+app.post('/api/ai', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: 'Chave da API Gemini não configurada no servidor (Railway Env: GEMINI_API_KEY).' });
+    return;
+  }
+
+  const body = req.body || {};
+  let prompt = '';
+
+  if (body.task === 'category') {
+    const title = String(body.title || '').trim();
+    if (!title) { res.status(400).json({ error: 'Título é obrigatório' }); return; }
+    prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o ID da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly.`;
+  } else {
+    const title = String(body.title || '').trim();
+    const category = String(body.category || '').trim();
+    const keywords = String(body.keywords || '').trim();
+    if (!title) { res.status(400).json({ error: 'Título é obrigatório' }); return; }
+    prompt = `Você é um assistente de marketing especialista em classificados de serviços.
+Escreva uma descrição atraente, profissional e formatada (pode usar markdown leve como tópicos) para um prestador de serviços.
+
+Título do Serviço: ${title}
+Categoria: ${category}
+Palavras-chave/Detalhes extras: ${keywords}
+
+Regras:
+- Use português do Brasil.
+- Máximo de 150 palavras.
+- Foque nos benefícios para o cliente.
+- Inclua uma chamada para ação (CTA) no final.`;
+  }
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+    });
+
+    const data = await r.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!r.ok || text === undefined) {
+      console.error('Gemini API error:', r.status, data?.error || data);
+      res.status(r.ok ? 500 : 502).json({ error: 'Erro ao gerar conteúdo com IA.' });
+      return;
+    }
+
+    if (body.task === 'category') {
+      res.status(200).json({ category: text.trim() });
+    } else {
+      res.status(200).json({ text });
+    }
+  } catch (e) {
+    console.error('Gemini fetch error:', e);
+    res.status(500).json({ error: 'Erro ao conectar com o serviço de IA.' });
+  }
+});
+
+// ----------------------------------------------------------------
+// /api/expire-ads — expira anúncios (uso do cron / disparos externos)
+// Requer SUPABASE_SERVICE_ROLE_KEY. Se CRON_SECRET for definida,
+// a chamada precisa do header `x-cron-secret` ou `?secret=` correspondente.
+// ----------------------------------------------------------------
+async function expireAds() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada no servidor.');
+
+  const url = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+  const supabase = createClient(url, serviceKey);
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('service_ads')
+    .update({ status: 'expired' })
+    .eq('status', 'approved')
+    .lt('expires_at', now)
+    .select('id');
+  if (error) throw error;
+  return (data || []).length;
+}
+
+app.post('/api/expire-ads', async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const provided = req.headers['x-cron-secret'] || req.query.secret;
+    if (provided !== secret) {
+      res.status(401).json({ error: 'Não autorizado.' });
+      return;
+    }
+  }
+  try {
+    const count = await expireAds();
+    res.status(200).json({ ok: true, expired: count });
+  } catch (e) {
+    console.error('expire-ads error:', e);
+    res.status(500).json({ error: 'Falha ao expirar anúncios.' });
+  }
+});
+
+// ----------------------------------------------------------------
+// SPA: serve os arquivos do dist/ e cai no index.html para rotas do React
+// ----------------------------------------------------------------
+app.use(express.static(distDir));
+
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(path.join(distDir, 'index.html'));
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Mestrio server rodando na porta ${port}`);
+});

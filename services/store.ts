@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ServiceAd, User, UserRole, ChatSession, Message, Review } from '../types';
+import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus } from '../types';
+import { DEFAULT_CATEGORIES } from '../constants';
 
 export interface GetAdsParams {
   category?: string;
@@ -69,18 +70,36 @@ class Store {
       availability: data.availability,
       tags: data.tags || [],
       providerAvatar: data.profiles?.avatar || undefined,
-      isCertified: data.profiles?.is_certified || false
+      isCertified: data.profiles?.is_certified || false,
+      status: data.status || 'approved',
+      expiresAt: data.expires_at,
+      rejectionReason: data.rejection_reason
+    };
+  }
+
+  private mapCategory(data: any): Category {
+    return {
+      id: data.id,
+      slug: data.slug,
+      name: data.name,
+      icon: data.icon || 'Wrench',
+      sortOrder: data.sort_order || 0,
+      active: data.active !== false
     };
   }
 
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
     let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
-    
+
+    // Sem providerId = consulta pública: apenas anúncios aprovados e não expirados.
+    const isPublic = !params?.providerId;
     if (params?.category && params.category !== 'all') {
       query = query.eq('category', params.category);
     }
     if (params?.providerId) {
       query = query.eq('provider_id', params.providerId);
+    } else {
+      query = query.eq('status', 'approved');
     }
     if (params?.location) {
       query = query.ilike('location', `%${params.location}%`);
@@ -94,9 +113,19 @@ class Store {
         if (params.priceRange === 'high') query = query.gt('price', 300);
         if (params.priceRange === 'estimate') query = query.eq('price', 0);
     }
+
+    const nowIso = new Date().toISOString();
     if (params?.searchTerm) {
-      // Basic ilike search on title or description
-      query = query.or(`title.ilike.%${params.searchTerm}%,description.ilike.%${params.searchTerm}%`);
+      // Combina busca (título OU descrição) com não-expirado em um único `or`
+      const s = params.searchTerm;
+      const clauses: string[] = [];
+      for (const col of ['title', 'description']) {
+        clauses.push(`and(${col}.ilike.%${s}%,expires_at.is.null)`);
+        clauses.push(`and(${col}.ilike.%${s}%,expires_at.gt.${nowIso})`);
+      }
+      query = query.or(clauses.join(','));
+    } else if (isPublic) {
+      query = query.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
     }
 
     const limit = params?.limit || 50;
@@ -124,6 +153,9 @@ class Store {
   }
 
   async addAd(ad: Omit<ServiceAd, 'id' | 'createdAt' | 'rating' | 'reviewCount' | 'reviews' | 'providerName'>): Promise<ServiceAd> {
+    const durationDays = await this.getAdDurationDays();
+    const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from('service_ads')
       .insert([{
@@ -138,7 +170,9 @@ class Store {
         whatsapp: ad.whatsapp,
         availability: ad.availability,
         tags: ad.tags || [],
-        is_premium: ad.isPremium || false
+        is_premium: ad.isPremium || false,
+        status: 'pending',
+        expires_at: expiresAt
       }])
       .select()
       .single();
@@ -218,6 +252,7 @@ class Store {
       .maybeSingle();
 
     if (error || !data) return null;
+    if (data.is_suspended) return null;
     return {
       id: data.id,
       name: data.name,
@@ -226,7 +261,10 @@ class Store {
       avatar: data.avatar,
       location: data.location,
       phone: data.phone,
-      bio: data.bio
+      bio: data.bio,
+      isCertified: data.is_certified || false,
+      isSuspended: false,
+      createdAt: data.created_at
     };
   }
 
@@ -288,7 +326,10 @@ class Store {
     if (authError) throw authError;
 
     const userProfile = await this.getCurrentUser();
-    if (!userProfile) throw new Error("Perfil não encontrado");
+    if (!userProfile) {
+      // getCurrentUser retorna null se o perfil não existe ou está suspenso
+      throw new Error("Perfil não encontrado ou conta suspensa. Fale com o suporte.");
+    }
     return userProfile;
   }
 
@@ -656,6 +697,239 @@ class Store {
     const text = `Olá, ${name}! Seu agendamento para o dia ${formattedDate} às ${appointment.time} foi confirmado! Qualquer dúvida é só me chamar. Até lá!`;
 
     await this.sendMessage(chatId, senderId, text);
+  }
+
+  // ==================================================================
+  //  MÓDULO DO ADMIN / DONO (painel /owner)
+  // ==================================================================
+
+  // --- Configurações ---
+  async getSetting(key: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+    if (error) { console.error("Store Error [getSetting]:", error); return null; }
+    return data?.value ?? null;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() });
+    if (error) { console.error("Store Error [setSetting]:", error); throw error; }
+  }
+
+  async getAdDurationDays(): Promise<number> {
+    const value = await this.getSetting('ad_duration_days');
+    const parsed = parseInt(value || '', 10);
+    return isNaN(parsed) || parsed <= 0 ? 30 : parsed;
+  }
+
+  async setAdDurationDays(days: number): Promise<void> {
+    await this.setSetting('ad_duration_days', String(Math.max(1, Math.round(days))));
+  }
+
+  // --- Categorias ---
+  async getCategories(): Promise<Category[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (error) throw error;
+      if (data && data.length > 0) return data.map(c => this.mapCategory(c));
+    } catch (e) {
+      console.error("Store Error [getCategories]:", e);
+    }
+    return DEFAULT_CATEGORIES.map(c => ({
+      id: c.slug, slug: c.slug, name: c.name, icon: c.icon, sortOrder: c.sortOrder, active: true
+    }));
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) { console.error("Store Error [getAllCategories]:", error); throw error; }
+    return (data || []).map(c => this.mapCategory(c));
+  }
+
+  async createCategory(cat: { slug: string; name: string; icon: string; sortOrder: number }): Promise<void> {
+    const { error } = await supabase
+      .from('categories')
+      .insert([{
+        slug: cat.slug,
+        name: cat.name,
+        icon: cat.icon,
+        sort_order: cat.sortOrder
+      }]);
+    if (error) { console.error("Store Error [createCategory]:", error); throw error; }
+  }
+
+  async updateCategory(id: string, updates: Partial<Category>): Promise<void> {
+    const u: any = {};
+    if (updates.slug !== undefined) u.slug = updates.slug;
+    if (updates.name !== undefined) u.name = updates.name;
+    if (updates.icon !== undefined) u.icon = updates.icon;
+    if (updates.sortOrder !== undefined) u.sort_order = updates.sortOrder;
+    if (updates.active !== undefined) u.active = updates.active;
+    const { error } = await supabase.from('categories').update(u).eq('id', id);
+    if (error) { console.error("Store Error [updateCategory]:", error); throw error; }
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) { console.error("Store Error [deleteCategory]:", error); throw error; }
+  }
+
+  // --- Moderação de anúncios ---
+  async getAllAds(params?: { status?: string; search?: string; limit?: number }): Promise<ServiceAd[]> {
+    let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
+    if (params?.status && params.status !== 'all') query = query.eq('status', params.status);
+    if (params?.search) {
+      query = query.or(`title.ilike.%${params.search}%,location.ilike.%${params.search}%`);
+    }
+    const limit = params?.limit || 200;
+    query = query.range(0, limit - 1).order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+    if (error) { console.error("Store Error [getAllAds]:", error); throw error; }
+    return (data || []).map(ad => this.mapAd(ad));
+  }
+
+  async updateAdStatus(id: string, status: AdStatus, reason?: string): Promise<void> {
+    const update: any = { status };
+    if (status === 'approved') {
+      update.rejection_reason = null;
+      const { data: existing } = await supabase
+        .from('service_ads')
+        .select('expires_at')
+        .eq('id', id)
+        .single();
+      if (!existing?.expires_at) {
+        const days = await this.getAdDurationDays();
+        update.expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      }
+    } else if (reason !== undefined) {
+      update.rejection_reason = reason || null;
+    }
+
+    const { error } = await supabase.from('service_ads').update(update).eq('id', id);
+    if (error) { console.error("Store Error [updateAdStatus]:", error); throw error; }
+  }
+
+  async setAdExpiration(id: string, expiresAtIso: string): Promise<void> {
+    const { error } = await supabase.from('service_ads').update({ expires_at: expiresAtIso }).eq('id', id);
+    if (error) { console.error("Store Error [setAdExpiration]:", error); throw error; }
+  }
+
+  async extendAd(id: string, days: number): Promise<void> {
+    const { data } = await supabase.from('service_ads').select('expires_at').eq('id', id).single();
+    const now = Date.now();
+    const base = data?.expires_at ? Math.max(new Date(data.expires_at).getTime(), now) : now;
+    await this.setAdExpiration(id, new Date(base + days * 24 * 60 * 60 * 1000).toISOString());
+  }
+
+  /**
+   * Marca como 'expired' os anúncios aprovados cuja data de expiração já passou.
+   * A RLS permite o provider expirar os próprios anúncios e o admin todos.
+   */
+  async expireAds(): Promise<number> {
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('service_ads')
+      .update({ status: 'expired' })
+      .eq('status', 'approved')
+      .lt('expires_at', now)
+      .select('id');
+    if (error) { console.error("Store Error [expireAds]:", error); throw error; }
+    return (data || []).length;
+  }
+
+  // --- Usuários ---
+  async getUsers(): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, created_at')
+      .order('created_at', { ascending: false })
+      .limit(300);
+    if (error) { console.error("Store Error [getUsers]:", error); throw error; }
+    return (data || []).map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role as UserRole,
+      avatar: u.avatar,
+      location: u.location,
+      phone: u.phone,
+      bio: u.bio,
+      isSuspended: u.is_suspended || false,
+      createdAt: u.created_at
+    }));
+  }
+
+  async updateUserRole(id: string, role: UserRole): Promise<void> {
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+    if (error) { console.error("Store Error [updateUserRole]:", error); throw error; }
+  }
+
+  async setUserSuspended(id: string, suspended: boolean): Promise<void> {
+    const { error } = await supabase.from('profiles').update({ is_suspended: suspended }).eq('id', id);
+    if (error) { console.error("Store Error [setUserSuspended]:", error); throw error; }
+  }
+
+  // --- Métricas ---
+  async getAdminStats(): Promise<AdminStats> {
+    const count = async (table: any, filters?: (q: any) => any): Promise<number> => {
+      let q = supabase.from(table).select('*', { count: 'exact', head: true });
+      if (filters) q = filters(q);
+      const { count: c, error } = await q;
+      if (error) console.error("Store Error [getAdminStats]", table, error);
+      return c || 0;
+    };
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [
+      totalUsers, providers, clients, admins, newUsersWeek,
+      totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
+      totalAppointments, appointmentsPending, appointmentsCompleted,
+      totalReviews
+    ] = await Promise.all([
+      count('profiles'),
+      count('profiles', q => q.eq('role', 'PROVIDER')),
+      count('profiles', q => q.eq('role', 'CLIENT')),
+      count('profiles', q => q.eq('role', 'ADMIN')),
+      count('profiles', q => q.gte('created_at', weekAgo)),
+      count('service_ads'),
+      count('service_ads', q => q.eq('status', 'pending')),
+      count('service_ads', q => q.eq('status', 'approved')),
+      count('service_ads', q => q.eq('status', 'rejected')),
+      count('service_ads', q => q.eq('status', 'expired')),
+      count('service_ads', q => q.eq('status', 'suspended')),
+      count('service_ads', q => q.gte('created_at', weekAgo)),
+      count('appointments'),
+      count('appointments', q => q.eq('status', 'pending')),
+      count('appointments', q => q.eq('status', 'completed')),
+      count('reviews'),
+    ]);
+
+    const { data: reviewRows } = await supabase.from('reviews').select('rating');
+    const avgRating = reviewRows && reviewRows.length > 0
+      ? Number((reviewRows.reduce((a: number, r: any) => a + (r.rating || 0), 0) / reviewRows.length).toFixed(1))
+      : 0;
+
+    return {
+      totalUsers, providers, clients, admins, newUsersWeek,
+      totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
+      totalAppointments, appointmentsPending, appointmentsCompleted,
+      totalReviews, avgRating
+    };
   }
 }
 

@@ -1,0 +1,20 @@
+# Configuração do Railway (serviço web principal)
+# Build: npm run build (gera dist/) | Start: node server.js (serve SPA + /api)
+[build]
+builder = "nixpacks"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "node server.js"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# ------------------------------------------------------------------
+# CRON (serviço separado no Railway):
+# Crie um segundo serviço no mesmo repositório e configure:
+#   - Start command:  node scripts/expire-ads.js
+#   - Settings -> Cron Schedule:  0 6 * * *  (UTC, diário às 6h)
+#   - Env: SUPABASE_SERVICE_ROLE_KEY (nunca expor no frontend)
+# ------------------------------------------------------------------
