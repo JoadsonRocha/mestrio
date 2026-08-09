@@ -8,6 +8,8 @@ import { CATEGORIES } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { AdStatus } from '../types';
+import { validateUploadCount, validateUploadFileContent } from '../utils/security';
+import { logSecurityWarning, logSecurityError } from '../services/audit';
 
 const DAYS_OF_WEEK = [
   { id: 'seg', label: 'Seg' },
@@ -186,18 +188,33 @@ const CreateAd: React.FC = () => {
     );
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      Array.from(e.target.files).forEach((file: File) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (reader.result) {
-            setImages(prev => [...prev, reader.result as string]);
-            setImageFiles(prev => [...prev, file]);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const files = Array.from(e.target.files);
+    const limitCheck = validateUploadCount(images.length, files);
+    if (!limitCheck.valid) {
+      toast(limitCheck.message || 'Não foi possível anexar as imagens.', 'error');
+      logSecurityWarning('upload.limit', 'Tentativa de envio excedeu o limite', { currentCount: images.length, incomingCount: files.length });
+      return;
+    }
+
+    for (const file of files) {
+      const validation = await validateUploadFileContent(file);
+      if (!validation.valid) {
+        toast(validation.message || 'Imagem inválida.', 'error');
+        logSecurityWarning('upload.invalid', 'Upload bloqueado por validação', { fileName: file.name, reason: validation.message });
+        continue;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          setImages(prev => [...prev, reader.result as string]);
+          setImageFiles(prev => [...prev, file]);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -248,6 +265,13 @@ const CreateAd: React.FC = () => {
 
     setSubmitting(true);
     try {
+      if (!formData.title.trim() || !formData.description.trim() || !formData.location.trim()) {
+        throw new Error('Preencha título, descrição e localização.');
+      }
+
+      if (formData.whatsapp && formData.whatsapp.replace(/\D/g, '').length < 10) {
+        throw new Error('Número de WhatsApp inválido.');
+      }
       // Upload new images to Supabase Storage (keep existing URLs in edit mode)
       const finalImages: string[] = [];
       for (let i = 0; i < images.length; i++) {
@@ -304,7 +328,8 @@ const CreateAd: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Erro ao salvar anúncio:", err);
-      toast('Não foi possível salvar o anúncio. Tente novamente.', 'error');
+      logSecurityError('ad.create_failed', 'Falha ao criar/editar anúncio', { message: err?.message, isEditing }, user?.id);
+      toast(err?.message || 'Não foi possível salvar o anúncio. Tente novamente.', 'error');
     } finally {
       setSubmitting(false);
     }

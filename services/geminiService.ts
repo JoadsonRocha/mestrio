@@ -1,3 +1,5 @@
+import { logSecurityWarning } from './audit';
+
 const AI_ENDPOINT = '/api/ai';
 
 interface AIResponse {
@@ -13,7 +15,10 @@ const request = async (body: unknown): Promise<AIResponse> => {
     body: JSON.stringify(body),
   });
   const data: AIResponse = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Erro no serviço de IA.');
+  if (!res.ok) {
+    logSecurityWarning('ai.request_failed', 'Falha na chamada da IA', { status: res.status, body });
+    throw new Error(data.error || 'Erro no serviço de IA.');
+  }
   return data;
 };
 

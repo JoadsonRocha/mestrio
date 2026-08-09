@@ -5,6 +5,8 @@ import { store } from '../services/store';
 import { useToast } from '../context/ToastContext';
 import { UserRole } from '../types';
 import { AlertCircle } from 'lucide-react';
+import { validateEmail, validatePassword } from '../utils/security';
+import { logSecurityWarning, logSecurityError, logSecurityEvent } from '../services/audit';
 
 const Login: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -29,22 +31,44 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      setErrorMsg(emailValidation.message || 'E-mail inválido.');
+      logSecurityWarning('login.invalid_email', 'Tentativa de login com e-mail inválido', { email });
+      return;
+    }
+
+    if (!password) {
+      setErrorMsg('Informe uma senha.');
+      return;
+    }
     if (isRegistering && !name) return;
+
+    if (isRegistering) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        setErrorMsg(passwordValidation.message || 'Senha inválida.');
+        logSecurityWarning('login.password_policy', 'Senha não passou na política de segurança', { email });
+        return;
+      }
+    }
 
     setLoading(true);
     setErrorMsg('');
     try {
       if (isRegistering) {
         await register(email, password, name, role);
+        logSecurityEvent('auth.register', 'Nova conta criada', { email, role }, undefined);
         toast('Cadastro realizado com sucesso! Verifique seu e-mail se necessário.', 'success');
         navigate('/dashboard');
       } else {
         await login(email, password);
+        logSecurityEvent('auth.login', 'Login realizado com sucesso', { email }, undefined);
         navigate('/dashboard');
       }
     } catch (error: any) {
       console.error(error);
+      logSecurityError('auth.failed', 'Falha no fluxo de autenticação', { email, action: isRegistering ? 'register' : 'login' }, undefined);
       
       let friendlyError = 'Erro ao realizar a operação. Verifique as credenciais.';
       const rawError = error.message?.toLowerCase() || '';
