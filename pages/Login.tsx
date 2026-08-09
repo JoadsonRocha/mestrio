@@ -26,7 +26,8 @@ const Login: React.FC = () => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    const isAdmin = user.isOwner || user.role === UserRole.ADMIN;
+    return <Navigate to={isAdmin ? "/owner" : "/dashboard"} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,11 +61,9 @@ const Login: React.FC = () => {
         await register(email, password, name, role);
         logSecurityEvent('auth.register', 'Nova conta criada', { email, role }, undefined);
         toast('Cadastro realizado com sucesso! Verifique seu e-mail se necessário.', 'success');
-        navigate('/dashboard');
       } else {
         await login(email, password);
         logSecurityEvent('auth.login', 'Login realizado com sucesso', { email }, undefined);
-        navigate('/dashboard');
       }
     } catch (error: any) {
       console.error(error);
