@@ -112,7 +112,7 @@ ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para Profiles
-CREATE POLICY "Perfis são públicos para leitura" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Usuários leem seus próprios perfis" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Usuários inserem seu próprio perfil" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Usuários atualizam seu próprio perfil" ON profiles FOR UPDATE USING (auth.uid() = id);
 
@@ -359,9 +359,14 @@ CREATE POLICY "Dono edita seus dados privados" ON user_private
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Migração: move telefones existentes e remove as colunas de PII de profiles.
-INSERT INTO user_private (user_id, phone)
-SELECT id, phone FROM profiles WHERE phone IS NOT NULL
-ON CONFLICT (user_id) DO NOTHING;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'phone') THEN
+    EXECUTE 'INSERT INTO user_private (user_id, phone)
+             SELECT id, phone FROM profiles WHERE phone IS NOT NULL
+             ON CONFLICT (user_id) DO NOTHING';
+  END IF;
+END $$;
 ALTER TABLE profiles DROP COLUMN IF EXISTS email;
 ALTER TABLE profiles DROP COLUMN IF EXISTS phone;
 

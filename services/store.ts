@@ -295,7 +295,7 @@ class Store {
 
   async getUserProfile(userId: string): Promise<User | null> {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('id, name, avatar, bio, location, role, is_certified')
       .eq('id', userId)
       .maybeSingle();

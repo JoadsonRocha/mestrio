@@ -13,7 +13,8 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
 const requestCounts = new Map();
 
 function getClientKey(req) {
-  return req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  // Com 'trust proxy' ativado, o req.ip conterá com segurança o IP original do cliente.
+  return req.ip || req.socket.remoteAddress || 'unknown';
 }
 
 function rateLimit(req, res, next) {
@@ -32,9 +33,14 @@ function rateLimit(req, res, next) {
   next();
 }
 
+app.set('trust proxy', 1); // Essencial para proxies como Railway (lê o X-Forwarded-For corretamente em req.ip)
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
-app.use(cors());
+
+// Restringindo o CORS apenas para as origens permitidas
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173'];
+app.use(cors({ origin: allowedOrigins }));
+
 app.use(rateLimit);
 
 // Headers de segurança + CSP (substitui helmet; evita dependência extra).

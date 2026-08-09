@@ -18,6 +18,12 @@ export function validatePassword(password: string): { valid: boolean; message?: 
   if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) {
     return { valid: false, message: 'A senha precisa incluir pelo menos um caractere especial.' };
   }
+  if (/(.)\1{2,}/.test(value)) {
+    return { valid: false, message: 'A senha não pode conter o mesmo caractere repetido em sequência (ex: aaa).' };
+  }
+  if (/12345|abcdef|qwerty/.test(value.toLowerCase())) {
+    return { valid: false, message: 'A senha não pode conter sequências fáceis de adivinhar.' };
+  }
 
   return { valid: true };
 }
