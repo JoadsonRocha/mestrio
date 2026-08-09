@@ -264,6 +264,13 @@ class Store {
 
     if (error || !data) return null;
     if (data.is_suspended) return null;
+
+    let permissions: string[] | undefined;
+    if (data.is_owner || data.role === 'ADMIN') {
+      const { data: perms } = await supabase.rpc('get_my_permissions');
+      permissions = Array.isArray(perms) ? perms : [];
+    }
+
     return {
       id: data.id,
       name: data.name,
@@ -277,6 +284,7 @@ class Store {
       isSuspended: false,
       isOwner: data.is_owner || false,
       roleRequest: data.role_request || null,
+      permissions,
       createdAt: data.created_at
     };
   }
@@ -953,6 +961,19 @@ class Store {
   async setUserCertified(id: string, certified: boolean): Promise<void> {
     const { error } = await supabase.rpc('set_user_certified', { target_user: id, certified });
     if (error) { console.error("Store Error [setUserCertified]:", error); throw error; }
+  }
+
+  /** Consulta as permissões de um admin — RPC (somente o dono). */
+  async getAdminPermissions(userId: string): Promise<string[]> {
+    const { data, error } = await supabase.rpc('get_admin_permissions', { target_user: userId });
+    if (error) { console.error("Store Error [getAdminPermissions]:", error); throw error; }
+    return Array.isArray(data) ? data : [];
+  }
+
+  /** Define as permissões de um admin — RPC (somente o dono). */
+  async setAdminPermissions(userId: string, perms: string[]): Promise<void> {
+    const { error } = await supabase.rpc('set_admin_permissions', { target_user: userId, perms });
+    if (error) { console.error("Store Error [setAdminPermissions]:", error); throw error; }
   }
 
   // --- Métricas ---
