@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { store } from '../services/store';
 import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus } from '../types';
+import { categoryIcon } from '../components/CategoryIcon';
 
 type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'settings';
 
@@ -809,7 +810,7 @@ const OwnerDashboard: React.FC = () => {
                     <div key={cat.id} className="p-4 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <span className="w-9 h-9 rounded-full bg-gray-100 text-brand-600 flex items-center justify-center">
-                          <span className="text-lg">{cat.icon}</span>
+                          {categoryIcon(cat.slug, 20)}
                         </span>
                         <div>
                           <p className="font-semibold text-gray-900">{cat.name}</p>
