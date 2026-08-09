@@ -29,7 +29,31 @@ export interface GetAdsParams {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  },
+});
+
+async function refreshSessionIfNeeded(): Promise<void> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) {
+    console.error('Supabase auth getSession error:', error);
+    return;
+  }
+  if (!session) return;
+
+  const expiresAt = session.expires_at;
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+  if (expiresAt && currentTimestamp >= expiresAt - 10) {
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError && refreshError.message !== 'No refresh token found') {
+      console.error('Supabase auth refreshSession error:', refreshError);
+    }
+  }
+}
 
 const AD_IMAGES_BUCKET = import.meta.env.VITE_AD_IMAGES_BUCKET || 'ad-images';
 const AVATARS_BUCKET = import.meta.env.VITE_AVATARS_BUCKET || 'avatars';
@@ -261,6 +285,7 @@ class Store {
   }
 
   async getCurrentUser(): Promise<User | null> {
+    await refreshSessionIfNeeded();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user) return null;
 
