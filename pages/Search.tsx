@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, X, Search, MapPin, Navigation } from 'lucide-react';
+import { Filter, X, Search, MapPin, Navigation, Map, List } from 'lucide-react';
 import { store } from '../services/store';
 import { ServiceCard, CategoryPill } from '../components/UI';
+import { MapView } from '../components/MapView';
 import { CATEGORIES } from '../constants';
 import { ServiceAd } from '../types';
 import { useToast } from '../context/ToastContext';
@@ -23,6 +24,7 @@ const SearchPage: React.FC = () => {
   const [category, setCategory] = useState(searchParams.get('c') || 'all');
   const [priceRange, setPriceRange] = useState<string>(searchParams.get('p') || 'all');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'list'|'map'>('list');
   const [isLocating, setIsLocating] = useState(false);
 
   const handleGetLocation = () => {
@@ -180,12 +182,20 @@ const SearchPage: React.FC = () => {
         
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">Resultados da busca</h2>
-            <button 
-                onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center px-4 py-2 border rounded-md shadow-sm text-sm transition-colors ${showFilters ? 'bg-gray-100 border-gray-300 text-gray-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-            >
-                <Filter size={16} className="mr-2"/> {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                  onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                  className="flex items-center px-4 py-2 border rounded-md shadow-sm text-sm transition-colors bg-white border-gray-200 text-brand-600 hover:bg-gray-50"
+              >
+                  {viewMode === 'list' ? <><Map size={16} className="mr-2"/> Ver no Mapa</> : <><List size={16} className="mr-2"/> Ver Lista</>}
+              </button>
+              <button 
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center px-4 py-2 border rounded-md shadow-sm text-sm transition-colors ${showFilters ? 'bg-gray-100 border-gray-300 text-gray-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              >
+                  <Filter size={16} className="mr-2"/> {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              </button>
+            </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
@@ -252,11 +262,15 @@ const SearchPage: React.FC = () => {
               <div className="flex justify-center py-20" aria-live="polite"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" role="status" aria-label="Carregando resultados"></div></div>
             ) : ads.length > 0 ? (
                 <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {ads.map(ad => (
-                          <ServiceCard key={ad.id} ad={ad} compact />
-                        ))}
-                    </div>
+                    {viewMode === 'list' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {ads.map(ad => (
+                            <ServiceCard key={ad.id} ad={ad} compact />
+                          ))}
+                      </div>
+                    ) : (
+                      <MapView ads={ads} />
+                    )}
                     {hasMore && (
                         <div className="mt-12 text-center">
                             <button 

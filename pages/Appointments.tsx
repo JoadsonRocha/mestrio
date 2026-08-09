@@ -4,6 +4,7 @@ import { Calendar, Check, X, Clock, CheckCircle2, MapPin, Star, Loader2, Send, L
 import { useAuth } from '../context/AuthContext';
 import { store, supabase } from '../services/store';
 import { Appointment, AppointmentStatus, UserRole } from '../types';
+import { generateGoogleCalendarUrl } from '../utils/calendar';
 import { useToast } from '../context/ToastContext';
 
 const Appointments: React.FC = () => {
@@ -182,12 +183,22 @@ const Appointments: React.FC = () => {
         )}
 
         {!isClient && app.status === 'confirmed' && (
-          <button
-            onClick={() => handleUpdateStatus(app.id, 'completed')}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center transition-colors"
-          >
-            <CheckCircle2 size={16} className="mr-1" /> Concluir serviço
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => handleUpdateStatus(app.id, 'completed')}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center transition-colors"
+            >
+              <CheckCircle2 size={16} className="mr-1" /> Concluir serviço
+            </button>
+            <a
+              href={generateGoogleCalendarUrl(app)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center transition-colors"
+            >
+              <Calendar size={16} className="mr-1" /> Google Agenda
+            </a>
+          </div>
         )}
       </>
     );

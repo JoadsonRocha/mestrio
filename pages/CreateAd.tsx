@@ -33,6 +33,8 @@ const CreateAd: React.FC = () => {
     price: '',
     priceUnit: 'job',
     location: '',
+    lat: null as number | null,
+    lng: null as number | null,
     whatsapp: '',
     description: '',
     keywords: '' 
@@ -77,6 +79,8 @@ const CreateAd: React.FC = () => {
                     price: ad.price.toString(),
                     priceUnit: ad.priceUnit,
                     location: ad.location,
+                    lat: ad.lat || null,
+                    lng: ad.lng || null,
                     whatsapp: ad.whatsapp,
                     description: ad.description,
                     keywords: ''
@@ -161,7 +165,7 @@ const CreateAd: React.FC = () => {
               locationStr = data.display_name.split(',').slice(0, 3).join(',');
             }
             
-            setFormData(prev => ({ ...prev, location: locationStr }));
+            setFormData(prev => ({ ...prev, location: locationStr, lat: parseFloat(data.lat), lng: parseFloat(data.lon) }));
           }
         } catch (error) {
           console.error("Erro ao buscar endereço:", error);
@@ -308,6 +312,8 @@ const CreateAd: React.FC = () => {
               price: Number(formData.price) || 0,
               priceUnit: formData.priceUnit as 'job' | 'hour' | 'estimate',
               location: formData.location,
+              lat: formData.lat || undefined,
+              lng: formData.lng || undefined,
               whatsapp: formData.whatsapp,
               images: finalImages.length > 0 ? finalImages : undefined,
               availability: availabilityString,
@@ -329,6 +335,8 @@ const CreateAd: React.FC = () => {
               price: Number(formData.price) || 0,
               priceUnit: formData.priceUnit as 'job' | 'hour' | 'estimate',
               location: formData.location,
+              lat: formData.lat || undefined,
+              lng: formData.lng || undefined,
               whatsapp: formData.whatsapp,
               images: finalImages.length > 0 ? finalImages : ['https://picsum.photos/400/300?random=' + Math.floor(Math.random() * 100)],
               isPremium: false,

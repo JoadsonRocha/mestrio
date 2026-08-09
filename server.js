@@ -137,6 +137,62 @@ Regras:
 });
 
 // ----------------------------------------------------------------
+// /api/ai/estimate — Orçador Inteligente
+// ----------------------------------------------------------------
+app.post('/api/ai/estimate', async (req, res) => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Chave da API Groq não configurada.' });
+
+  const body = req.body || {};
+  const problem = String(body.problem || '').trim();
+  
+  if (!problem) return res.status(400).json({ error: 'O problema é obrigatório' });
+
+  const prompt = `Você é um assistente técnico especialista de um marketplace de serviços residenciais (Mestrio).
+O cliente tem o seguinte problema/necessidade: "${problem}".
+
+Responda ESTRITAMENTE em formato JSON com as seguintes chaves (sem usar blocos de código ou formatação markdown, retorne a string JSON pura):
+- category: A categoria mais adequada (electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly, ou outros).
+- possible_issue: Uma breve descrição de 1 frase sobre o que pode ser o defeito/solução.
+- price_range: Uma estimativa de preço no formato "R$ X a R$ Y".
+
+JSON puro:`;
+
+  try {
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: 'user', content: prompt }]
+      }),
+    });
+
+    const data = await r.json();
+    const text = data?.choices?.[0]?.message?.content || '';
+
+    let parsedResponse = {};
+    try {
+      // Remove possible markdown formatting from Groq response (e.g. ```json ... ```)
+      const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsedResponse = JSON.parse(cleanText);
+    } catch (parseError) {
+      console.error('Erro ao fazer parse do JSON do Groq:', text);
+      return res.status(500).json({ error: 'A resposta da IA foi inválida.' });
+    }
+
+    res.status(200).json(parsedResponse);
+  } catch (e) {
+    console.error('Groq estimate fetch error:', e);
+    res.status(500).json({ error: 'Erro ao conectar com a IA.' });
+  }
+});
+
+// ----------------------------------------------------------------
 // /api/expire-ads — expira anúncios (uso do cron / disparos externos)
 // Requer SUPABASE_SERVICE_ROLE_KEY E CRON_SECRET: a chamada precisa do
 // header `x-cron-secret` (ou `?secret=`). Sem CRON_SECRET configurada,

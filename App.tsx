@@ -3,6 +3,7 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar, Footer } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SmartEstimator } from './components/SmartEstimator';
 const Home = lazy(() => import('./pages/Home'));
 const SearchPage = lazy(() => import('./pages/Search'));
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'));
@@ -92,6 +93,7 @@ const MainLayout: React.FC = () => {
         </Suspense>
       </main>
       {!isDashboardRoute && <Footer />}
+      {!isDashboardRoute && <SmartEstimator />}
     </div>
   );
 };

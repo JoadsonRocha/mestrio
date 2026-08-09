@@ -109,6 +109,8 @@ export interface ServiceAd {
   expiresAt?: string;
   rejectionReason?: string;
   views?: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface FilterState {
