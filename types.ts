@@ -45,6 +45,15 @@ export interface Category {
   active: boolean;
 }
 
+export interface Tag {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  sortOrder: number;
+  active: boolean;
+}
+
 export interface AdminStats {
   totalUsers: number;
   providers: number;
