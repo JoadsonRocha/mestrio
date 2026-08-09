@@ -2,6 +2,7 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar, Footer } from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 const Home = lazy(() => import('./pages/Home'));
 const SearchPage = lazy(() => import('./pages/Search'));
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'));
@@ -54,7 +55,8 @@ const MainLayout: React.FC = () => {
     <div className={`flex flex-col bg-gray-50 ${isDashboardRoute ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <Navbar />
       <main id="main-content" className="flex-grow flex flex-col overflow-hidden">
-        <Suspense fallback={<div className="flex items-center justify-center p-8">Carregando...</div>}>
+        <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-gray-500">Carregando conteúdo...</div>}>
+        <ErrorBoundary>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<SearchPage />} />
@@ -79,6 +81,7 @@ const MainLayout: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
+        </ErrorBoundary>
         </Suspense>
       </main>
       {!isDashboardRoute && <Footer />}

@@ -34,12 +34,13 @@ const SearchPage: React.FC = () => {
       navigator.geolocation.getCurrentPosition(async (pos) => {
           try {
               const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&localityLanguage=pt`);
+              if (!res.ok) throw new Error('Falha ao consultar geolocalização');
               const data = await res.json();
-              const loc = `${data.city || data.locality}, ${data.principalSubdivisionCode?.split('-')[1] || data.principalSubdivision}`;
+              const loc = `${data.city || data.locality || 'Sua região'}, ${data.principalSubdivisionCode?.split('-')[1] || data.principalSubdivision || ''}`.trim().replace(/, $/, '');
               setLocation(loc);
               updateSearchParam('l', loc);
               setPage(1);
-              loadData(1, true, { location: loc });
+              await loadData(1, true, { location: loc });
           } catch(e) {
               toast('Erro ao buscar localização.', 'error');
           } finally {
@@ -81,23 +82,32 @@ const SearchPage: React.FC = () => {
 
   // Trigger load when category or priceRange changes (instant filters)
   useEffect(() => {
-    setPage(1);
-    loadData(1, true);
+    let cancelled = false;
+    const run = async () => {
+      setPage(1);
+      await loadData(1, true);
+      if (cancelled) return;
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, priceRange]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     updateSearchParam('q', query);
     updateSearchParam('l', location);
     setPage(1);
-    loadData(1, true);
+    await loadData(1, true);
   };
 
-  const handleLoadMore = () => {
+  const handleLoadMore = async () => {
       const nextPage = page + 1;
       setPage(nextPage);
-      loadData(nextPage, false);
+      await loadData(nextPage, false);
   };
 
   const updateSearchParam = (key: string, value: string) => {
@@ -135,6 +145,7 @@ const SearchPage: React.FC = () => {
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Encanador, Eletricista, Faxina..."
                         className="w-full border-gray-300 rounded-xl focus:ring-brand-500 focus:border-brand-500 p-3 pl-10 border shadow-sm"
+                        autoComplete="off"
                     />
                     <Search className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
                 </div>
@@ -145,6 +156,7 @@ const SearchPage: React.FC = () => {
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="Sua cidade ou bairro..."
                         className="w-full border-gray-300 rounded-xl focus:ring-brand-500 focus:border-brand-500 p-3 pl-10 pr-12 border shadow-sm"
+                        autoComplete="off"
                     />
                     <MapPin className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
                     <button 
@@ -237,7 +249,7 @@ const SearchPage: React.FC = () => {
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div></div>
+              <div className="flex justify-center py-20" aria-live="polite"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" role="status" aria-label="Carregando resultados"></div></div>
             ) : ads.length > 0 ? (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
