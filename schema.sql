@@ -83,11 +83,13 @@ END $$;
 -- Tabela de Sessões de Chat (Negociações)
 CREATE TABLE chat_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  ad_id UUID NOT NULL REFERENCES service_ads(id) ON DELETE CASCADE,
+  ad_id UUID REFERENCES service_ads(id) ON DELETE CASCADE,
   last_message TEXT,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE chat_sessions ALTER COLUMN ad_id DROP NOT NULL;
 
 -- Tabela de Participantes do Chat (Relacionamento N:M)
 CREATE TABLE chat_participants (
@@ -875,6 +877,52 @@ BEGIN
   INSERT INTO chat_participants (session_id, user_id) VALUES
     (new_session, my_id),
     (new_session, provider);
+
+  RETURN new_session;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION start_direct_chat(p_target_user_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  my_id uuid := auth.uid();
+  is_admin boolean;
+  existing_session uuid;
+  new_session uuid;
+BEGIN
+  IF my_id IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF my_id = p_target_user_id THEN RAISE EXCEPTION 'Não é possível iniciar chat com você mesmo.'; END IF;
+
+  SELECT (role = 'ADMIN' OR is_owner) INTO is_admin FROM profiles WHERE id = my_id;
+  IF NOT is_admin THEN
+    RAISE EXCEPTION 'Somente administradores podem iniciar conversas diretas com usuários.';
+  END IF;
+
+  SELECT cs.id INTO existing_session
+  FROM chat_sessions cs
+  WHERE cs.ad_id IS NULL
+    AND EXISTS (
+      SELECT 1 FROM chat_participants cp
+      WHERE cp.session_id = cs.id AND cp.user_id = my_id
+    )
+    AND EXISTS (
+      SELECT 1 FROM chat_participants cp
+      WHERE cp.session_id = cs.id AND cp.user_id = p_target_user_id
+    )
+    AND (SELECT COUNT(*) FROM chat_participants cp WHERE cp.session_id = cs.id) = 2;
+
+  IF existing_session IS NOT NULL THEN
+    RETURN existing_session;
+  END IF;
+
+  INSERT INTO chat_sessions (ad_id) VALUES (NULL) RETURNING id INTO new_session;
+  INSERT INTO chat_participants (session_id, user_id) VALUES
+    (new_session, my_id),
+    (new_session, p_target_user_id);
 
   RETURN new_session;
 END;

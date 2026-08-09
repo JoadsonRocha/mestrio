@@ -574,6 +574,12 @@ class Store {
     return data as string;
   }
 
+  async startDirectChat(targetUserId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('start_direct_chat', { p_target_user_id: targetUserId });
+    if (error) { console.error("Store Error [startDirectChat]:", error); throw error; }
+    return data as string;
+  }
+
   async sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
     const { error: msgError } = await supabase.from('messages').insert([{
       session_id: chatId,

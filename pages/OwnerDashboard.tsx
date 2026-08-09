@@ -60,6 +60,9 @@ const OwnerDashboard: React.FC = () => {
   const [editingPerms, setEditingPerms] = useState<User | null>(null);
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [permBusy, setPermBusy] = useState(false);
+  const [messageUser, setMessageUser] = useState<User | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageBusy, setMessageBusy] = useState(false);
 
   const loadStats = useCallback(async () => {
     try { setStats(await store.getAdminStats()); } catch (e) { console.error(e); }
@@ -346,6 +349,23 @@ const OwnerDashboard: React.FC = () => {
       toast('Configurações salvas.', 'success');
     } catch (e) { console.error(e); toast('Erro ao salvar.', 'error'); }
     finally { setBusy(false); }
+  };
+
+  const handleSendMessageToUser = async () => {
+    if (!messageUser || !messageText.trim()) return;
+    setMessageBusy(true);
+    try {
+      const chatId = await store.startDirectChat(messageUser.id);
+      await store.sendMessage(chatId, user.id, messageText.trim());
+      toast(`Mensagem enviada para ${messageUser.name}.`, 'success');
+      setMessageUser(null);
+      setMessageText('');
+    } catch (e) {
+      console.error(e);
+      toast('Não foi possível enviar a mensagem.', 'error');
+    } finally {
+      setMessageBusy(false);
+    }
   };
 
   const tabItem = (id: Tab, label: string, icon: React.ComponentType<{ size?: number | string; className?: string }>, badge?: number) => (
@@ -1014,6 +1034,42 @@ const OwnerDashboard: React.FC = () => {
                 className="text-sm px-4 py-2 rounded bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {permBusy ? 'Salvando...' : 'Salvar permissões'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {messageUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Enviar mensagem para {messageUser.name}</h3>
+                <p className="text-xs text-gray-500">A mensagem será enviada como administrador.</p>
+              </div>
+              <button onClick={() => setMessageUser(null)} className="text-gray-400 hover:text-gray-700">✕</button>
+            </div>
+            <textarea
+              value={messageText}
+              onChange={e => setMessageText(e.target.value)}
+              rows={6}
+              placeholder="Escreva sua mensagem..."
+              className="w-full text-sm px-3 py-3 rounded border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setMessageUser(null)}
+                className="text-sm px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSendMessageToUser}
+                disabled={messageBusy || !messageText.trim()}
+                className="text-sm px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {messageBusy ? 'Enviando...' : 'Enviar mensagem'}
               </button>
             </div>
           </div>
