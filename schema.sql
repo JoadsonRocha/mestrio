@@ -225,8 +225,10 @@ ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'a
   CHECK (status IN ('pending', 'approved', 'rejected', 'expired', 'suspended'));
 ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS views INTEGER NOT NULL DEFAULT 0;
 
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role_request TEXT;
 
 CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -461,18 +463,107 @@ BEGIN
 END;
 $$;
 
+-- Incrementar visualizações de um anúncio (público: anônimo ou autenticado)
+CREATE OR REPLACE FUNCTION increment_ad_view(ad_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE service_ads SET views = views + 1 WHERE id = ad_id;
+END;
+$$;
+
+-- Solicitar mudança para profissional (o próprio usuário) — apenas CLIENT
+CREATE OR REPLACE FUNCTION request_provider_role()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  UPDATE profiles SET role_request = 'PROVIDER'
+  WHERE id = auth.uid() AND role = 'CLIENT';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Apenas clientes podem solicitar o papel de profissional.';
+  END IF;
+END;
+$$;
+
+-- Cancelar a solicitação de profissional (o próprio usuário)
+CREATE OR REPLACE FUNCTION cancel_provider_request()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  UPDATE profiles SET role_request = NULL WHERE id = auth.uid();
+END;
+$$;
+
+-- Aprovar a solicitação de profissional — só o dono (vira PROVIDER)
+CREATE OR REPLACE FUNCTION approve_provider_request(target_user uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono do projeto pode aprovar solicitações de profissional.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user AND role_request = 'PROVIDER') THEN
+    RAISE EXCEPTION 'Usuário não encontrado ou sem solicitação pendente.';
+  END IF;
+  UPDATE profiles SET role = 'PROVIDER', role_request = NULL WHERE id = target_user;
+END;
+$$;
+
+-- Recusar a solicitação de profissional — só o dono
+CREATE OR REPLACE FUNCTION reject_provider_request(target_user uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono do projeto pode recusar solicitações de profissional.';
+  END IF;
+  UPDATE profiles SET role_request = NULL WHERE id = target_user;
+END;
+$$;
+
 -- PERMISSÕES: somente usuários autenticados podem chamar as funções
 REVOKE ALL ON FUNCTION set_user_role(uuid, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION promote_to_admin(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION demote_from_admin(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION transfer_ownership(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION set_user_suspended(uuid, boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION request_provider_role() FROM PUBLIC;
+REVOKE ALL ON FUNCTION cancel_provider_request() FROM PUBLIC;
+REVOKE ALL ON FUNCTION approve_provider_request(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION reject_provider_request(uuid) FROM PUBLIC;
+-- A contagem de views é pública (visitantes anônimos também contam)
+REVOKE ALL ON FUNCTION increment_ad_view(uuid) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION set_user_role(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION promote_to_admin(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION demote_from_admin(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION transfer_ownership(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION set_user_suspended(uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION request_provider_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION cancel_provider_request() TO authenticated;
+GRANT EXECUTE ON FUNCTION approve_provider_request(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION reject_provider_request(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 
 -- ==========================================
 -- 7. STORAGE (imagens de anúncios e avatares)

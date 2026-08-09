@@ -77,7 +77,8 @@ class Store {
       isCertified: data.profiles?.is_certified || false,
       status: data.status || 'approved',
       expiresAt: data.expires_at,
-      rejectionReason: data.rejection_reason
+      rejectionReason: data.rejection_reason,
+      views: data.views || 0
     };
   }
 
@@ -269,6 +270,7 @@ class Store {
       isCertified: data.is_certified || false,
       isSuspended: false,
       isOwner: data.is_owner || false,
+      roleRequest: data.role_request || null,
       createdAt: data.created_at
     };
   }
@@ -861,7 +863,7 @@ class Store {
   async getUsers(): Promise<User[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, is_owner, created_at')
+      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, is_owner, role_request, created_at')
       .order('created_at', { ascending: false })
       .limit(300);
     if (error) { console.error("Store Error [getUsers]:", error); throw error; }
@@ -876,6 +878,7 @@ class Store {
       bio: u.bio,
       isSuspended: u.is_suspended || false,
       isOwner: u.is_owner || false,
+      roleRequest: u.role_request || null,
       createdAt: u.created_at
     }));
   }
@@ -925,7 +928,8 @@ class Store {
     const [
       totalUsers, providers, clients, admins, newUsersWeek,
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
-      totalAppointments, appointmentsPending, appointmentsCompleted,
+      totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
+      appointmentsCancelled, newAppointmentsWeek,
       totalReviews
     ] = await Promise.all([
       count('profiles'),
@@ -942,7 +946,10 @@ class Store {
       count('service_ads', q => q.gte('created_at', weekAgo)),
       count('appointments'),
       count('appointments', q => q.eq('status', 'pending')),
+      count('appointments', q => q.eq('status', 'confirmed')),
       count('appointments', q => q.eq('status', 'completed')),
+      count('appointments', q => q.eq('status', 'cancelled')),
+      count('appointments', q => q.gte('created_at', weekAgo)),
       count('reviews'),
     ]);
 
@@ -951,11 +958,40 @@ class Store {
       ? Number((reviewRows.reduce((a: number, r: any) => a + (r.rating || 0), 0) / reviewRows.length).toFixed(1))
       : 0;
 
+    // Distribuição de anúncios ativos por categoria
+    const { data: adsRows } = await supabase.from('service_ads').select('category, status');
+    const byCategory = new Map<string, number>();
+    for (const row of adsRows || []) {
+      if (row.status === 'approved') {
+        byCategory.set(row.category, (byCategory.get(row.category) || 0) + 1);
+      }
+    }
+    const adsByCategory = Array.from(byCategory.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Top anúncios mais avaliados
+    const { data: topRows } = await supabase
+      .from('service_ads')
+      .select('id, title, category, rating, review_count, profiles(name)')
+      .eq('status', 'approved')
+      .order('review_count', { ascending: false })
+      .limit(5);
+    const topAds = (topRows || []).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      providerName: r.profiles?.name || '—',
+      category: r.category,
+      rating: r.rating || 0,
+      reviewCount: r.review_count || 0,
+    }));
+
     return {
       totalUsers, providers, clients, admins, newUsersWeek,
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
-      totalAppointments, appointmentsPending, appointmentsCompleted,
-      totalReviews, avgRating
+      totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
+      appointmentsCancelled, newAppointmentsWeek,
+      totalReviews, avgRating, adsByCategory, topAds
     };
   }
 }

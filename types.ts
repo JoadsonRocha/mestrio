@@ -16,6 +16,7 @@ export interface User {
   isCertified?: boolean;
   isSuspended?: boolean;
   isOwner?: boolean;
+  roleRequest?: string | null;
   createdAt?: string;
 }
 
@@ -45,9 +46,21 @@ export interface AdminStats {
   newAdsWeek: number;
   totalAppointments: number;
   appointmentsPending: number;
+  appointmentsConfirmed: number;
   appointmentsCompleted: number;
+  appointmentsCancelled: number;
+  newAppointmentsWeek: number;
   totalReviews: number;
   avgRating: number;
+  adsByCategory: { category: string; count: number }[];
+  topAds: {
+    id: string;
+    title: string;
+    providerName: string;
+    category: string;
+    rating: number;
+    reviewCount: number;
+  }[];
 }
 
 export interface Review {
@@ -83,6 +96,7 @@ export interface ServiceAd {
   status?: AdStatus;
   expiresAt?: string;
   rejectionReason?: string;
+  views?: number;
 }
 
 export interface FilterState {

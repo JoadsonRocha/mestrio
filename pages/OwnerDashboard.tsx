@@ -272,6 +272,7 @@ const OwnerDashboard: React.FC = () => {
               <div className="space-y-4">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                   <h2 className="text-lg font-bold text-gray-900 mb-1">Usuários</h2>
+                  <p className="text-xs text-gray-500">Base da plataforma</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
                     <StatCard label="Total" value={stats?.totalUsers ?? 0} icon={Users} color="bg-brand-50 text-brand-600" />
                     <StatCard label="Profissionais" value={stats?.providers ?? 0} icon={Shield} color="bg-blue-50 text-blue-600" />
@@ -283,12 +284,13 @@ const OwnerDashboard: React.FC = () => {
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                   <h2 className="text-lg font-bold text-gray-900 mb-1">Anúncios</h2>
+                  <p className="text-xs text-gray-500">Cadastros de serviços na plataforma</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
                     <StatCard label="Total" value={stats?.totalAds ?? 0} icon={Megaphone} color="bg-brand-50 text-brand-600" />
                     <StatCard label="Pendentes" value={stats?.adsPending ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
                     <StatCard label="Aprovados" value={stats?.adsApproved ?? 0} icon={Check} color="bg-green-50 text-green-600" />
                     <StatCard label="Rejeitados" value={stats?.adsRejected ?? 0} icon={X} color="bg-red-50 text-red-600" />
-                    <StatCard label="Expirados" value={stats?.adsExpired ?? 0} icon={Clock} color="bg-gray-100 text-gray-600" />
+                    <StatCard label="Suspensos" value={stats?.adsSuspended ?? 0} icon={Ban} color="bg-orange-50 text-orange-600" />
                     <StatCard label="Novos (7d)" value={stats?.newAdsWeek ?? 0} icon={TrendingUp} color="bg-blue-50 text-blue-600" />
                   </div>
                   {stats && stats.adsPending > 0 && (
@@ -302,11 +304,95 @@ const OwnerDashboard: React.FC = () => {
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Agendamentos & Avaliações</h2>
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">Agendamentos (serviços)</h2>
+                  <p className="text-xs text-gray-500">Fluxo de serviços realizados pela plataforma</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
                     <StatCard label="Total" value={stats?.totalAppointments ?? 0} icon={Calendar} color="bg-brand-50 text-brand-600" />
                     <StatCard label="Pendentes" value={stats?.appointmentsPending ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
+                    <StatCard label="Confirmados" value={stats?.appointmentsConfirmed ?? 0} icon={Check} color="bg-blue-50 text-blue-600" />
                     <StatCard label="Concluídos" value={stats?.appointmentsCompleted ?? 0} icon={CheckCircle2} color="bg-green-50 text-green-600" />
+                    <StatCard label="Cancelados" value={stats?.appointmentsCancelled ?? 0} icon={X} color="bg-red-50 text-red-600" />
+                    <StatCard label="Novos (7d)" value={stats?.newAppointmentsWeek ?? 0} icon={TrendingUp} color="bg-purple-50 text-purple-600" />
+                  </div>
+                  {stats && stats.totalAppointments > 0 && (
+                    <div className="mt-4">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Taxa de conclusão</span>
+                        <span className="font-semibold text-gray-700">{Math.round((stats.appointmentsCompleted / stats.totalAppointments) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full transition-all"
+                          style={{ width: `${Math.round((stats.appointmentsCompleted / stats.totalAppointments) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">Categorias mais procuradas</h2>
+                  <p className="text-xs text-gray-500">Anúncios ativos por categoria</p>
+                  {(!stats || stats.adsByCategory.length === 0) ? (
+                    <p className="text-sm text-gray-400 mt-4">Nenhum anúncio aprovado ainda.</p>
+                  ) : (
+                    <div className="space-y-3 mt-4">
+                      {stats.adsByCategory.slice(0, 5).map(c => {
+                        const max = stats.adsByCategory[0].count;
+                        const name = categories.find(cc => cc.slug === c.category)?.name || c.category;
+                        return (
+                          <div key={c.category}>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="font-medium text-gray-700">{name}</span>
+                              <span className="text-gray-500">{c.count} {c.count === 1 ? 'anúncio' : 'anúncios'}</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                              <div
+                                className="bg-brand-500 h-2 rounded-full transition-all"
+                                style={{ width: `${Math.round((c.count / max) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">Top anúncios avaliados</h2>
+                  <p className="text-xs text-gray-500">Serviços com mais avaliações na plataforma</p>
+                  {(!stats || stats.topAds.length === 0) ? (
+                    <p className="text-sm text-gray-400 mt-4">Nenhum anúncio avaliado ainda.</p>
+                  ) : (
+                    <div className="divide-y divide-gray-100 mt-3">
+                      {stats.topAds.map((ad, i) => {
+                        const name = categories.find(cc => cc.slug === ad.category)?.name || ad.category;
+                        return (
+                          <div key={ad.id} className="py-3 flex items-center gap-3">
+                            <span className="w-6 text-center text-sm font-bold text-gray-300">#{i + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 truncate">{ad.title}</p>
+                              <p className="text-xs text-gray-500">{ad.providerName} · {name}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-semibold text-gray-800 flex items-center justify-end gap-1">
+                                <Star size={14} className="text-yellow-400 fill-yellow-400" />
+                                {ad.rating.toFixed(1)}
+                              </p>
+                              <p className="text-xs text-gray-400">{ad.reviewCount} {ad.reviewCount === 1 ? 'avaliação' : 'avaliações'}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">Avaliações</h2>
+                  <p className="text-xs text-gray-500">Feedback dos clientes</p>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
                     <StatCard label="Avaliações" value={stats?.totalReviews ?? 0} icon={MessageSquare} color="bg-purple-50 text-purple-600" />
                     <StatCard label="Nota média" value={stats?.avgRating ?? 0} icon={Star} color="bg-yellow-50 text-yellow-600" />
                   </div>
