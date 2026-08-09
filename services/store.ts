@@ -464,14 +464,15 @@ class Store {
       const otherUserName = otherParticipant?.profiles?.name;
       const otherUserAvatar = otherParticipant?.profiles?.avatar;
 
+      const isDirectChat = c.ad_id === null;
       const providerId = c.service_ads?.provider_id;
-      const providerName = (c.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
-      const clientName = (c.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
+      const providerName = isDirectChat ? undefined : (c.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
+      const clientName = isDirectChat ? undefined : (c.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
 
       return {
         id: c.id,
         adId: c.ad_id,
-        adTitle: c.service_ads?.title || 'Anúncio',
+        adTitle: c.service_ads?.title || (isDirectChat ? 'Suporte Administrativo' : 'Anúncio'),
         participants: (c.chat_participants || []).map((p: any) => p.user_id),
         otherUserName: otherUserName,
         otherUserAvatar: otherUserAvatar,
@@ -516,14 +517,15 @@ class Store {
     const otherParticipant = (data.chat_participants || []).find((p: any) => p.user_id !== userId);
     const otherUserName = otherParticipant?.profiles?.name;
 
+    const isDirectChat = data.ad_id === null;
     const providerId = data.service_ads?.provider_id;
-    const providerName = (data.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
-    const clientName = (data.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
+    const providerName = isDirectChat ? undefined : (data.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
+    const clientName = isDirectChat ? undefined : (data.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
 
     return {
       id: data.id,
       adId: data.ad_id,
-      adTitle: data.service_ads?.title || 'Anúncio',
+      adTitle: data.service_ads?.title || (isDirectChat ? 'Suporte Administrativo' : 'Anúncio'),
       participants: (data.chat_participants || []).map((p: any) => p.user_id),
       otherUserName: otherUserName,
       providerName,
