@@ -376,7 +376,7 @@ const OwnerDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 justify-between mb-6 lg:flex-row lg:items-center">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">Painel do Dono</h1>
             {user.isOwner ? (
@@ -387,6 +387,30 @@ const OwnerDashboard: React.FC = () => {
           </div>
           <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium">Voltar ao início →</Link>
         </div>
+
+        {stats && (stats.adsPending > 0 || stats.pendingProviderRequests > 0 || stats.suspendedUsers > 0) && (
+          <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 text-yellow-700">
+                <span className="text-lg">⚠️</span>
+              </div>
+              <div>
+                <p className="font-semibold text-yellow-900">Atenção: ações urgentes</p>
+                <div className="mt-2 space-y-1">
+                  {stats.adsPending > 0 && (
+                    <p>Há <strong>{stats.adsPending}</strong> anúncios pendentes aguardando moderação.</p>
+                  )}
+                  {stats.pendingProviderRequests > 0 && (
+                    <p>Existem <strong>{stats.pendingProviderRequests}</strong> solicitações de profissional aguardando aprovação.</p>
+                  )}
+                  {stats.suspendedUsers > 0 && (
+                    <p>Há <strong>{stats.suspendedUsers}</strong> usuários suspensos. Revise se o bloqueio ainda é necessário.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Sidebar */}
