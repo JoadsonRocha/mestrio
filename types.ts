@@ -17,6 +17,7 @@ export interface User {
   isSuspended?: boolean;
   isOwner?: boolean;
   roleRequest?: string | null;
+  providerRequestDetails?: any;
   permissions?: string[];
   referralCode?: string;
   referredBy?: string;

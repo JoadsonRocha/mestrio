@@ -1007,8 +1007,8 @@ class Store {
   }
 
   /** Cliente solicita virar profissional — RPC (próprio usuário). */
-  async requestProviderRole(): Promise<void> {
-    const { error } = await supabase.rpc('request_provider_role');
+  async requestProviderRole(details?: any): Promise<void> {
+    const { error } = await supabase.rpc('request_provider_role', { details });
     if (error) { console.error("Store Error [requestProviderRole]:", error); throw error; }
   }
 
