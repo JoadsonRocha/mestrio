@@ -3,15 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, Users, FolderOpen, Settings2, Plus,
   Trash2, Check, X, Ban, RefreshCw, Clock, Shield, Star,
-  Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye
+  Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye, Tags
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { store } from '../services/store';
-import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus } from '../types';
+import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, Tag } from '../types';
 import { categoryIcon } from '../components/CategoryIcon';
 
-type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'settings';
+type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'tags' | 'settings';
 
 const STATUS_LABEL: Record<AdStatus, string> = {
   pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado',
@@ -46,6 +46,7 @@ const OwnerDashboard: React.FC = () => {
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [adDurationDays, setAdDurationDays] = useState('30');
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -53,6 +54,7 @@ const OwnerDashboard: React.FC = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: 'Wrench' });
+  const [newTag, setNewTag] = useState({ name: '', icon: 'Check' });
   const [confirmingTransfer, setConfirmingTransfer] = useState<string | null>(null);
   const [adminPerms, setAdminPerms] = useState<Record<string, string[]>>({});
   const [editingPerms, setEditingPerms] = useState<User | null>(null);
@@ -88,6 +90,10 @@ const OwnerDashboard: React.FC = () => {
     try { setCategories(await store.getAllCategories()); } catch (e) { console.error(e); }
   }, []);
 
+  const loadTags = useCallback(async () => {
+    try { setTags(await store.getAllTags()); } catch (e) { console.error(e); }
+  }, []);
+
   const loadSettings = useCallback(async () => {
     const days = await store.getAdDurationDays();
     setAdDurationDays(String(days));
@@ -101,14 +107,16 @@ const OwnerDashboard: React.FC = () => {
       loadStats();
       loadUsers();
       loadCategories();
+      loadTags();
       loadSettings();
     }).catch(() => {
       loadStats();
       loadUsers();
       loadCategories();
+      loadTags();
       loadSettings();
     });
-  }, [loading, user, navigate, loadStats, loadUsers, loadCategories, loadSettings]);
+  }, [loading, user, navigate, loadStats, loadUsers, loadCategories, loadTags, loadSettings]);
 
   useEffect(() => {
     if (tab === 'ads') loadAds();
@@ -129,7 +137,10 @@ const OwnerDashboard: React.FC = () => {
   if (can('view_metrics')) visibleTabs.push('overview');
   if (can('moderate_ads')) visibleTabs.push('ads');
   if (can('manage_users') || can('approve_providers') || can('verify_providers')) visibleTabs.push('users');
-  if (can('manage_categories')) visibleTabs.push('categories');
+  if (can('manage_categories')) {
+    visibleTabs.push('categories');
+    visibleTabs.push('tags');
+  }
   if (can('manage_settings')) visibleTabs.push('settings');
 
   const activeTab = visibleTabs.includes(tab) ? tab : (visibleTabs[0] ?? 'overview');
@@ -296,6 +307,35 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao excluir.', 'error'); }
   };
 
+  // ---- Ações de Tags Globais ----
+  const handleAddTag = async () => {
+    if (!newTag.name.trim()) return;
+    const slug = newTag.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    if (!slug) { toast('Nome inválido.', 'error'); return; }
+    try {
+      await store.createTag({ slug, name: newTag.name.trim(), icon: newTag.icon, sortOrder: tags.length + 1 });
+      setNewTag({ name: '', icon: 'Check' });
+      await loadTags();
+      toast('Tag criada.', 'success');
+    } catch (e) { console.error(e); toast('Erro ao criar tag.', 'error'); }
+  };
+
+  const handleToggleTag = async (tag: Tag) => {
+    try {
+      await store.updateTag(tag.id, { active: !tag.active });
+      setTags(prev => prev.map(t => t.id === tag.id ? { ...t, active: !t.active } : t));
+    } catch (e) { console.error(e); toast('Erro ao atualizar tag.', 'error'); }
+  };
+
+  const handleDeleteTag = async (tag: Tag) => {
+    try {
+      await store.deleteTag(tag.id);
+      setTags(prev => prev.filter(t => t.id !== tag.id));
+      toast('Tag excluída.', 'success');
+    } catch (e) { console.error(e); toast('Erro ao excluir tag.', 'error'); }
+  };
+
   // ---- Configurações ----
   const handleSaveSettings = async () => {
     const days = parseInt(adDurationDays, 10);
@@ -356,6 +396,7 @@ const OwnerDashboard: React.FC = () => {
               {can('moderate_ads') && tabItem('ads', 'Anúncios', Megaphone, stats?.adsPending || 0)}
               {(can('manage_users') || can('approve_providers') || can('verify_providers')) && tabItem('users', 'Usuários', Users)}
               {can('manage_categories') && tabItem('categories', 'Categorias', FolderOpen)}
+              {can('manage_categories') && tabItem('tags', 'Tags', Tags)}
               {can('manage_settings') && tabItem('settings', 'Configurações', Settings2)}
             </nav>
           </aside>
@@ -825,6 +866,58 @@ const OwnerDashboard: React.FC = () => {
                           {cat.active ? 'Ativa' : 'Inativa'}
                         </button>
                         <button onClick={() => handleDeleteCategory(cat)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center">
+                          <Trash2 size={12} className="mr-1" /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'tags' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-5 border-b border-gray-100">
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">Tags / Comodidades</h2>
+                  <p className="text-xs text-gray-500 mb-3">Filtros rápidos globais que os profissionais podem marcar nos anúncios.</p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      value={newTag.name}
+                      onChange={e => setNewTag(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nome da tag (ex: 24 Horas)"
+                      className="flex-1 text-sm px-3 py-1.5 rounded border border-gray-200"
+                    />
+                    <input
+                      value={newTag.icon}
+                      onChange={e => setNewTag(prev => ({ ...prev, icon: e.target.value }))}
+                      placeholder="Ícone (ex: Clock)"
+                      className="sm:w-40 text-sm px-3 py-1.5 rounded border border-gray-200"
+                    />
+                    <button onClick={handleAddTag} className="bg-brand-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-brand-700 flex items-center justify-center">
+                      <Plus size={16} className="mr-1" /> Adicionar
+                    </button>
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {tags.map(tag => (
+                    <div key={tag.id} className="p-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-9 h-9 rounded-full bg-gray-100 text-brand-600 flex items-center justify-center">
+                          {categoryIcon(tag.slug, 20)}
+                        </span>
+                        <div>
+                          <p className="font-semibold text-gray-900">{tag.name}</p>
+                          <p className="text-xs text-gray-400">/{tag.slug}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleTag(tag)}
+                          className={`text-xs px-2 py-1 rounded border ${tag.active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
+                        >
+                          {tag.active ? 'Ativa' : 'Inativa'}
+                        </button>
+                        <button onClick={() => handleDeleteTag(tag)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center">
                           <Trash2 size={12} className="mr-1" /> Excluir
                         </button>
                       </div>
