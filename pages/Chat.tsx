@@ -4,12 +4,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Send, User as UserIcon, ArrowLeft, CheckCheck, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { store, supabase } from '../services/store';
+import { useToast } from '../context/ToastContext';
 import { ChatSession, Message } from '../types';
 
 const Chat: React.FC = () => {
   const { user, loading } = useAuth();
   const { id: routeChatId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [chats, setChats] = useState<ChatSession[]>([]);
@@ -107,17 +109,37 @@ const Chat: React.FC = () => {
     e.preventDefault();
     if (!newMessage.trim() || !activeChat || !user) return;
 
+    const messageText = newMessage.trim();
+    setNewMessage('');
     setSending(true);
+
+    // Optimistic UI update
+    const optimisticMessage: Message = {
+      id: 'temp-' + Date.now(),
+      text: messageText,
+      senderId: user.id,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+
+    setActiveChat(prev => prev ? {
+      ...prev,
+      messages: [...prev.messages, optimisticMessage]
+    } : prev);
+
     try {
-      await store.sendMessage(activeChat.id, user.id, newMessage);
+      await store.sendMessage(activeChat.id, user.id, messageText);
       const updatedChat = await store.getChatById(activeChat.id, user.id);
       if (updatedChat) {
           setActiveChat({ ...updatedChat });
           setChats(prev => prev.map(c => c.id === updatedChat.id ? updatedChat : c).sort((a,b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
       }
-      setNewMessage('');
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
+      toast('Não foi possível enviar a mensagem. Verifique a conexão.', 'error');
+      // Rollback optimistic update
+      const rollbackChat = await store.getChatById(activeChat.id, user.id);
+      if (rollbackChat) setActiveChat(rollbackChat);
     } finally {
       setSending(false);
     }

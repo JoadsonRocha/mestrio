@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Sparkles, Wand2, Upload, X, Clock, Calendar, Loader2, MapPin, LocateFixed, Info, AlertTriangle } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 import { store, uploadImage } from '../services/store';
 import { generateServiceDescription, suggestCategory } from '../services/geminiService';
 import { CATEGORIES } from '../constants';
@@ -207,14 +208,25 @@ const CreateAd: React.FC = () => {
         continue;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setImages(prev => [...prev, reader.result as string]);
-          setImageFiles(prev => [...prev, file]);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            setImages(prev => [...prev, reader.result as string]);
+            setImageFiles(prev => [...prev, compressedFile]);
+          }
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error('Erro na compressão da imagem:', error);
+        toast('Erro ao processar a imagem.', 'error');
+      }
     }
   };
 

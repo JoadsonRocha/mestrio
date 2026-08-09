@@ -55,7 +55,14 @@ const MainLayout: React.FC = () => {
     <div className={`flex flex-col bg-gray-50 ${isDashboardRoute ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <Navbar />
       <main id="main-content" className="flex-grow flex flex-col overflow-hidden">
-        <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-gray-500">Carregando conteúdo...</div>}>
+        <Suspense fallback={
+          <div className="flex-1 flex flex-col items-center justify-center p-8 w-full max-w-4xl mx-auto space-y-4 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="w-full h-32 bg-gray-200 rounded"></div>
+            <div className="w-full h-32 bg-gray-200 rounded"></div>
+            <div className="w-full h-32 bg-gray-200 rounded"></div>
+          </div>
+        }>
         <ErrorBoundary>
         <Routes>
           <Route path="/" element={<Home />} />

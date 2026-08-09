@@ -1,6 +1,7 @@
 // Servidor de produção para o Railway:
 // serve o build (dist/) com fallback SPA + endpoints de API (/api/ai, /api/expire-ads) + healthcheck.
 import express from 'express';
+import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -33,6 +34,7 @@ function rateLimit(req, res, next) {
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
+app.use(cors());
 app.use(rateLimit);
 
 // Headers de segurança + CSP (substitui helmet; evita dependência extra).
