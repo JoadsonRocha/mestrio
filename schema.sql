@@ -120,8 +120,14 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para Profiles
 CREATE POLICY "Usuários leem seus próprios perfis" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Perfis públicos para leitura" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Usuários inserem seu próprio perfil" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Usuários atualizam seu próprio perfil" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP VIEW IF EXISTS public_profiles;
+CREATE VIEW public_profiles AS
+SELECT id, name, avatar, location, bio, role, is_certified, created_at
+FROM profiles;
 
 -- Políticas para Service Ads (Anúncios)
 CREATE POLICY "Anúncios são públicos para leitura" ON service_ads FOR SELECT USING (true);

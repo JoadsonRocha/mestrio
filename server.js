@@ -51,7 +51,7 @@ app.use((req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://api.bigdatacloud.net",
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
@@ -223,7 +223,8 @@ async function expireAds() {
 }
 
 app.post('/api/expire-ads', async (req, res) => {
-  if (!req.get('x-cron-secret') && !req.query.secret) {
+  const provided = req.get('x-cron-secret');
+  if (!provided) {
     res.status(401).json({ error: 'Não autorizado.' });
     return;
   }
@@ -233,7 +234,6 @@ app.post('/api/expire-ads', async (req, res) => {
     res.status(503).json({ error: 'CRON_SECRET não configurada no servidor.' });
     return;
   }
-  const provided = req.headers['x-cron-secret'] || req.query.secret;
   if (provided !== secret) {
     res.status(401).json({ error: 'Não autorizado.' });
     return;
