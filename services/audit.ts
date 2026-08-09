@@ -22,7 +22,10 @@ function buildEntry(level: AuditLevel, action: string, message: string, metadata
 
 export function logSecurityEvent(action: string, message: string, metadata?: Record<string, unknown>, userId?: string) {
   const entry = buildEntry('info', action, message, metadata, userId);
-  console.info('[SECURITY]', JSON.stringify(entry));
+  // Apenas loga no console se estiver em ambiente de desenvolvimento
+  if (import.meta.env.DEV) {
+    console.info('[SECURITY]', JSON.stringify(entry));
+  }
 }
 
 export function logSecurityWarning(action: string, message: string, metadata?: Record<string, unknown>, userId?: string) {
