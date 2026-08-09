@@ -264,25 +264,58 @@ ON CONFLICT (key) DO NOTHING;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
+-- PERMISSÕES POR ADMIN (RBAC): o DONO concede funções a cada admin.
+CREATE TABLE IF NOT EXISTS admin_permissions (
+  admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  permission TEXT NOT NULL,
+  PRIMARY KEY (admin_id, permission)
+);
+ALTER TABLE admin_permissions ENABLE ROW LEVEL SECURITY;
+-- Cada admin vê apenas as próprias permissões; criar/alterar é via RPC do dono.
+CREATE POLICY "Admin vê suas próprias permissões"
+  ON admin_permissions FOR SELECT USING (auth.uid() = admin_id);
+
+-- Helper usado em policies e RPCs: dono tem todas as funções; o admin só as
+-- que o dono concedeu na tabela admin_permissions.
+CREATE OR REPLACE FUNCTION is_admin_allowed(required_perm text)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT COALESCE((
+    SELECT CASE
+      WHEN p.is_owner THEN true
+      ELSE EXISTS (
+        SELECT 1 FROM admin_permissions ap
+        WHERE ap.admin_id = p.id AND ap.permission = required_perm
+      )
+    END
+    FROM profiles p
+    WHERE p.id = auth.uid()
+  ), false);
+$$;
+
 CREATE POLICY "Categorias são públicas para leitura"
   ON categories FOR SELECT USING (true);
 CREATE POLICY "Somente admin insere categorias"
   ON categories FOR INSERT WITH CHECK (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('manage_categories'));
 CREATE POLICY "Somente admin atualiza categorias"
   ON categories FOR UPDATE USING (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('manage_categories'));
 CREATE POLICY "Somente admin deleta categorias"
   ON categories FOR DELETE USING (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('manage_categories'));
 
 CREATE POLICY "Configurações são públicas para leitura"
   ON app_settings FOR SELECT USING (true);
 CREATE POLICY "Somente admin altera configurações"
   ON app_settings FOR ALL USING (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'))
+    AND is_admin_allowed('manage_settings'))
   WITH CHECK (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('manage_settings'));
 
 DROP POLICY IF EXISTS "Anúncios são públicos para leitura" ON service_ads;
 CREATE POLICY "Anúncios visíveis: aprovados, do provedor ou admin"
