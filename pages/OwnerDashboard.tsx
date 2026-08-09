@@ -771,6 +771,15 @@ const OwnerDashboard: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
+                        {u.id !== user?.id && (
+                          <button
+                            onClick={() => setMessageUser(u)}
+                            className="text-xs px-2 py-1.5 rounded flex items-center bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            title="Enviar Mensagem"
+                          >
+                            💬 Mensagem
+                          </button>
+                        )}
                         {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
                           <>
                             <button
