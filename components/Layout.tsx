@@ -87,11 +87,6 @@ export const Navbar: React.FC = () => {
                    <img loading="lazy" decoding="async" className="h-8 w-8 rounded-full object-cover border border-gray-200" src={user.avatar || "https://via.placeholder.com/100"} alt="" />
                    <span className="font-medium">{user.name}</span>
                 </Link>
-                {user.role === 'ADMIN' && (
-                  <Link to="/owner" className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-brand-50 hover:text-brand-700 font-medium">
-                    Painel Admin
-                  </Link>
-                )}
               </div>
             ) : (
               <Link to="/login" className="text-brand-600 font-medium hover:text-brand-800">
@@ -126,11 +121,6 @@ export const Navbar: React.FC = () => {
                      {unreadCount > 0 && (
                          <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">{unreadCount}</span>
                      )}
-                 </Link>
-             )}
-             {user?.role === 'ADMIN' && (
-                 <Link to="/owner" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">
-                     Painel Admin
                  </Link>
              )}
           </div>
