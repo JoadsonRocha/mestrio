@@ -339,6 +339,12 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  -- Rotinas confiáveis (RPCs SECURITY DEFINER autorizadas) podem sinalizar
+  -- que a alteração de papel é legítima, via variável de sessão local.
+  IF COALESCE(current_setting('app.skip_privilege_trigger', true), '') = 'on' THEN
+    RETURN NEW;
+  END IF;
+
   IF (NEW.role IS DISTINCT FROM OLD.role OR NEW.is_owner IS DISTINCT FROM OLD.is_owner) THEN
     IF auth.uid() IS NOT NULL
        AND NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
@@ -506,7 +512,7 @@ BEGIN
 END;
 $$;
 
--- Aprovar a solicitação de profissional — só o dono (vira PROVIDER)
+-- Aprovar a solicitação de profissional — admin ou dono (vira PROVIDER)
 CREATE OR REPLACE FUNCTION approve_provider_request(target_user uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -515,17 +521,21 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
-    RAISE EXCEPTION 'Somente o dono do projeto pode aprovar solicitações de profissional.';
+  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
+                   FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente administradores podem aprovar solicitações de profissional.';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user AND role_request = 'PROVIDER') THEN
     RAISE EXCEPTION 'Usuário não encontrado ou sem solicitação pendente.';
   END IF;
+  -- Sinaliza ao trigger que esta mudança de papel é legítima (variável de sessão local).
+  PERFORM set_config('app.skip_privilege_trigger', 'on', true);
   UPDATE profiles SET role = 'PROVIDER', role_request = NULL WHERE id = target_user;
+  PERFORM set_config('app.skip_privilege_trigger', 'off', true);
 END;
 $$;
 
--- Recusar a solicitação de profissional — só o dono
+-- Recusar a solicitação de profissional — admin ou dono
 CREATE OR REPLACE FUNCTION reject_provider_request(target_user uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -534,8 +544,9 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
-    RAISE EXCEPTION 'Somente o dono do projeto pode recusar solicitações de profissional.';
+  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
+                   FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente administradores podem recusar solicitações de profissional.';
   END IF;
   UPDATE profiles SET role_request = NULL WHERE id = target_user;
 END;

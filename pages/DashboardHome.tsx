@@ -112,7 +112,7 @@ const DashboardHome: React.FC = () => {
               <Briefcase size={20} className="text-yellow-600 shrink-0" />
               <div className="flex-1">
                 <p className="font-semibold text-yellow-800 text-sm">Solicitação de profissional enviada</p>
-                <p className="text-xs text-yellow-700">Assim que o dono da plataforma aprovar, você poderá criar anúncios de serviços.</p>
+                <p className="text-xs text-yellow-700">Assim que a administração aprovar, você poderá criar anúncios de serviços.</p>
               </div>
               <button
                 onClick={handleCancelProviderRequest}

@@ -173,7 +173,7 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao suspender.', 'error'); }
   };
 
-  // Solicitação de profissional (cliente → PROVIDER) — aprovar/recusar só o DONO
+  // Solicitação de profissional (cliente → PROVIDER) — aprovar/recusar admin ou dono
   const handleApproveProviderRequest = async (u: User) => {
     setBusyId(u.id);
     try {
@@ -560,7 +560,7 @@ const OwnerDashboard: React.FC = () => {
                   <h2 className="text-lg font-bold text-gray-900">Usuários ({users.length})</h2>
                   {!user.isOwner && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Você é administrador. Somente o <strong>dono do projeto</strong> pode alterar papéis ou promover/destituir admins.
+                      Você é administrador. Pode moderar anúncios, suspender, verificar profissionais e <strong>aprovar solicitações de profissional</strong>. Somente o <strong>dono</strong> altera papéis ou promove/destitui admins.
                     </p>
                   )}
                   {user.isOwner && (
@@ -604,26 +604,22 @@ const OwnerDashboard: React.FC = () => {
 
                       <div className="flex items-center gap-2 flex-wrap">
                         {u.roleRequest === 'PROVIDER' && (
-                          user.isOwner ? (
-                            <>
-                              <button
-                                onClick={() => handleApproveProviderRequest(u)}
-                                disabled={busyId === u.id}
-                                className="text-xs px-2 py-1.5 rounded flex items-center bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                              >
-                                <Check size={12} className="mr-1" /> Aprovar
-                              </button>
-                              <button
-                                onClick={() => handleRejectProviderRequest(u)}
-                                disabled={busyId === u.id}
-                                className="text-xs px-2 py-1.5 rounded flex items-center bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:opacity-50"
-                              >
-                                <X size={12} className="mr-1" /> Recusar
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-400 italic">Solicitação aguardando aprovação do dono</span>
-                          )
+                          <>
+                            <button
+                              onClick={() => handleApproveProviderRequest(u)}
+                              disabled={busyId === u.id}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              <Check size={12} className="mr-1" /> Aprovar
+                            </button>
+                            <button
+                              onClick={() => handleRejectProviderRequest(u)}
+                              disabled={busyId === u.id}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <X size={12} className="mr-1" /> Recusar
+                            </button>
+                          </>
                         )}
 
                         {user.isOwner && !u.isOwner && u.role !== UserRole.ADMIN && (

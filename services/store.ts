@@ -361,7 +361,10 @@ class Store {
                 id: authData.user.id,
                 email: authData.user.email,
                 name: name,
-                role: role || 'PROVIDER',
+                // Novo profissional entra como CLIENT com solicitação pendente,
+                // até o dono aprovar (role_request = 'PROVIDER').
+                role: role === UserRole.PROVIDER ? UserRole.CLIENT : (role || UserRole.PROVIDER),
+                ...(role === UserRole.PROVIDER ? { role_request: 'PROVIDER' } : {}),
                 avatar: `https://picsum.photos/seed/${email}/100/100`
             }]);
         if (profileError) console.error("Error creating profile", profileError);
@@ -934,13 +937,13 @@ class Store {
     if (error) { console.error("Store Error [cancelProviderRequest]:", error); throw error; }
   }
 
-  /** Aprova solicitação de profissional — RPC (somente o dono). */
+  /** Aprova solicitação de profissional — RPC (admin ou dono). */
   async approveProviderRequest(id: string): Promise<void> {
     const { error } = await supabase.rpc('approve_provider_request', { target_user: id });
     if (error) { console.error("Store Error [approveProviderRequest]:", error); throw error; }
   }
 
-  /** Recusa solicitação de profissional — RPC (somente o dono). */
+  /** Recusa solicitação de profissional — RPC (admin ou dono). */
   async rejectProviderRequest(id: string): Promise<void> {
     const { error } = await supabase.rpc('reject_provider_request', { target_user: id });
     if (error) { console.error("Store Error [rejectProviderRequest]:", error); throw error; }

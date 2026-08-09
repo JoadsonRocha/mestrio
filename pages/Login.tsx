@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { store } from '../services/store';
 import { useToast } from '../context/ToastContext';
 import { UserRole } from '../types';
+import { AlertCircle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -117,6 +118,12 @@ const Login: React.FC = () => {
                       <span className="text-sm font-medium text-center">Oferecer Serviços</span>
                     </label>
                   </div>
+                  {role === UserRole.PROVIDER && (
+                    <p className="mt-2 text-xs text-gray-500 flex items-center">
+                      <AlertCircle size={12} className="mr-1 text-brand-600" />
+                      Você entrará como cliente e poderá criar anúncios assim que o dono aprovar sua conta de profissional.
+                    </p>
+                  )}
                 </div>
 
                 <div>
