@@ -66,14 +66,14 @@ const distDir = path.join(__dirname, 'dist');
 app.get('/healthz', (req, res) => res.status(200).json({ ok: true }));
 
 // ----------------------------------------------------------------
-// /api/ai — proxy para o Gemini (mesma lógica do antigo api/ai.js)
+// /api/ai — proxy para o Groq
 // ----------------------------------------------------------------
-const MODEL = 'gemini-3-flash-preview';
+const MODEL = 'llama3-8b-8192'; // Modelo gratuito rápido do Groq
 
 app.post('/api/ai', async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: 'Chave da API Gemini não configurada no servidor (Railway Env: GEMINI_API_KEY).' });
+    res.status(500).json({ error: 'Chave da API Groq não configurada no servidor (Railway Env: GROQ_API_KEY).' });
     return;
   }
 
@@ -103,18 +103,24 @@ Regras:
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
     const r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: 'user', content: prompt }]
+      }),
     });
 
     const data = await r.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = data?.choices?.[0]?.message?.content;
 
     if (!r.ok || text === undefined) {
-      console.error('Gemini API error:', r.status, data?.error || data);
+      console.error('Groq API error:', r.status, data?.error || data);
       res.status(r.ok ? 500 : 502).json({ error: 'Erro ao gerar conteúdo com IA.' });
       return;
     }
@@ -125,8 +131,8 @@ Regras:
       res.status(200).json({ text });
     }
   } catch (e) {
-    console.error('Gemini fetch error:', e);
-    res.status(500).json({ error: 'Erro ao conectar com o serviço de IA.' });
+    console.error('Groq fetch error:', e);
+    res.status(500).json({ error: 'Erro ao conectar com o serviço de IA do Groq.' });
   }
 });
 
