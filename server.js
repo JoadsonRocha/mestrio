@@ -7,9 +7,33 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 100;
+const requestCounts = new Map();
+
+function getClientKey(req) {
+  return req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+}
+
+function rateLimit(req, res, next) {
+  const key = getClientKey(req);
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const entries = (requestCounts.get(key) || []).filter((ts) => ts > windowStart);
+  entries.push(now);
+  requestCounts.set(key, entries);
+
+  if (entries.length > RATE_LIMIT_MAX_REQUESTS) {
+    res.status(429).json({ error: 'Muitas requisições. Tente novamente mais tarde.' });
+    return;
+  }
+
+  next();
+}
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
+app.use(rateLimit);
 
 // Headers de segurança + CSP (substitui helmet; evita dependência extra).
 app.use((req, res, next) => {
@@ -29,6 +53,8 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   next();
 });
 
@@ -50,16 +76,15 @@ app.post('/api/ai', async (req, res) => {
   }
 
   const body = req.body || {};
+  const title = String(body.title || '').trim();
+  const category = String(body.category || '').trim();
+  const keywords = String(body.keywords || '').trim();
   let prompt = '';
 
   if (body.task === 'category') {
-    const title = String(body.title || '').trim();
     if (!title) { res.status(400).json({ error: 'Título é obrigatório' }); return; }
     prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o ID da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly.`;
   } else {
-    const title = String(body.title || '').trim();
-    const category = String(body.category || '').trim();
-    const keywords = String(body.keywords || '').trim();
     if (!title) { res.status(400).json({ error: 'Título é obrigatório' }); return; }
     prompt = `Você é um assistente de marketing especialista em classificados de serviços.
 Escreva uma descrição atraente, profissional e formatada (pode usar markdown leve como tópicos) para um prestador de serviços.
@@ -128,6 +153,11 @@ async function expireAds() {
 }
 
 app.post('/api/expire-ads', async (req, res) => {
+  if (!req.get('x-cron-secret') && !req.query.secret) {
+    res.status(401).json({ error: 'Não autorizado.' });
+    return;
+  }
+
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     res.status(503).json({ error: 'CRON_SECRET não configurada no servidor.' });

@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
+import { sanitizeText, sanitizeHtmlLike, sanitizePhone } from '../utils/sanitization';
 
 export interface GetAdsParams {
   category?: string;
@@ -26,7 +27,7 @@ export interface GetAdsParams {
  */
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'COLE_A_ANON_KEY_DO_PROJETO_AQUI';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -61,13 +62,13 @@ class Store {
     return {
       id: data.id,
       providerId: data.provider_id,
-      providerName: data.profiles?.name || 'Profissional',
-      title: data.title,
-      description: data.description,
+      providerName: sanitizeText(data.profiles?.name || 'Profissional'),
+      title: sanitizeText(data.title),
+      description: sanitizeHtmlLike(data.description),
       category: data.category,
       price: data.price,
       priceUnit: data.price_unit,
-      location: data.location,
+      location: sanitizeText(data.location),
       images: data.images || [],
       rating: data.rating || 0,
       reviewCount: data.review_count || 0,
@@ -81,9 +82,9 @@ class Store {
       })),
       isPremium: data.is_premium,
       createdAt: data.created_at,
-      whatsapp: data.whatsapp,
+      whatsapp: sanitizePhone(data.whatsapp || ''),
       availability: data.availability,
-      tags: data.tags || [],
+      tags: (data.tags || []).map((tag: string) => sanitizeText(tag)),
       providerAvatar: data.profiles?.avatar || undefined,
       isCertified: data.profiles?.is_certified || false,
       status: data.status || 'approved',
@@ -97,7 +98,7 @@ class Store {
     return {
       id: data.id,
       slug: data.slug,
-      name: data.name,
+      name: sanitizeText(data.name),
       icon: data.icon || 'Wrench',
       sortOrder: data.sort_order || 0,
       active: data.active !== false
@@ -313,11 +314,15 @@ class Store {
     };
   }
 
+  private normalizeUserInput(value: string): string {
+    return sanitizeText(value);
+  }
+
   async updateProfile(userId: string, updates: Partial<User>): Promise<User> {
     const profileData: any = {};
-    if (updates.name !== undefined) profileData.name = updates.name;
-    if (updates.bio !== undefined) profileData.bio = updates.bio;
-    if (updates.location !== undefined) profileData.location = updates.location;
+    if (updates.name !== undefined) profileData.name = this.normalizeUserInput(updates.name);
+    if (updates.bio !== undefined) profileData.bio = sanitizeHtmlLike(updates.bio);
+    if (updates.location !== undefined) profileData.location = this.normalizeUserInput(updates.location);
     if (updates.avatar !== undefined) profileData.avatar = updates.avatar;
 
     const { error } = await supabase.from('profiles').update(profileData).eq('id', userId);
@@ -327,7 +332,7 @@ class Store {
     if (updates.phone !== undefined) {
       const { error: phoneError } = await supabase
         .from('user_private')
-        .upsert({ user_id: userId, phone: updates.phone || '' }, { onConflict: 'user_id' });
+        .upsert({ user_id: userId, phone: sanitizePhone(updates.phone || '') }, { onConflict: 'user_id' });
       if (phoneError) { console.error("Store Error [updateProfile] phone:", phoneError); throw phoneError; }
     }
 
