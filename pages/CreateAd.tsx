@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Sparkles, Wand2, Upload, X, Clock, Calendar, Loader2, MapPin, LocateFixed, Info, AlertTriangle } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
