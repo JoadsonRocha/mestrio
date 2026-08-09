@@ -420,6 +420,8 @@ const OwnerDashboard: React.FC = () => {
                     <StatCard label="Profissionais" value={stats?.providers ?? 0} icon={Shield} color="bg-blue-50 text-blue-600" />
                     <StatCard label="Clientes" value={stats?.clients ?? 0} icon={Users} color="bg-green-50 text-green-600" />
                     <StatCard label="Admins" value={stats?.admins ?? 0} icon={Star} color="bg-purple-50 text-purple-600" />
+                    <StatCard label="Suspensos" value={stats?.suspendedUsers ?? 0} icon={Ban} color="bg-orange-50 text-orange-700" />
+                    <StatCard label="Solicitações (profs)" value={stats?.pendingProviderRequests ?? 0} icon={Plus} color="bg-yellow-50 text-yellow-700" />
                     <StatCard label="Novos (7d)" value={stats?.newUsersWeek ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
                   </div>
                 </div>

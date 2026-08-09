@@ -73,6 +73,8 @@ export interface AdminStats {
   appointmentsCompleted: number;
   appointmentsCancelled: number;
   newAppointmentsWeek: number;
+  suspendedUsers: number;
+  pendingProviderRequests: number;
   totalReviews: number;
   newReviewsWeek: number;
   avgRating: number;

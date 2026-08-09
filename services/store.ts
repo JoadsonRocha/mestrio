@@ -1077,6 +1077,8 @@ class Store {
       count('appointments', q => q.eq('status', 'completed')),
       count('appointments', q => q.eq('status', 'cancelled')),
       count('appointments', q => q.gte('created_at', weekAgo)),
+      count('profiles', q => q.eq('is_suspended', true)),
+      count('profiles', q => q.eq('role_request', 'PROVIDER')),
       count('reviews'),
       count('reviews', q => q.gte('created_at', weekAgo)),
     ]);
@@ -1123,7 +1125,7 @@ class Store {
       totalUsers, providers, clients, admins, newUsersWeek,
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
-      appointmentsCancelled, newAppointmentsWeek,
+      appointmentsCancelled, newAppointmentsWeek, suspendedUsers, pendingProviderRequests,
       totalReviews, newReviewsWeek, avgRating, totalViews, approvalRate, avgViewsPerApprovedAd, adsByCategory, topAds
     };
   }
