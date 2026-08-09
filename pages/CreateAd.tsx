@@ -8,7 +8,7 @@ import { generateServiceDescription, suggestCategory } from '../services/geminiS
 import { CATEGORIES } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { AdStatus } from '../types';
+import { AdStatus, Tag } from '../types';
 import { validateUploadCount, validateUploadFileContent } from '../utils/security';
 import { logSecurityWarning, logSecurityError } from '../services/audit';
 
@@ -56,7 +56,7 @@ const CreateAd: React.FC = () => {
 
   // Tags State
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+  const [globalTags, setGlobalTags] = useState<Tag[]>([]);
 
   // Moderation status (edit mode)
   const [adStatus, setAdStatus] = useState<AdStatus | null>(null);
@@ -65,6 +65,10 @@ const CreateAd: React.FC = () => {
 
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
+
+  useEffect(() => {
+    store.getTags().then(setGlobalTags).catch(console.error);
+  }, []);
 
   // Initial load for editing
   React.useEffect(() => {
@@ -239,19 +243,12 @@ const CreateAd: React.FC = () => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const newTag = tagInput.trim();
-      if (newTag && !tags.includes(newTag)) {
-        setTags([...tags, newTag]);
-      }
-      setTagInput('');
+  const toggleTag = (slug: string) => {
+    if (tags.includes(slug)) {
+        setTags(tags.filter(t => t !== slug));
+    } else {
+        setTags([...tags, slug]);
     }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
   };
 
   const handleGenerateDescription = async () => {
@@ -507,25 +504,28 @@ const CreateAd: React.FC = () => {
 
                 {/* Tags Section */}
                 <div className="bg-white">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags do Serviço (Opcional)</label>
-                    <p className="text-xs text-gray-500 mb-2">Digite uma característica (ex: urgente, material incluso) e aperte Enter ou Vírgula.</p>
-                    <div className="border border-gray-300 rounded-md p-2 focus-within:ring-1 focus-within:ring-brand-500 focus-within:border-brand-500 flex flex-wrap gap-2 items-center bg-white">
-                        {tags.map(tag => (
-                            <span key={tag} className="flex items-center bg-brand-50 text-brand-700 text-sm px-2 py-1 rounded-md border border-brand-100">
-                                {tag}
-                                <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-brand-500 hover:text-brand-800">
-                                    <X size={14} />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Características do Serviço (Opcional)</label>
+                    <div className="flex flex-wrap gap-2">
+                        {globalTags.filter(t => t.active).map(tag => {
+                            const isSelected = tags.includes(tag.slug);
+                            return (
+                                <button
+                                    key={tag.slug}
+                                    type="button"
+                                    onClick={() => toggleTag(tag.slug)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                                        isSelected 
+                                        ? 'bg-brand-50 border-brand-500 text-brand-700' 
+                                        : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+                                    }`}
+                                >
+                                    <span>{tag.name}</span>
                                 </button>
-                            </span>
-                        ))}
-                        <input 
-                            type="text" 
-                            className="flex-1 outline-none min-w-[120px] text-sm p-1"
-                            placeholder={tags.length === 0 ? "Adicionar tag..." : ""}
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            onKeyDown={handleTagKeyDown}
-                        />
+                            );
+                        })}
+                        {globalTags.filter(t => t.active).length === 0 && (
+                            <p className="text-sm text-gray-500 italic">Nenhuma característica disponível.</p>
+                        )}
                     </div>
                 </div>
 
