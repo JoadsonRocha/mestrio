@@ -63,6 +63,7 @@ const OwnerDashboard: React.FC = () => {
   const [messageUser, setMessageUser] = useState<User | null>(null);
   const [messageText, setMessageText] = useState('');
   const [messageBusy, setMessageBusy] = useState(false);
+  const [viewingDetails, setViewingDetails] = useState<User | null>(null);
 
   const loadStats = useCallback(async () => {
     try { setStats(await store.getAdminStats()); } catch (e) { console.error(e); }
@@ -783,6 +784,13 @@ const OwnerDashboard: React.FC = () => {
                         {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
                           <>
                             <button
+                              onClick={() => setViewingDetails(u)}
+                              className="text-xs px-2 py-1.5 rounded flex items-center bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                              title="Ver Detalhes do Pedido"
+                            >
+                              📄 Detalhes
+                            </button>
+                            <button
                               onClick={() => handleApproveProviderRequest(u)}
                               disabled={busyId === u.id}
                               className="text-xs px-2 py-1.5 rounded flex items-center bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
@@ -1079,6 +1087,59 @@ const OwnerDashboard: React.FC = () => {
                 className="text-sm px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {messageBusy ? 'Enviando...' : 'Enviar mensagem'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6 my-8">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Detalhes da Solicitação</h3>
+                <p className="text-xs text-gray-500">Solicitante: {viewingDetails.name}</p>
+              </div>
+              <button onClick={() => setViewingDetails(null)} className="text-gray-400 hover:text-gray-700">✕</button>
+            </div>
+            
+            <div className="space-y-4 text-sm text-gray-800">
+              {viewingDetails.providerRequestDetails ? (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Área de Atuação</h4>
+                    <p className="bg-gray-50 p-2 rounded border border-gray-100">{viewingDetails.providerRequestDetails.area || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Experiência Profissional</h4>
+                    <p className="bg-gray-50 p-2 rounded border border-gray-100 whitespace-pre-wrap">{viewingDetails.providerRequestDetails.experience || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Cursos e Certificações</h4>
+                    <p className="bg-gray-50 p-2 rounded border border-gray-100 whitespace-pre-wrap">{viewingDetails.providerRequestDetails.courses || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Motivação</h4>
+                    <p className="bg-gray-50 p-2 rounded border border-gray-100 whitespace-pre-wrap">{viewingDetails.providerRequestDetails.motivation || 'Não informado'}</p>
+                  </div>
+                  {viewingDetails.providerRequestDetails.documentUrl && (
+                    <div>
+                      <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Documento com Foto</h4>
+                      <a href={viewingDetails.providerRequestDetails.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-800 bg-brand-50 px-3 py-2 rounded-md font-medium text-xs">
+                        📎 Visualizar Documento
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-500 italic">Nenhum detalhe adicional foi fornecido pelo usuário (solicitação antiga).</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setViewingDetails(null)} className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
+                Fechar
               </button>
             </div>
           </div>
