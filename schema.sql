@@ -228,6 +228,7 @@ ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
 ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS views INTEGER NOT NULL DEFAULT 0;
 
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_certified BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role_request TEXT;
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -540,6 +541,26 @@ BEGIN
 END;
 $$;
 
+-- Conceder/remover o selo de profissional verificado — admin ou dono
+CREATE OR REPLACE FUNCTION set_user_certified(target_user uuid, certified boolean)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
+                   FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente administradores podem conceder o selo de verificação.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user AND role = 'PROVIDER') THEN
+    RAISE EXCEPTION 'Só é possível verificar usuários com o papel de profissional.';
+  END IF;
+  UPDATE profiles SET is_certified = certified WHERE id = target_user;
+END;
+$$;
+
 -- PERMISSÕES: somente usuários autenticados podem chamar as funções
 REVOKE ALL ON FUNCTION set_user_role(uuid, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION promote_to_admin(uuid) FROM PUBLIC;
@@ -550,6 +571,7 @@ REVOKE ALL ON FUNCTION request_provider_role() FROM PUBLIC;
 REVOKE ALL ON FUNCTION cancel_provider_request() FROM PUBLIC;
 REVOKE ALL ON FUNCTION approve_provider_request(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION reject_provider_request(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION set_user_certified(uuid, boolean) FROM PUBLIC;
 -- A contagem de views é pública (visitantes anônimos também contam)
 REVOKE ALL ON FUNCTION increment_ad_view(uuid) FROM PUBLIC;
 
@@ -562,6 +584,7 @@ GRANT EXECUTE ON FUNCTION request_provider_role() TO authenticated;
 GRANT EXECUTE ON FUNCTION cancel_provider_request() TO authenticated;
 GRANT EXECUTE ON FUNCTION approve_provider_request(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION reject_provider_request(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION set_user_certified(uuid, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 

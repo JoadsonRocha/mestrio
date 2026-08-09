@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { store } from '../services/store';
 import { User, ServiceAd } from '../types';
 import { ServiceCard } from '../components/UI';
-import { MessageSquare, MapPin, Star, User as UserIcon } from 'lucide-react';
+import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -93,7 +93,14 @@ const PublicProfile: React.FC = () => {
                 />
                 
                 <div className="mt-4 md:mt-0 md:ml-6 flex-1">
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{profile.name}</h1>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{profile.name}</h1>
+                        {profile.isCertified && (
+                            <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100 font-semibold uppercase tracking-wide">
+                                <CheckCircle2 size={12} className="mr-1 text-green-600" /> Verificado
+                            </span>
+                        )}
+                    </div>
                     <div className="flex flex-wrap items-center mt-2 text-sm text-gray-600 gap-4">
                         {profile.location && (
                             <span className="flex items-center">

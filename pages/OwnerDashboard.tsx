@@ -194,6 +194,17 @@ const OwnerDashboard: React.FC = () => {
     finally { setBusyId(null); }
   };
 
+  // Selo de verificação — admin ou dono
+  const handleCertify = async (u: User) => {
+    setBusyId(u.id);
+    try {
+      await store.setUserCertified(u.id, !u.isCertified);
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, isCertified: !u.isCertified } : x));
+      toast(u.isCertified ? `Selo removido de ${u.name}.` : `Selo de verificação concedido a ${u.name}.`, 'success');
+    } catch (e) { console.error(e); toast('Erro ao alterar o selo.', 'error'); }
+    finally { setBusyId(null); }
+  };
+
   // ---- Ações de categorias ----
   const handleAddCategory = async () => {
     if (!newCat.name.trim()) return;
@@ -568,6 +579,9 @@ const OwnerDashboard: React.FC = () => {
                           {u.isOwner && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Dono</span>
                           )}
+                          {u.isCertified && u.role === UserRole.PROVIDER && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100 font-medium">Verificado</span>
+                          )}
                           {u.role === UserRole.ADMIN && !u.isOwner && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 font-medium">Admin</span>
                           )}
@@ -658,6 +672,17 @@ const OwnerDashboard: React.FC = () => {
                               <RefreshCw size={12} className="mr-1" /> Transferir posse
                             </button>
                           )
+                        )}
+
+                        {u.role === UserRole.PROVIDER && !u.isOwner && (
+                          <button
+                            onClick={() => handleCertify(u)}
+                            disabled={busyId === u.id}
+                            title="Selo de verificação concedido pelo dono/admin"
+                            className={`text-xs px-2 py-1.5 rounded flex items-center disabled:opacity-50 ${u.isCertified ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'}`}
+                          >
+                            <CheckCircle2 size={12} className="mr-1" /> {u.isCertified ? 'Remover selo' : 'Verificar'}
+                          </button>
                         )}
 
                         {!u.isOwner && u.id !== user.id && (

@@ -284,7 +284,7 @@ class Store {
   async getUserProfile(userId: string): Promise<User | null> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, avatar, bio, location, role')
+      .select('id, name, avatar, bio, location, role, is_certified')
       .eq('id', userId)
       .maybeSingle();
 
@@ -296,6 +296,7 @@ class Store {
       avatar: data.avatar,
       location: data.location,
       bio: data.bio,
+      isCertified: data.is_certified || false,
       email: '', // omitted for privacy in public profile
       phone: ''  // omitted for privacy unless needed (we can fetch later if required)
     };
@@ -869,7 +870,7 @@ class Store {
   async getUsers(): Promise<User[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, is_owner, role_request, created_at')
+      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, is_owner, is_certified, role_request, created_at')
       .order('created_at', { ascending: false })
       .limit(300);
     if (error) { console.error("Store Error [getUsers]:", error); throw error; }
@@ -884,6 +885,7 @@ class Store {
       bio: u.bio,
       isSuspended: u.is_suspended || false,
       isOwner: u.is_owner || false,
+      isCertified: u.is_certified || false,
       roleRequest: u.role_request || null,
       createdAt: u.created_at
     }));
@@ -942,6 +944,12 @@ class Store {
   async rejectProviderRequest(id: string): Promise<void> {
     const { error } = await supabase.rpc('reject_provider_request', { target_user: id });
     if (error) { console.error("Store Error [rejectProviderRequest]:", error); throw error; }
+  }
+
+  /** Concede/remove o selo de profissional verificado — RPC (admin ou dono). */
+  async setUserCertified(id: string, certified: boolean): Promise<void> {
+    const { error } = await supabase.rpc('set_user_certified', { target_user: id, certified });
+    if (error) { console.error("Store Error [setUserCertified]:", error); throw error; }
   }
 
   // --- Métricas ---
