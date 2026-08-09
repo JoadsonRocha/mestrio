@@ -105,6 +105,17 @@ class Store {
     };
   }
 
+  private mapTag(data: any): Tag {
+    return {
+      id: data.id,
+      slug: data.slug,
+      name: sanitizeText(data.name),
+      icon: data.icon || 'Check',
+      sortOrder: data.sort_order || 0,
+      active: data.active !== false
+    };
+  }
+
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
     let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
 
@@ -787,6 +798,62 @@ class Store {
   async deleteCategory(id: string): Promise<void> {
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) { console.error("Store Error [deleteCategory]:", error); throw error; }
+  }
+
+  // --- Tags Globais ---
+
+  async getTags(): Promise<Tag[]> {
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (error) throw error;
+      if (data && data.length > 0) return data.map(t => this.mapTag(t));
+    } catch (e) {
+      console.error("Store Error [getTags]:", e);
+    }
+    return [];
+  }
+
+  async getAllTags(): Promise<Tag[]> {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) { console.error("Store Error [getAllTags]:", error); throw error; }
+    return (data || []).map(t => this.mapTag(t));
+  }
+
+  async createTag(tag: { slug: string; name: string; icon: string; sortOrder: number }): Promise<void> {
+    const { error } = await supabase
+      .from('tags')
+      .insert([{
+        slug: tag.slug,
+        name: tag.name,
+        icon: tag.icon,
+        sort_order: tag.sortOrder
+      }]);
+    if (error) { console.error("Store Error [createTag]:", error); throw error; }
+  }
+
+  async updateTag(id: string, updates: Partial<Tag>): Promise<void> {
+    const u: any = {};
+    if (updates.slug !== undefined) u.slug = updates.slug;
+    if (updates.name !== undefined) u.name = updates.name;
+    if (updates.icon !== undefined) u.icon = updates.icon;
+    if (updates.sortOrder !== undefined) u.sort_order = updates.sortOrder;
+    if (updates.active !== undefined) u.active = updates.active;
+    const { error } = await supabase.from('tags').update(u).eq('id', id);
+    if (error) { console.error("Store Error [updateTag]:", error); throw error; }
+  }
+
+  async deleteTag(id: string): Promise<void> {
+    const { error } = await supabase.from('tags').delete().eq('id', id);
+    if (error) { console.error("Store Error [deleteTag]:", error); throw error; }
   }
 
   // --- Moderação de anúncios ---
