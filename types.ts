@@ -52,6 +52,7 @@ export interface AdminStats {
   newAppointmentsWeek: number;
   totalReviews: number;
   avgRating: number;
+  totalViews: number;
   adsByCategory: { category: string; count: number }[];
   topAds: {
     id: string;
@@ -60,6 +61,7 @@ export interface AdminStats {
     category: string;
     rating: number;
     reviewCount: number;
+    views: number;
   }[];
 }
 

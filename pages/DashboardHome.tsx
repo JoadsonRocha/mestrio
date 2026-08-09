@@ -1,17 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { store } from '../services/store';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, MessageSquare, Calendar, Star, CheckCircle2, Megaphone, Mail } from 'lucide-react';
+import { Plus, Search, MessageSquare, Calendar, Star, CheckCircle2, Megaphone, Mail, Briefcase, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { ServiceAd, UserRole, Appointment, ChatSession } from '../types';
 
 const DashboardHome: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const [myAds, setMyAds] = useState<ServiceAd[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
+  const [requesting, setRequesting] = useState(false);
+
+  const handleRequestProvider = async () => {
+    setRequesting(true);
+    try {
+      await store.requestProviderRole();
+      await refreshUser();
+      toast('Solicitação enviada! Aguardando aprovação.', 'success');
+    } catch (e: any) {
+      console.error(e);
+      toast(e?.message || 'Erro ao solicitar.', 'error');
+    }
+    finally { setRequesting(false); }
+  };
+
+  const handleCancelProviderRequest = async () => {
+    setRequesting(true);
+    try {
+      await store.cancelProviderRequest();
+      await refreshUser();
+      toast('Solicitação cancelada.', 'info');
+    } catch (e) { console.error(e); toast('Erro ao cancelar.', 'error'); }
+    finally { setRequesting(false); }
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -79,6 +105,40 @@ const DashboardHome: React.FC = () => {
                 </Link>
             )}
         </div>
+
+        {isClient && (
+          user.roleRequest === 'PROVIDER' ? (
+            <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Briefcase size={20} className="text-yellow-600 shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-yellow-800 text-sm">Solicitação de profissional enviada</p>
+                <p className="text-xs text-yellow-700">Assim que o dono da plataforma aprovar, você poderá criar anúncios de serviços.</p>
+              </div>
+              <button
+                onClick={handleCancelProviderRequest}
+                disabled={requesting}
+                className="text-xs px-3 py-1.5 rounded-md bg-white border border-yellow-300 text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 flex items-center"
+              >
+                <X size={12} className="mr-1" /> Cancelar solicitação
+              </button>
+            </div>
+          ) : (
+            <div className="mb-6 bg-brand-50 border border-brand-100 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Briefcase size={20} className="text-brand-600 shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-brand-900 text-sm">Quer anunciar seus serviços?</p>
+                <p className="text-xs text-brand-700">Torne-se um profissional e crie anúncios de serviços para atrair clientes.</p>
+              </div>
+              <button
+                onClick={handleRequestProvider}
+                disabled={requesting}
+                className="text-xs px-3 py-1.5 rounded-md bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 flex items-center"
+              >
+                <Briefcase size={12} className="mr-1" /> Quero ser profissional
+              </button>
+            </div>
+          )
+        )}
 
         {/* Meus Serviços */}
         <div className="mb-6">

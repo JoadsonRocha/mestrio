@@ -106,6 +106,14 @@ const ServiceDetail: React.FC = () => {
     loadAd();
   }, [id]);
 
+  // Conta a visualização uma única vez por montagem da página
+  const viewCountedRef = React.useRef(false);
+  useEffect(() => {
+    if (!id || viewCountedRef.current) return;
+    viewCountedRef.current = true;
+    store.incrementAdView(id);
+  }, [id]);
+
   // Lightbox: navegação por teclado (Esc, setas) e trava o scroll
   useEffect(() => {
     if (lightboxIndex === null) return;

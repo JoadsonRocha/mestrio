@@ -157,6 +157,12 @@ class Store {
     return this.mapAd(data);
   }
 
+  /** Incrementa o contador de visualizações do anúncio — RPC pública. */
+  async incrementAdView(adId: string): Promise<void> {
+    const { error } = await supabase.rpc('increment_ad_view', { ad_id: adId });
+    if (error) { console.error("Store Error [incrementAdView]:", error); }
+  }
+
   async addAd(ad: Omit<ServiceAd, 'id' | 'createdAt' | 'rating' | 'reviewCount' | 'reviews' | 'providerName'>): Promise<ServiceAd> {
     const durationDays = await this.getAdDurationDays();
     const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
@@ -914,6 +920,30 @@ class Store {
     if (error) { console.error("Store Error [setUserSuspended]:", error); throw error; }
   }
 
+  /** Cliente solicita virar profissional — RPC (próprio usuário). */
+  async requestProviderRole(): Promise<void> {
+    const { error } = await supabase.rpc('request_provider_role');
+    if (error) { console.error("Store Error [requestProviderRole]:", error); throw error; }
+  }
+
+  /** Cliente cancela a solicitação de profissional — RPC (próprio usuário). */
+  async cancelProviderRequest(): Promise<void> {
+    const { error } = await supabase.rpc('cancel_provider_request');
+    if (error) { console.error("Store Error [cancelProviderRequest]:", error); throw error; }
+  }
+
+  /** Aprova solicitação de profissional — RPC (somente o dono). */
+  async approveProviderRequest(id: string): Promise<void> {
+    const { error } = await supabase.rpc('approve_provider_request', { target_user: id });
+    if (error) { console.error("Store Error [approveProviderRequest]:", error); throw error; }
+  }
+
+  /** Recusa solicitação de profissional — RPC (somente o dono). */
+  async rejectProviderRequest(id: string): Promise<void> {
+    const { error } = await supabase.rpc('reject_provider_request', { target_user: id });
+    if (error) { console.error("Store Error [rejectProviderRequest]:", error); throw error; }
+  }
+
   // --- Métricas ---
   async getAdminStats(): Promise<AdminStats> {
     const count = async (table: any, filters?: (q: any) => any): Promise<number> => {
@@ -959,11 +989,13 @@ class Store {
       : 0;
 
     // Distribuição de anúncios ativos por categoria
-    const { data: adsRows } = await supabase.from('service_ads').select('category, status');
+    const { data: adsRows } = await supabase.from('service_ads').select('category, status, views');
     const byCategory = new Map<string, number>();
+    let totalViews = 0;
     for (const row of adsRows || []) {
       if (row.status === 'approved') {
         byCategory.set(row.category, (byCategory.get(row.category) || 0) + 1);
+        totalViews += row.views || 0;
       }
     }
     const adsByCategory = Array.from(byCategory.entries())
@@ -973,7 +1005,7 @@ class Store {
     // Top anúncios mais avaliados
     const { data: topRows } = await supabase
       .from('service_ads')
-      .select('id, title, category, rating, review_count, profiles(name)')
+      .select('id, title, category, rating, review_count, views, profiles(name)')
       .eq('status', 'approved')
       .order('review_count', { ascending: false })
       .limit(5);
@@ -984,6 +1016,7 @@ class Store {
       category: r.category,
       rating: r.rating || 0,
       reviewCount: r.review_count || 0,
+      views: r.views || 0,
     }));
 
     return {
@@ -991,7 +1024,7 @@ class Store {
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
       appointmentsCancelled, newAppointmentsWeek,
-      totalReviews, avgRating, adsByCategory, topAds
+      totalReviews, avgRating, adsByCategory, topAds, totalViews
     };
   }
 }

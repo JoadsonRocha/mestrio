@@ -173,6 +173,27 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao suspender.', 'error'); }
   };
 
+  // Solicitação de profissional (cliente → PROVIDER) — aprovar/recusar só o DONO
+  const handleApproveProviderRequest = async (u: User) => {
+    setBusyId(u.id);
+    try {
+      await store.approveProviderRequest(u.id);
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: UserRole.PROVIDER, roleRequest: null } : x));
+      toast(`${u.name} agora é profissional.`, 'success');
+    } catch (e) { console.error(e); toast('Erro ao aprovar.', 'error'); }
+    finally { setBusyId(null); }
+  };
+
+  const handleRejectProviderRequest = async (u: User) => {
+    setBusyId(u.id);
+    try {
+      await store.rejectProviderRequest(u.id);
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, roleRequest: null } : x));
+      toast('Solicitação recusada.', 'success');
+    } catch (e) { console.error(e); toast('Erro ao recusar.', 'error'); }
+    finally { setBusyId(null); }
+  };
+
   // ---- Ações de categorias ----
   const handleAddCategory = async () => {
     if (!newCat.name.trim()) return;
@@ -287,11 +308,12 @@ const OwnerDashboard: React.FC = () => {
                   <p className="text-xs text-gray-500">Cadastros de serviços na plataforma</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
                     <StatCard label="Total" value={stats?.totalAds ?? 0} icon={Megaphone} color="bg-brand-50 text-brand-600" />
+                    <StatCard label="Visualizações" value={stats?.totalViews ?? 0} icon={Eye} color="bg-blue-50 text-blue-600" />
                     <StatCard label="Pendentes" value={stats?.adsPending ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
                     <StatCard label="Aprovados" value={stats?.adsApproved ?? 0} icon={Check} color="bg-green-50 text-green-600" />
                     <StatCard label="Rejeitados" value={stats?.adsRejected ?? 0} icon={X} color="bg-red-50 text-red-600" />
                     <StatCard label="Suspensos" value={stats?.adsSuspended ?? 0} icon={Ban} color="bg-orange-50 text-orange-600" />
-                    <StatCard label="Novos (7d)" value={stats?.newAdsWeek ?? 0} icon={TrendingUp} color="bg-blue-50 text-blue-600" />
+                    <StatCard label="Novos (7d)" value={stats?.newAdsWeek ?? 0} icon={TrendingUp} color="bg-purple-50 text-purple-600" />
                   </div>
                   {stats && stats.adsPending > 0 && (
                     <button
@@ -380,7 +402,9 @@ const OwnerDashboard: React.FC = () => {
                                 <Star size={14} className="text-yellow-400 fill-yellow-400" />
                                 {ad.rating.toFixed(1)}
                               </p>
-                              <p className="text-xs text-gray-400">{ad.reviewCount} {ad.reviewCount === 1 ? 'avaliação' : 'avaliações'}</p>
+                              <p className="text-xs text-gray-400">
+                                {ad.reviewCount} {ad.reviewCount === 1 ? 'avaliação' : 'avaliações'} · <Eye size={10} className="inline mr-0.5 text-gray-400" />{ad.views || 0}
+                              </p>
                             </div>
                           </div>
                         );
@@ -436,6 +460,7 @@ const OwnerDashboard: React.FC = () => {
                         <div className="flex items-center gap-3 text-xs text-gray-500 mt-1.5 flex-wrap">
                           <span>{ad.providerName}</span>
                           <span className="flex items-center"><Star size={12} className="mr-1 text-yellow-500" />{ad.rating || 0} ({ad.reviewCount})</span>
+                          <span className="flex items-center"><Eye size={12} className="mr-1 text-gray-400" />{ad.views || 0} visualizações</span>
                           <span>{ad.category}</span>
                           <span>{ad.location}</span>
                           {ad.expiresAt && (
@@ -555,12 +580,38 @@ const OwnerDashboard: React.FC = () => {
                           {u.isSuspended && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Suspenso</span>
                           )}
+                          {u.roleRequest === 'PROVIDER' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Solicitou ser profissional</span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-500">{u.email}</p>
                         <p className="text-xs text-gray-400 mt-0.5">Cadastrado em {u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '—'}</p>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
+                        {u.roleRequest === 'PROVIDER' && (
+                          user.isOwner ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveProviderRequest(u)}
+                                disabled={busyId === u.id}
+                                className="text-xs px-2 py-1.5 rounded flex items-center bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                              >
+                                <Check size={12} className="mr-1" /> Aprovar
+                              </button>
+                              <button
+                                onClick={() => handleRejectProviderRequest(u)}
+                                disabled={busyId === u.id}
+                                className="text-xs px-2 py-1.5 rounded flex items-center bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                              >
+                                <X size={12} className="mr-1" /> Recusar
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">Solicitação aguardando aprovação do dono</span>
+                          )
+                        )}
+
                         {user.isOwner && !u.isOwner && u.role !== UserRole.ADMIN && (
                           <select
                             value={u.role === UserRole.ADMIN ? UserRole.PROVIDER : u.role}
