@@ -25,6 +25,16 @@ const STATUS_STYLE: Record<AdStatus, string> = {
   suspended: 'bg-orange-50 text-orange-700 border-orange-200'
 };
 
+export const PERMISSION_LABELS: Record<string, string> = {
+  moderate_ads: 'Moderar anúncios',
+  manage_users: 'Suspender usuários',
+  approve_providers: 'Aprovar profissionais',
+  verify_providers: 'Selos de verificação',
+  manage_categories: 'Gerenciar categorias',
+  manage_settings: 'Configurações',
+  view_metrics: 'Ver métricas'
+};
+
 const OwnerDashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const { toast } = useToast();
@@ -43,6 +53,10 @@ const OwnerDashboard: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: 'Wrench' });
   const [confirmingTransfer, setConfirmingTransfer] = useState<string | null>(null);
+  const [adminPerms, setAdminPerms] = useState<Record<string, string[]>>({});
+  const [editingPerms, setEditingPerms] = useState<User | null>(null);
+  const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
+  const [permBusy, setPermBusy] = useState(false);
 
   const loadStats = useCallback(async () => {
     try { setStats(await store.getAdminStats()); } catch (e) { console.error(e); }
@@ -56,8 +70,18 @@ const OwnerDashboard: React.FC = () => {
   }, [filterStatus]);
 
   const loadUsers = useCallback(async () => {
-    try { setUsers(await store.getUsers()); } catch (e) { console.error(e); }
-  }, []);
+    try {
+      const data = await store.getUsers();
+      setUsers(data);
+      if (user?.isOwner) {
+        const admins = data.filter(u => u.role === UserRole.ADMIN && !u.isOwner);
+        const entries = await Promise.all(
+          admins.map(async a => [a.id, await store.getAdminPermissions(a.id)] as [string, string[]])
+        );
+        setAdminPerms(Object.fromEntries(entries));
+      }
+    } catch (e) { console.error(e); }
+  }, [user?.isOwner]);
 
   const loadCategories = useCallback(async () => {
     try { setCategories(await store.getAllCategories()); } catch (e) { console.error(e); }
@@ -96,6 +120,18 @@ const OwnerDashboard: React.FC = () => {
       </div>
     );
   }
+
+  // RBAC: dono tem todas as funções; admin só as concedidas pelo dono.
+  const can = (perm: string) => user.isOwner || (user.permissions || []).includes(perm);
+
+  const visibleTabs: Tab[] = [];
+  if (can('view_metrics')) visibleTabs.push('overview');
+  if (can('moderate_ads')) visibleTabs.push('ads');
+  if (can('manage_users') || can('approve_providers') || can('verify_providers')) visibleTabs.push('users');
+  if (can('manage_categories')) visibleTabs.push('categories');
+  if (can('manage_settings')) visibleTabs.push('settings');
+
+  const activeTab = visibleTabs.includes(tab) ? tab : (visibleTabs[0] ?? 'overview');
 
   // ---- Ações de moderação ----
   const handleStatus = async (ad: ServiceAd, status: AdStatus, reason?: string) => {
@@ -145,6 +181,8 @@ const OwnerDashboard: React.FC = () => {
       await store.promoteToAdmin(id);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, role: UserRole.ADMIN } : u));
       toast('Usuário promovido a administrador.', 'success');
+      const promoted = users.find(u => u.id === id);
+      if (promoted) openPermModal(promoted);
     } catch (e) { console.error(e); toast('Erro ao promover. Somente o dono pode fazer isso.', 'error'); }
   };
 
@@ -205,6 +243,29 @@ const OwnerDashboard: React.FC = () => {
     finally { setBusyId(null); }
   };
 
+  // ---- Permissões por admin (somente o DONO) ----
+  const openPermModal = async (u: User) => {
+    setEditingPerms(u);
+    setSelectedPerms([]);
+    if (u.role === UserRole.ADMIN && !u.isOwner) {
+      try {
+        setSelectedPerms(await store.getAdminPermissions(u.id));
+      } catch (e) { console.error(e); }
+    }
+  };
+
+  const handleSavePerms = async () => {
+    if (!editingPerms) return;
+    setPermBusy(true);
+    try {
+      await store.setAdminPermissions(editingPerms.id, selectedPerms);
+      setAdminPerms(prev => ({ ...prev, [editingPerms.id]: selectedPerms }));
+      toast('Permissões salvas.', 'success');
+      setEditingPerms(null);
+    } catch (e) { console.error(e); toast('Erro ao salvar permissões.', 'error'); }
+    finally { setPermBusy(false); }
+  };
+
   // ---- Ações de categorias ----
   const handleAddCategory = async () => {
     if (!newCat.name.trim()) return;
@@ -249,7 +310,7 @@ const OwnerDashboard: React.FC = () => {
   const tabItem = (id: Tab, label: string, icon: React.ComponentType<{ size?: number | string; className?: string }>, badge?: number) => (
     <button
       onClick={() => setTab(id)}
-      className={`flex items-center px-3 py-2 rounded-md transition-colors text-sm font-medium ${tab === id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-700 hover:bg-brand-50 hover:text-brand-700'}`}
+      className={`flex items-center px-3 py-2 rounded-md transition-colors text-sm font-medium ${activeTab === id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-700 hover:bg-brand-50 hover:text-brand-700'}`}
     >
       {React.createElement(icon, { size: 16, className: "mr-3 text-brand-600" })}
       {label}
@@ -290,17 +351,24 @@ const OwnerDashboard: React.FC = () => {
           {/* Sidebar */}
           <aside className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 p-4 h-fit">
             <nav className="space-y-1">
-              {tabItem('overview', 'Visão Geral', LayoutDashboard)}
-              {tabItem('ads', 'Anúncios', Megaphone, stats?.adsPending || 0)}
-              {tabItem('users', 'Usuários', Users)}
-              {tabItem('categories', 'Categorias', FolderOpen)}
-              {tabItem('settings', 'Configurações', Settings2)}
+              {can('view_metrics') && tabItem('overview', 'Visão Geral', LayoutDashboard)}
+              {can('moderate_ads') && tabItem('ads', 'Anúncios', Megaphone, stats?.adsPending || 0)}
+              {(can('manage_users') || can('approve_providers') || can('verify_providers')) && tabItem('users', 'Usuários', Users)}
+              {can('manage_categories') && tabItem('categories', 'Categorias', FolderOpen)}
+              {can('manage_settings') && tabItem('settings', 'Configurações', Settings2)}
             </nav>
           </aside>
 
           {/* Conteúdo */}
           <div className="lg:col-span-4 space-y-4">
-            {tab === 'overview' && (
+            {visibleTabs.length === 0 && !user.isOwner && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center text-gray-500">
+                <Shield size={32} className="mx-auto mb-3 text-gray-300" />
+                <p className="font-medium text-gray-700">Sem permissões concedidas</p>
+                <p className="text-sm text-gray-500 mt-1">Peça ao dono para definir suas funções de administrador.</p>
+              </div>
+            )}
+            {activeTab === 'overview' && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                   <h2 className="text-lg font-bold text-gray-900 mb-1">Usuários</h2>
@@ -435,7 +503,7 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
 
-            {tab === 'ads' && (
+            {activeTab === 'ads' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100">
                   <h2 className="text-lg font-bold text-gray-900 mb-3">Moderação de Anúncios</h2>
@@ -554,7 +622,7 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
 
-            {tab === 'users' && (
+            {activeTab === 'users' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100">
                   <h2 className="text-lg font-bold text-gray-900">Usuários ({users.length})</h2>
@@ -599,11 +667,20 @@ const OwnerDashboard: React.FC = () => {
                           )}
                         </div>
                         <p className="text-xs text-gray-500">{u.email}</p>
+                        {u.role === UserRole.ADMIN && !u.isOwner && (adminPerms[u.id]?.length || 0) > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {adminPerms[u.id].map(p => (
+                              <span key={p} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                                {PERMISSION_LABELS[p] || p}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <p className="text-xs text-gray-400 mt-0.5">Cadastrado em {u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '—'}</p>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        {u.roleRequest === 'PROVIDER' && (
+                        {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
                           <>
                             <button
                               onClick={() => handleApproveProviderRequest(u)}
@@ -635,12 +712,21 @@ const OwnerDashboard: React.FC = () => {
 
                         {user.isOwner && !u.isOwner && (
                           u.role === UserRole.ADMIN ? (
-                            <button
-                              onClick={() => handleDemote(u.id)}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                            >
-                              <X size={12} className="mr-1" /> Remover admin
-                            </button>
+                            <>
+                              <button
+                                onClick={() => openPermModal(u)}
+                                className="text-xs px-2 py-1.5 rounded flex items-center bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100"
+                                title="Definir as funções deste administrador"
+                              >
+                                <Shield size={12} className="mr-1" /> Permissões
+                              </button>
+                              <button
+                                onClick={() => handleDemote(u.id)}
+                                className="text-xs px-2 py-1.5 rounded flex items-center bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+                              >
+                                <X size={12} className="mr-1" /> Remover admin
+                              </button>
+                            </>
                           ) : (
                             <button
                               onClick={() => handlePromote(u.id)}
@@ -670,7 +756,7 @@ const OwnerDashboard: React.FC = () => {
                           )
                         )}
 
-                        {u.role === UserRole.PROVIDER && !u.isOwner && (
+                        {u.role === UserRole.PROVIDER && !u.isOwner && can('verify_providers') && (
                           <button
                             onClick={() => handleCertify(u)}
                             disabled={busyId === u.id}
@@ -681,7 +767,7 @@ const OwnerDashboard: React.FC = () => {
                           </button>
                         )}
 
-                        {!u.isOwner && u.id !== user.id && (
+                        {!u.isOwner && u.id !== user.id && can('manage_users') && (
                           <button
                             onClick={() => handleSuspend(u)}
                             className={`text-xs px-2 py-1.5 rounded flex items-center ${u.isSuspended ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'}`}
@@ -696,7 +782,7 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
 
-            {tab === 'categories' && (
+            {activeTab === 'categories' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100">
                   <h2 className="text-lg font-bold text-gray-900 mb-3">Categorias</h2>
@@ -747,7 +833,7 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
 
-            {tab === 'settings' && (
+            {activeTab === 'settings' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Configurações da Plataforma</h2>
                 <div className="max-w-sm">
@@ -773,6 +859,43 @@ const OwnerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {editingPerms && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Permissões de {editingPerms.name}</h3>
+            <p className="text-xs text-gray-500 mb-4">Selecione as funções deste administrador. O dono tem acesso total.</p>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-3 p-2 rounded border border-gray-100 hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedPerms.includes(key)}
+                    onChange={e => setSelectedPerms(prev => e.target.checked ? [...prev, key] : prev.filter(p => p !== key))}
+                    className="w-4 h-4 text-brand-600"
+                  />
+                  <span className="text-sm text-gray-800">{label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setEditingPerms(null)}
+                className="text-sm px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSavePerms}
+                disabled={permBusy}
+                className="text-sm px-4 py-2 rounded bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {permBusy ? 'Salvando...' : 'Salvar permissões'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
