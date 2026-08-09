@@ -274,6 +274,16 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT DEFAULT 'Check',
+  sort_order INTEGER DEFAULT 0,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT,
@@ -291,10 +301,18 @@ INSERT INTO categories (slug, name, icon, sort_order, active) VALUES
   ('assembly', 'Montagem de Móveis', 'Package', 8, true)
 ON CONFLICT (slug) DO NOTHING;
 
+INSERT INTO tags (slug, name, icon, sort_order, active) VALUES
+  ('24h', 'Atendimento 24h', 'Clock', 1, true),
+  ('free_estimate', 'Orçamento Grátis', 'Calculator', 2, true),
+  ('credit_card', 'Aceita Cartão', 'CreditCard', 3, true),
+  ('guarantee', 'Com Garantia', 'ShieldCheck', 4, true)
+ON CONFLICT (slug) DO NOTHING;
+
 INSERT INTO app_settings (key, value) VALUES ('ad_duration_days', '30')
 ON CONFLICT (key) DO NOTHING;
 
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- PERMISSÕES POR ADMIN (RBAC): o DONO concede funções a cada admin.
@@ -340,6 +358,18 @@ CREATE POLICY "Somente admin atualiza categorias"
     AND is_admin_allowed('manage_categories'));
 CREATE POLICY "Somente admin deleta categorias"
   ON categories FOR DELETE USING (auth.role() = 'authenticated'
+    AND is_admin_allowed('manage_categories'));
+
+CREATE POLICY "Tags são públicas para leitura"
+  ON tags FOR SELECT USING (true);
+CREATE POLICY "Somente admin insere tags"
+  ON tags FOR INSERT WITH CHECK (auth.role() = 'authenticated'
+    AND is_admin_allowed('manage_categories'));
+CREATE POLICY "Somente admin atualiza tags"
+  ON tags FOR UPDATE USING (auth.role() = 'authenticated'
+    AND is_admin_allowed('manage_categories'));
+CREATE POLICY "Somente admin deleta tags"
+  ON tags FOR DELETE USING (auth.role() = 'authenticated'
     AND is_admin_allowed('manage_categories'));
 
 CREATE POLICY "Configurações são públicas para leitura"
