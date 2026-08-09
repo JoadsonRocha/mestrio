@@ -18,6 +18,10 @@ export interface User {
   isOwner?: boolean;
   roleRequest?: string | null;
   permissions?: string[];
+  referralCode?: string;
+  referredBy?: string;
+  referralCredits?: number;
+  referralCashEarnings?: number;
   createdAt?: string;
 }
 

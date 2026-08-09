@@ -23,6 +23,10 @@ CREATE TABLE profiles (
   bio TEXT,
   is_certified BOOLEAN DEFAULT false,
   is_owner BOOLEAN NOT NULL DEFAULT false,
+  referral_code TEXT UNIQUE,
+  referred_by UUID REFERENCES profiles(id),
+  referral_credits DECIMAL(10, 2) DEFAULT 0.00, -- $20 in credits upon signup
+  referral_cash_earnings DECIMAL(10, 2) DEFAULT 0.00, -- 15% cash earnings
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
