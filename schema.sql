@@ -322,23 +322,24 @@ CREATE POLICY "Anúncios visíveis: aprovados, do provedor ou admin"
   ON service_ads FOR SELECT USING (
     (status = 'approved' AND (expires_at IS NULL OR expires_at > timezone('utc'::text, now())))
     OR auth.uid() = provider_id
-    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN')
+    OR is_admin_allowed('moderate_ads')
+    OR is_admin_allowed('view_metrics')
   );
 
 DROP POLICY IF EXISTS "Admin pode atualizar todos os anúncios" ON service_ads;
 CREATE POLICY "Admin pode atualizar todos os anúncios"
   ON service_ads FOR UPDATE USING (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('moderate_ads'));
 
 DROP POLICY IF EXISTS "Admin pode deletar anúncios" ON service_ads;
 CREATE POLICY "Admin pode deletar anúncios"
   ON service_ads FOR DELETE USING (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('moderate_ads'));
 
 DROP POLICY IF EXISTS "Admin pode ver todos os agendamentos" ON appointments;
 CREATE POLICY "Admin pode ver todos os agendamentos"
   ON appointments FOR SELECT USING (auth.role() = 'authenticated'
-    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+    AND is_admin_allowed('view_metrics'));
 
 -- NOTA: NÃO criamos mais a policy ampla "Admin pode atualizar perfis".
 -- A gestão de papéis/suspensão agora é feita exclusivamente pelas funções
@@ -463,6 +464,7 @@ BEGIN
     RAISE EXCEPTION 'O dono do projeto não pode ser destituído.';
   END IF;
   UPDATE profiles SET role = 'PROVIDER' WHERE id = target_user AND role = 'ADMIN';
+  DELETE FROM admin_permissions WHERE admin_id = target_user;
 END;
 $$;
 
@@ -483,10 +485,20 @@ BEGIN
   END IF;
   UPDATE profiles SET is_owner = false WHERE id = auth.uid();
   UPDATE profiles SET is_owner = true, role = 'ADMIN' WHERE id = new_owner;
+  -- O ex-dono vira admin e mantém acesso total: ganha todas as permissões.
+  INSERT INTO admin_permissions (admin_id, permission)
+  SELECT auth.uid(), p
+  FROM unnest(ARRAY[
+    'moderate_ads', 'manage_users', 'approve_providers',
+    'verify_providers', 'manage_categories', 'manage_settings', 'view_metrics'
+  ]) AS p
+  ON CONFLICT (admin_id, permission) DO NOTHING;
+  -- O novo dono não precisa de permissões na tabela (dono tem tudo).
+  DELETE FROM admin_permissions WHERE admin_id = new_owner;
 END;
 $$;
 
--- Suspender/reativar usuário — admin ou dono
+-- Suspender/reativar usuário — admin com permissão 'manage_users' ou dono
 CREATE OR REPLACE FUNCTION set_user_suspended(target_user uuid, suspended boolean)
 RETURNS void
 LANGUAGE plpgsql
@@ -495,9 +507,8 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
-                   FROM profiles WHERE id = auth.uid()), false) THEN
-    RAISE EXCEPTION 'Somente administradores podem suspender usuários.';
+  IF NOT is_admin_allowed('manage_users') THEN
+    RAISE EXCEPTION 'Sem permissão para suspender usuários.';
   END IF;
   UPDATE profiles SET is_suspended = suspended WHERE id = target_user;
 END;
@@ -545,7 +556,8 @@ BEGIN
 END;
 $$;
 
--- Aprovar a solicitação de profissional — admin ou dono (vira PROVIDER)
+-- Aprovar a solicitação de profissional — admin com permissão
+-- 'approve_providers' ou dono (vira PROVIDER)
 CREATE OR REPLACE FUNCTION approve_provider_request(target_user uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -554,9 +566,8 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
-                   FROM profiles WHERE id = auth.uid()), false) THEN
-    RAISE EXCEPTION 'Somente administradores podem aprovar solicitações de profissional.';
+  IF NOT is_admin_allowed('approve_providers') THEN
+    RAISE EXCEPTION 'Sem permissão para aprovar profissionais.';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user AND role_request = 'PROVIDER') THEN
     RAISE EXCEPTION 'Usuário não encontrado ou sem solicitação pendente.';
@@ -568,7 +579,8 @@ BEGIN
 END;
 $$;
 
--- Recusar a solicitação de profissional — admin ou dono
+-- Recusar a solicitação de profissional — admin com permissão
+-- 'approve_providers' ou dono
 CREATE OR REPLACE FUNCTION reject_provider_request(target_user uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -577,15 +589,15 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
-                   FROM profiles WHERE id = auth.uid()), false) THEN
-    RAISE EXCEPTION 'Somente administradores podem recusar solicitações de profissional.';
+  IF NOT is_admin_allowed('approve_providers') THEN
+    RAISE EXCEPTION 'Sem permissão para recusar profissionais.';
   END IF;
   UPDATE profiles SET role_request = NULL WHERE id = target_user;
 END;
 $$;
 
--- Conceder/remover o selo de profissional verificado — admin ou dono
+-- Conceder/remover o selo de profissional verificado — admin com permissão
+-- 'verify_providers' ou dono
 CREATE OR REPLACE FUNCTION set_user_certified(target_user uuid, certified boolean)
 RETURNS void
 LANGUAGE plpgsql
@@ -594,14 +606,96 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
-                   FROM profiles WHERE id = auth.uid()), false) THEN
-    RAISE EXCEPTION 'Somente administradores podem conceder o selo de verificação.';
+  IF NOT is_admin_allowed('verify_providers') THEN
+    RAISE EXCEPTION 'Sem permissão para conceder o selo de verificação.';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user AND role = 'PROVIDER') THEN
     RAISE EXCEPTION 'Só é possível verificar usuários com o papel de profissional.';
   END IF;
   UPDATE profiles SET is_certified = certified WHERE id = target_user;
+END;
+$$;
+
+-- PERMISSÕES POR ADMIN (RBAC)
+-- Lista canônica de permissões que o dono pode conceder.
+CREATE OR REPLACE FUNCTION get_admin_permissions_list()
+RETURNS text[]
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT ARRAY[
+    'moderate_ads', 'manage_users', 'approve_providers',
+    'verify_providers', 'manage_categories', 'manage_settings', 'view_metrics'
+  ]::text[];
+$$;
+
+-- Permissões do usuário logado (dono => todas; admin => as concedidas).
+-- Usada pelo frontend para exibir/ocultar abas e ações.
+CREATE OR REPLACE FUNCTION get_my_permissions()
+RETURNS text[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RETURN get_admin_permissions_list();
+  END IF;
+  RETURN ARRAY(
+    SELECT permission FROM admin_permissions
+    WHERE admin_id = auth.uid() ORDER BY permission
+  );
+END;
+$$;
+
+-- Consultar permissões de outro usuário — só o dono
+CREATE OR REPLACE FUNCTION get_admin_permissions(target_user uuid)
+RETURNS text[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono pode consultar permissões de admins.';
+  END IF;
+  RETURN ARRAY(
+    SELECT permission FROM admin_permissions
+    WHERE admin_id = target_user ORDER BY permission
+  );
+END;
+$$;
+
+-- Definir as permissões de um admin (substitui o conjunto atual) — só o dono.
+-- O alvo precisa ser ADMIN; valores desconhecidos são ignorados.
+CREATE OR REPLACE FUNCTION set_admin_permissions(target_user uuid, perms text[])
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  p text;
+  valid text[] := get_admin_permissions_list();
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT COALESCE((SELECT is_owner FROM profiles WHERE id = auth.uid()), false) THEN
+    RAISE EXCEPTION 'Somente o dono pode definir permissões de admins.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = target_user AND role = 'ADMIN') THEN
+    RAISE EXCEPTION 'O usuário de destino precisa ser admin.';
+  END IF;
+  DELETE FROM admin_permissions WHERE admin_id = target_user;
+  IF perms IS NOT NULL THEN
+    FOREACH p IN ARRAY perms LOOP
+      IF p = ANY(valid) THEN
+        INSERT INTO admin_permissions (admin_id, permission)
+        VALUES (target_user, p);
+      END IF;
+    END LOOP;
+  END IF;
 END;
 $$;
 
@@ -616,8 +710,17 @@ REVOKE ALL ON FUNCTION cancel_provider_request() FROM PUBLIC;
 REVOKE ALL ON FUNCTION approve_provider_request(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION reject_provider_request(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION set_user_certified(uuid, boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_my_permissions() FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_admin_permissions(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION set_admin_permissions(uuid, text[]) FROM PUBLIC;
 -- A contagem de views é pública (visitantes anônimos também contam)
 REVOKE ALL ON FUNCTION increment_ad_view(uuid) FROM PUBLIC;
+
+-- is_admin_allowed é usada em policies RLS: anon e authenticated precisam
+-- executá-la (o dono do projeto também, via SECURITY DEFINER das RPCs).
+REVOKE ALL ON FUNCTION is_admin_allowed(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION is_admin_allowed(text) TO anon;
+GRANT EXECUTE ON FUNCTION is_admin_allowed(text) TO authenticated;
 
 GRANT EXECUTE ON FUNCTION set_user_role(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION promote_to_admin(uuid) TO authenticated;
@@ -629,6 +732,9 @@ GRANT EXECUTE ON FUNCTION cancel_provider_request() TO authenticated;
 GRANT EXECUTE ON FUNCTION approve_provider_request(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION reject_provider_request(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION set_user_certified(uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_my_permissions() TO authenticated;
+GRANT EXECUTE ON FUNCTION get_admin_permissions(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION set_admin_permissions(uuid, text[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 

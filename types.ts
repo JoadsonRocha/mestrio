@@ -17,8 +17,18 @@ export interface User {
   isSuspended?: boolean;
   isOwner?: boolean;
   roleRequest?: string | null;
+  permissions?: string[];
   createdAt?: string;
 }
+
+export type AdminPermission =
+  | 'moderate_ads'
+  | 'manage_users'
+  | 'approve_providers'
+  | 'verify_providers'
+  | 'manage_categories'
+  | 'manage_settings'
+  | 'view_metrics';
 
 export type AdStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'suspended';
 
