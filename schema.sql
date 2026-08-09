@@ -4,8 +4,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ==========================================
 -- 1. ENUMS (Tipos customizados)
 -- ==========================================
-CREATE TYPE user_role AS ENUM ('CLIENT', 'PROVIDER', 'ADMIN');
-CREATE TYPE price_unit AS ENUM ('hour', 'job', 'estimate');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE user_role AS ENUM ('CLIENT', 'PROVIDER', 'ADMIN');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'price_unit') THEN
+    CREATE TYPE price_unit AS ENUM ('hour', 'job', 'estimate');
+  END IF;
+END $$;
 
 -- ==========================================
 -- 2. TABELAS
@@ -132,10 +139,21 @@ DROP POLICY IF EXISTS "Usuários autenticados podem criar sessões" ON chat_sess
 DROP POLICY IF EXISTS "Usuários autenticados podem atualizar sessões" ON chat_sessions;
 DROP POLICY IF EXISTS "Participante vê sessão" ON chat_sessions;
 DROP POLICY IF EXISTS "Participante cria sessão" ON chat_sessions;
-CREATE POLICY "Participante vê sessão" ON chat_sessions
-  FOR SELECT USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
+CREATE OR REPLACE FUNCTION is_chat_participant(check_session_id UUID)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM chat_participants 
+    WHERE session_id = check_session_id AND user_id = auth.uid()
   );
+$$;
+
+CREATE POLICY "Participante vê sessão" ON chat_sessions
+  FOR SELECT USING (is_chat_participant(id));
 -- Sessões de chat: criadas apenas para um anúncio real e de OUTRO usuário.
 -- (A RPC start_chat é o caminho oficial; bloqueia sessões fantasma.)
 CREATE POLICY "Participante cria sessão" ON chat_sessions
@@ -146,9 +164,7 @@ CREATE POLICY "Participante cria sessão" ON chat_sessions
     )
   );
 CREATE POLICY "Participante atualiza sessão" ON chat_sessions
-  FOR UPDATE USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
-  );
+  FOR UPDATE USING (is_chat_participant(id));
 
 -- Políticas para Chat Participants (somente participantes da própria sessão)
 ALTER TABLE chat_participants ENABLE ROW LEVEL SECURITY;
@@ -157,9 +173,7 @@ DROP POLICY IF EXISTS "Usuários autenticados podem inserir participantes" ON ch
 DROP POLICY IF EXISTS "Participante vê participante" ON chat_participants;
 DROP POLICY IF EXISTS "Participante entra na sessão" ON chat_participants;
 CREATE POLICY "Participante vê participante" ON chat_participants
-  FOR SELECT USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
-  );
+  FOR SELECT USING (is_chat_participant(session_id));
 CREATE POLICY "Participante entra na sessão" ON chat_participants
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -171,19 +185,15 @@ DROP POLICY IF EXISTS "Participante lê mensagens" ON messages;
 DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 DROP POLICY IF EXISTS "Participante marca como lida" ON messages;
 CREATE POLICY "Participante lê mensagens" ON messages
-  FOR SELECT USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
-  );
+  FOR SELECT USING (is_chat_participant(session_id));
 DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 CREATE POLICY "Participante envia mensagem" ON messages
   FOR INSERT WITH CHECK (
     auth.uid() = sender_id
-    AND auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = messages.session_id)
+    AND is_chat_participant(session_id)
   );
 CREATE POLICY "Participante marca como lida" ON messages
-  FOR UPDATE USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
-  );
+  FOR UPDATE USING (is_chat_participant(session_id));
 
 -- Tabela de Agendamentos (Appointments)
 -- IF NOT EXISTS permite rodar o script novamente sem erro

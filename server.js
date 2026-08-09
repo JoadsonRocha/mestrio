@@ -41,7 +41,7 @@ app.use(express.json({ limit: '1mb' }));
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173'];
 app.use(cors({ origin: allowedOrigins }));
 
-app.use(rateLimit);
+app.use('/api', rateLimit);
 
 // Headers de segurança + CSP (substitui helmet; evita dependência extra).
 app.use((req, res, next) => {
