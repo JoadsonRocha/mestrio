@@ -1066,6 +1066,7 @@ class Store {
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
       appointmentsCancelled, newAppointmentsWeek,
+      suspendedUsers, pendingProviderRequests,
       totalReviews, newReviewsWeek
     ] = await Promise.all([
       count('profiles'),
