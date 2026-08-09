@@ -16,15 +16,40 @@ const DashboardHome: React.FC = () => {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [requesting, setRequesting] = useState(false);
 
-  const handleRequestProvider = async () => {
+  const [showProviderForm, setShowProviderForm] = useState(false);
+  const [providerForm, setProviderForm] = useState({ experience: '', courses: '', area: '', motivation: '' });
+  const [providerDocument, setProviderDocument] = useState<File | null>(null);
+
+  const handleRequestProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!providerForm.experience || !providerForm.courses || !providerForm.area || !providerDocument) {
+      toast('Por favor, preencha todos os campos obrigatórios e envie um documento.', 'error');
+      return;
+    }
     setRequesting(true);
     try {
-      await store.requestProviderRole();
+      const fileExt = providerDocument.name.split('.').pop();
+      const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage.from('avatars').upload(`documents/${fileName}`, providerDocument);
+      
+      let documentUrl = '';
+      if (error) {
+        console.error("Error uploading document:", error);
+        toast('Erro ao fazer upload do documento.', 'error');
+        setRequesting(false);
+        return;
+      } else {
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(data.path);
+        documentUrl = urlData.publicUrl;
+      }
+
+      await store.requestProviderRole({ ...providerForm, documentUrl });
       await refreshUser();
+      setShowProviderForm(false);
       toast('Solicitação enviada! Aguardando aprovação.', 'success');
-    } catch (e: any) {
-      console.error(e);
-      toast(e?.message || 'Erro ao solicitar.', 'error');
+    } catch (err: any) {
+      console.error(err);
+      toast(err?.message || 'Erro ao solicitar.', 'error');
     }
     finally { setRequesting(false); }
   };
@@ -130,7 +155,7 @@ const DashboardHome: React.FC = () => {
                 <p className="text-xs text-brand-700">Torne-se um profissional e crie anúncios de serviços para atrair clientes.</p>
               </div>
               <button
-                onClick={handleRequestProvider}
+                onClick={() => setShowProviderForm(true)}
                 disabled={requesting}
                 className="text-xs px-3 py-1.5 rounded-md bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 flex items-center"
               >
@@ -163,6 +188,47 @@ const DashboardHome: React.FC = () => {
                 </div>
             </div>
         )}
+
+      {/* Provider Request Modal */}
+      {showProviderForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6 my-8">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Solicitar Perfil de Profissional</h3>
+            <p className="text-xs text-gray-500 mb-4">Preencha suas informações para que nossa equipe possa avaliar sua solicitação.</p>
+            
+            <form onSubmit={handleRequestProvider} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Área de Atuação *</label>
+                <input required type="text" value={providerForm.area} onChange={e => setProviderForm({...providerForm, area: e.target.value})} className="w-full text-sm px-3 py-2 border rounded-md" placeholder="Ex: Programação, Design, Consultoria..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Experiência Profissional *</label>
+                <textarea required rows={3} value={providerForm.experience} onChange={e => setProviderForm({...providerForm, experience: e.target.value})} className="w-full text-sm px-3 py-2 border rounded-md" placeholder="Descreva sua experiência..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cursos e Certificações *</label>
+                <textarea required rows={2} value={providerForm.courses} onChange={e => setProviderForm({...providerForm, courses: e.target.value})} className="w-full text-sm px-3 py-2 border rounded-md" placeholder="Liste seus principais cursos..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Documento de Identidade com Foto *</label>
+                <input required type="file" accept="image/*,.pdf" onChange={e => setProviderDocument(e.target.files?.[0] || null)} className="w-full text-sm px-3 py-2 border rounded-md file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
+                <p className="text-[10px] text-gray-400 mt-1">Envie RG, CNH ou Passaporte legível.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motivação (Opcional)</label>
+                <textarea rows={2} value={providerForm.motivation} onChange={e => setProviderForm({...providerForm, motivation: e.target.value})} className="w-full text-sm px-3 py-2 border rounded-md" placeholder="Por que deseja se tornar profissional aqui?" />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button type="button" onClick={() => setShowProviderForm(false)} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md">Cancelar</button>
+                <button type="submit" disabled={requesting} className="px-4 py-2 text-sm text-white bg-brand-600 hover:bg-brand-700 rounded-md disabled:opacity-50">
+                  {requesting ? 'Enviando...' : 'Enviar Solicitação'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

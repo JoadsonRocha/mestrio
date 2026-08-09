@@ -971,6 +971,7 @@ class Store {
       isOwner: u.is_owner || false,
       isCertified: u.is_certified || false,
       roleRequest: u.role_request || null,
+      providerRequestDetails: u.provider_request_details || null,
       createdAt: u.created_at
     }));
   }
