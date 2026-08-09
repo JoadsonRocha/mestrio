@@ -34,8 +34,19 @@ const AD_IMAGES_BUCKET = import.meta.env.VITE_AD_IMAGES_BUCKET || 'ad-images';
 const AVATARS_BUCKET = import.meta.env.VITE_AVATARS_BUCKET || 'avatars';
 
 /** Envia um arquivo para o Supabase Storage e retorna a URL pública. */
+const ALLOWED_IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
+
 export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET): Promise<string> {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+
+  // Rejeita SVG e qualquer formato não-imagem (prevenção de stored XSS).
+  if (!ALLOWED_IMAGE_EXT.includes(ext)) {
+    throw new Error('Formato de imagem não suportado. Use JPG, PNG, WEBP, GIF ou AVIF.');
+  }
+  if (file.type && !file.type.startsWith('image/')) {
+    throw new Error('O arquivo precisa ser uma imagem.');
+  }
+
   const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
   if (error) throw error;
@@ -226,25 +237,10 @@ class Store {
     
     if (reviewError) { console.error("Store Error [addReview]:", reviewError); throw reviewError; }
 
-    const { data: allReviews } = await supabase
-      .from('reviews')
-      .select('rating')
-      .eq('ad_id', adId);
-    
-    if (allReviews && allReviews.length > 0) {
-      const totalStars = allReviews.reduce((acc, r) => acc + r.rating, 0);
-      const newRating = Number((totalStars / allReviews.length).toFixed(1));
-      
-      const { error: updateError } = await supabase
-        .from('service_ads')
-        .update({ 
-          rating: newRating, 
-          review_count: allReviews.length 
-        })
-        .eq('id', adId);
-
-      if (updateError) console.warn("Could not update service rating:", updateError);
-    }
+    // Recálculo de nota/count via RPC SECURITY DEFINER (o provider não pode
+    // mais manipular rating/review_count direto por REST).
+    const { error: updateError } = await supabase.rpc('recalculate_ad_rating', { ad_id: adId });
+    if (updateError) console.warn("Could not update service rating:", updateError);
   }
 
   async deleteAd(id: string): Promise<void> {
@@ -271,14 +267,21 @@ class Store {
       permissions = Array.isArray(perms) ? perms : [];
     }
 
+    // PII em canal privado: email vem da sessão (auth.users), telefone de user_private.
+    const { data: privateData } = await supabase
+      .from('user_private')
+      .select('phone')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+
     return {
       id: data.id,
       name: data.name,
-      email: data.email,
+      email: session.user.email || '',
       role: data.role as UserRole,
       avatar: data.avatar,
       location: data.location,
-      phone: data.phone,
+      phone: privateData?.phone || '',
       bio: data.bio,
       isCertified: data.is_certified || false,
       isSuspended: false,
@@ -311,31 +314,26 @@ class Store {
   }
 
   async updateProfile(userId: string, updates: Partial<User>): Promise<User> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({
-        name: updates.name,
-        bio: updates.bio,
-        location: updates.location,
-        phone: updates.phone,
-        avatar: updates.avatar
-      })
-      .eq('id', userId)
-      .select()
-      .single();
+    const profileData: any = {};
+    if (updates.name !== undefined) profileData.name = updates.name;
+    if (updates.bio !== undefined) profileData.bio = updates.bio;
+    if (updates.location !== undefined) profileData.location = updates.location;
+    if (updates.avatar !== undefined) profileData.avatar = updates.avatar;
 
+    const { error } = await supabase.from('profiles').update(profileData).eq('id', userId);
     if (error) { console.error("Store Error [updateProfile]:", error); throw error; }
 
-    return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: data.role as UserRole,
-      avatar: data.avatar,
-      location: data.location,
-      phone: data.phone,
-      bio: data.bio
-    };
+    // Telefone mora em user_private (PII não fica exposta em profiles).
+    if (updates.phone !== undefined) {
+      const { error: phoneError } = await supabase
+        .from('user_private')
+        .upsert({ user_id: userId, phone: updates.phone || '' }, { onConflict: 'user_id' });
+      if (phoneError) { console.error("Store Error [updateProfile] phone:", phoneError); throw phoneError; }
+    }
+
+    const updated = await this.getCurrentUser();
+    if (!updated) throw new Error("Perfil não encontrado.");
+    return updated;
   }
 
   async login(email: string, password?: string): Promise<User> {
@@ -367,7 +365,6 @@ class Store {
             .from('profiles')
             .insert([{
                 id: authData.user.id,
-                email: authData.user.email,
                 name: name,
                 // Novo profissional entra como CLIENT com solicitação pendente,
                 // até o dono aprovar (role_request = 'PROVIDER').
@@ -528,38 +525,12 @@ class Store {
     return count || 0;
   }
 
+  // Cria/reusa a sessão de chat via RPC start_chat (SECURITY DEFINER):
+  // valida autenticação, anúncio existente e insere os dois participantes.
   async startChat(clientId: string, providerId: string, adId: string, adTitle: string): Promise<string> {
-    const { data: clientSessions } = await supabase
-        .from('chat_participants')
-        .select('session_id')
-        .eq('user_id', clientId);
-        
-    if (clientSessions && clientSessions.length > 0) {
-        const sessionIds = clientSessions.map(cs => cs.session_id);
-        const { data: existingSession } = await supabase
-            .from('chat_sessions')
-            .select('id')
-            .eq('ad_id', adId)
-            .in('id', sessionIds)
-            .maybeSingle();
-            
-        if (existingSession) return existingSession.id;
-    }
-
-    const { data: newSession, error: sessionError } = await supabase
-      .from('chat_sessions')
-      .insert([{ ad_id: adId }])
-      .select()
-      .single();
-      
-    if (sessionError) { console.error("Store Error [startChat]:", sessionError); throw sessionError; }
-
-    await supabase.from('chat_participants').insert([
-        { session_id: newSession.id, user_id: clientId },
-        { session_id: newSession.id, user_id: providerId }
-    ]);
-    
-    return newSession.id;
+    const { data, error } = await supabase.rpc('start_chat', { p_ad_id: adId });
+    if (error) { console.error("Store Error [startChat]:", error); throw error; }
+    return data as string;
   }
 
   async sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
@@ -878,21 +849,18 @@ class Store {
   }
 
   // --- Usuários ---
+  // RPC SECURITY DEFINER: somente admin com 'manage_users' (ou dono) lê PII.
   async getUsers(): Promise<User[]> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, email, role, avatar, location, phone, bio, is_suspended, is_owner, is_certified, role_request, created_at')
-      .order('created_at', { ascending: false })
-      .limit(300);
+    const { data, error } = await supabase.rpc('get_admin_user_list');
     if (error) { console.error("Store Error [getUsers]:", error); throw error; }
     return (data || []).map((u: any) => ({
       id: u.id,
       name: u.name,
-      email: u.email,
+      email: u.email || '',
       role: u.role as UserRole,
       avatar: u.avatar,
       location: u.location,
-      phone: u.phone,
+      phone: u.phone || '',
       bio: u.bio,
       isSuspended: u.is_suspended || false,
       isOwner: u.is_owner || false,

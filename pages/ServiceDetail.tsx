@@ -150,9 +150,16 @@ const ServiceDetail: React.FC = () => {
           navigate('/login');
           return;
       }
+      // Sanitiza o WhatsApp do anúncio: apenas dígitos (o campo é controlado
+      // pelo provider e pode conter caracteres maliciosos).
+      const digits = String(ad.whatsapp || '').replace(/\D/g, '');
+      if (!digits) {
+          toast("Este profissional não configurou um número de WhatsApp válido.", 'error');
+          return;
+      }
       const message = `Olá, vi seu anúncio "${ad.title}" no Mestrio e gostaria de mais informações.`;
-      const url = `https://wa.me/${ad.whatsapp}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
+      const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleInternalChat = async () => {

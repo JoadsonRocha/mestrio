@@ -75,7 +75,7 @@ const Login: React.FC = () => {
     setSendingReset(true);
     setErrorMsg('');
     try {
-      await store.resetPassword(email);
+      await store.requestPasswordReset(email);
       toast('Enviamos um link de recuperação para o seu e-mail.', 'success');
     } catch (err) {
       console.error(err);

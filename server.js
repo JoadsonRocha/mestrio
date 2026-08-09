@@ -11,6 +11,27 @@ const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 
+// Headers de segurança + CSP (substitui helmet; evita dependência extra).
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'"
+  ].join('; '));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 const distDir = path.join(__dirname, 'dist');
 
 // Health check usado pelo Railway
@@ -84,8 +105,9 @@ Regras:
 
 // ----------------------------------------------------------------
 // /api/expire-ads — expira anúncios (uso do cron / disparos externos)
-// Requer SUPABASE_SERVICE_ROLE_KEY. Se CRON_SECRET for definida,
-// a chamada precisa do header `x-cron-secret` ou `?secret=` correspondente.
+// Requer SUPABASE_SERVICE_ROLE_KEY E CRON_SECRET: a chamada precisa do
+// header `x-cron-secret` (ou `?secret=`). Sem CRON_SECRET configurada,
+// o endpoint fica desabilitado (503) — nunca aberto para o público.
 // ----------------------------------------------------------------
 async function expireAds() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -107,12 +129,14 @@ async function expireAds() {
 
 app.post('/api/expire-ads', async (req, res) => {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const provided = req.headers['x-cron-secret'] || req.query.secret;
-    if (provided !== secret) {
-      res.status(401).json({ error: 'Não autorizado.' });
-      return;
-    }
+  if (!secret) {
+    res.status(503).json({ error: 'CRON_SECRET não configurada no servidor.' });
+    return;
+  }
+  const provided = req.headers['x-cron-secret'] || req.query.secret;
+  if (provided !== secret) {
+    res.status(401).json({ error: 'Não autorizado.' });
+    return;
   }
   try {
     const count = await expireAds();

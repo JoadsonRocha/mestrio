@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Env vars (nunca commitar segredos como SUPABASE_SERVICE_ROLE_KEY / CRON_SECRET)
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -12,14 +12,14 @@ CREATE TYPE price_unit AS ENUM ('hour', 'job', 'estimate');
 -- ==========================================
 
 -- Tabela de Perfis (Estende a tabela nativa auth.users do Supabase)
+-- PRIVACIDADE: NÃO armazenamos email/telefone aqui (PII exposta pelo RLS público).
+-- O email vive em auth.users (sessão) e o telefone na tabela privada user_private.
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
   role user_role NOT NULL DEFAULT 'CLIENT',
   avatar TEXT,
   location TEXT,
-  phone TEXT,
   bio TEXT,
   is_certified BOOLEAN DEFAULT false,
   is_owner BOOLEAN NOT NULL DEFAULT false,
@@ -60,6 +60,14 @@ CREATE TABLE reviews (
 
 -- Para bancos onde a tabela reviews já existia antes da coluna do nome
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS author_name TEXT;
+
+-- Impede que um usuário avalie o mesmo anúncio várias vezes (anti-spam de nota)
+DO $$
+BEGIN
+  CREATE UNIQUE INDEX IF NOT EXISTS reviews_author_ad_unique ON reviews (ad_id, author_id);
+EXCEPTION WHEN unique_violation THEN
+  NULL; -- já existem duplicados no banco atual: remover manualmente antes de aplicar
+END $$;
 
 -- Tabela de Sessões de Chat (Negociações)
 CREATE TABLE chat_sessions (
@@ -124,8 +132,15 @@ CREATE POLICY "Participante vê sessão" ON chat_sessions
   FOR SELECT USING (
     auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
   );
+-- Sessões de chat: criadas apenas para um anúncio real e de OUTRO usuário.
+-- (A RPC start_chat é o caminho oficial; bloqueia sessões fantasma.)
 CREATE POLICY "Participante cria sessão" ON chat_sessions
-  FOR INSERT WITH CHECK (true);
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM service_ads sa
+      WHERE sa.id = ad_id AND sa.provider_id <> auth.uid()
+    )
+  );
 CREATE POLICY "Participante atualiza sessão" ON chat_sessions
   FOR UPDATE USING (
     auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
@@ -155,8 +170,12 @@ CREATE POLICY "Participante lê mensagens" ON messages
   FOR SELECT USING (
     auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
   );
+DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 CREATE POLICY "Participante envia mensagem" ON messages
-  FOR INSERT WITH CHECK (auth.uid() = sender_id);
+  FOR INSERT WITH CHECK (
+    auth.uid() = sender_id
+    AND auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = messages.session_id)
+  );
 CREATE POLICY "Participante marca como lida" ON messages
   FOR UPDATE USING (
     auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
@@ -317,6 +336,31 @@ CREATE POLICY "Somente admin altera configurações"
   WITH CHECK (auth.role() = 'authenticated'
     AND is_admin_allowed('manage_settings'));
 
+-- ==========================================
+-- 5.1 PRIVACIDADE: dados privados do usuário
+-- ==========================================
+-- Telefone sai de profiles (PII exposta) e passa a morar aqui, acessível
+-- apenas ao próprio usuário (ou admin com 'manage_users').
+CREATE TABLE IF NOT EXISTS user_private (
+  user_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  phone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE user_private ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Dono e admin leem dados privados" ON user_private
+  FOR SELECT USING (auth.uid() = user_id OR is_admin_allowed('manage_users'));
+CREATE POLICY "Dono insere seus dados privados" ON user_private
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Dono edita seus dados privados" ON user_private
+  FOR UPDATE USING (auth.uid() = user_id);
+
+-- Migração: move telefones existentes e remove as colunas de PII de profiles.
+INSERT INTO user_private (user_id, phone)
+SELECT id, phone FROM profiles WHERE phone IS NOT NULL
+ON CONFLICT (user_id) DO NOTHING;
+ALTER TABLE profiles DROP COLUMN IF EXISTS email;
+ALTER TABLE profiles DROP COLUMN IF EXISTS phone;
+
 DROP POLICY IF EXISTS "Anúncios são públicos para leitura" ON service_ads;
 CREATE POLICY "Anúncios visíveis: aprovados, do provedor ou admin"
   ON service_ads FOR SELECT USING (
@@ -391,6 +435,14 @@ BEGIN
        AND NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
                          FROM profiles WHERE id = auth.uid()), false) THEN
       RAISE EXCEPTION 'Somente administradores podem suspender usuários.';
+    END IF;
+  END IF;
+
+  IF NEW.is_certified IS DISTINCT FROM OLD.is_certified THEN
+    IF auth.uid() IS NOT NULL
+       AND NOT COALESCE((SELECT (role = 'ADMIN' OR is_owner)
+                         FROM profiles WHERE id = auth.uid()), false) THEN
+      RAISE EXCEPTION 'Somente administradores podem conceder o selo de verificação.';
     END IF;
   END IF;
 
@@ -515,6 +567,8 @@ END;
 $$;
 
 -- Incrementar visualizações de um anúncio (público: anônimo ou autenticado)
+-- Sinaliza app.skip_ad_trigger porque a coluna views é protegida pelo trigger
+-- de moderação; o UPDATE aqui é legítimo (vem de RPC SECURITY DEFINER).
 CREATE OR REPLACE FUNCTION increment_ad_view(ad_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -522,7 +576,9 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  PERFORM set_config('app.skip_ad_trigger', 'on', true);
   UPDATE service_ads SET views = views + 1 WHERE id = ad_id;
+  PERFORM set_config('app.skip_ad_trigger', 'off', true);
 END;
 $$;
 
@@ -613,6 +669,159 @@ BEGIN
     RAISE EXCEPTION 'Só é possível verificar usuários com o papel de profissional.';
   END IF;
   UPDATE profiles SET is_certified = certified WHERE id = target_user;
+END;
+$$;
+
+-- TRIGGER de moderação de anúncios: impede que um profissional aprove o próprio
+-- anúncio ou manipule rating/views/expiração/premium via REST direto.
+-- Admins (com a permissão 'moderate_ads'), o SQL Editor/service role
+-- (auth.uid() NULL) e RPCs SECURITY DEFINER autorizadas (via app.skip_ad_trigger)
+-- continuam autorizados. O profissional pode apenas REENVIAR (status 'pending')
+-- ou ENCERRAR (status 'expired') os PRÓPRIOS anúncios.
+CREATE OR REPLACE FUNCTION block_ad_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Rotinas confiáveis (RPCs SECURITY DEFINER autorizadas) sinalizam via variável local.
+  IF COALESCE(current_setting('app.skip_ad_trigger', true), '') = 'on' THEN
+    RETURN NEW;
+  END IF;
+
+  IF (
+    NEW.status IS DISTINCT FROM OLD.status OR
+    NEW.expires_at IS DISTINCT FROM OLD.expires_at OR
+    NEW.rating IS DISTINCT FROM OLD.rating OR
+    NEW.review_count IS DISTINCT FROM OLD.review_count OR
+    NEW.views IS DISTINCT FROM OLD.views OR
+    NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason OR
+    NEW.is_premium IS DISTINCT FROM OLD.is_premium
+  ) THEN
+    -- SQL Editor / service role: auth.uid() é NULL → permitido.
+    IF auth.uid() IS NOT NULL AND NOT is_admin_allowed('moderate_ads') THEN
+      -- Profissional pode reenviar/encerrar SOMENTE os próprios anúncios,
+      -- mudando apenas o status (nunca rating/views/expiração/premium).
+      IF NOT (
+        auth.uid() = OLD.provider_id
+        AND NEW.status IN ('pending', 'expired')
+        AND NEW.status IS DISTINCT FROM OLD.status
+        AND NEW.expires_at IS NOT DISTINCT FROM OLD.expires_at
+        AND NEW.rating IS NOT DISTINCT FROM OLD.rating
+        AND NEW.review_count IS NOT DISTINCT FROM OLD.review_count
+        AND NEW.views IS NOT DISTINCT FROM OLD.views
+        AND NEW.rejection_reason IS NOT DISTINCT FROM OLD.rejection_reason
+        AND NEW.is_premium IS NOT DISTINCT FROM OLD.is_premium
+      ) THEN
+        RAISE EXCEPTION 'Somente administradores podem alterar a moderação do anúncio.';
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_service_ads_moderation ON service_ads;
+CREATE TRIGGER trg_service_ads_moderation
+  BEFORE UPDATE ON service_ads
+  FOR EACH ROW EXECUTE FUNCTION block_ad_escalation();
+
+-- Recalcular nota e contagem de avaliações de um anúncio (usada após reviews).
+CREATE OR REPLACE FUNCTION recalculate_ad_rating(ad_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  avg_rating numeric;
+  review_total integer;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM service_ads WHERE id = ad_id) THEN
+    RAISE EXCEPTION 'Anúncio não encontrado.';
+  END IF;
+
+  SELECT COALESCE(AVG(rating), 0), COUNT(*)::integer
+  INTO avg_rating, review_total
+  FROM reviews WHERE ad_id = recalculate_ad_rating.ad_id;
+
+  PERFORM set_config('app.skip_ad_trigger', 'on', true);
+  UPDATE service_ads SET rating = avg_rating, review_count = review_total WHERE id = ad_id;
+  PERFORM set_config('app.skip_ad_trigger', 'off', true);
+END;
+$$;
+
+-- Listar usuários com email/telefone — somente admin com 'manage_users' ou dono.
+-- (O SELECT público de profiles não expõe mais PII; aqui é canal privado.)
+CREATE OR REPLACE FUNCTION get_admin_user_list()
+RETURNS TABLE (
+  id uuid, name text, email text, role user_role, avatar text,
+  location text, phone text, bio text,
+  is_suspended boolean, is_owner boolean, is_certified boolean,
+  role_request text, created_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+  IF NOT is_admin_allowed('manage_users') THEN
+    RAISE EXCEPTION 'Sem permissão para listar usuários.';
+  END IF;
+  RETURN QUERY
+  SELECT p.id, p.name, u.email::text, p.role, p.avatar, p.location,
+         pr.phone, p.bio, p.is_suspended, p.is_owner, p.is_certified,
+         p.role_request, p.created_at
+  FROM profiles p
+  JOIN auth.users u ON u.id = p.id
+  LEFT JOIN user_private pr ON pr.user_id = p.id
+  ORDER BY p.created_at DESC
+  LIMIT 300;
+END;
+$$;
+
+-- Criar/reusar sessão de chat entre o cliente logado e o dono do anúncio.
+-- SECURITY DEFINER para conseguir inserir os DOIS participantes (a policy de
+-- chat_participants só permite auto-inserção). Valida: autenticado, anúncio
+-- existe e não é o próprio anúncio do chamador.
+CREATE OR REPLACE FUNCTION start_chat(p_ad_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  my_id uuid := auth.uid();
+  provider uuid;
+  existing_session uuid;
+  new_session uuid;
+BEGIN
+  IF my_id IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
+
+  SELECT provider_id INTO provider FROM service_ads WHERE id = p_ad_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Anúncio não encontrado.'; END IF;
+  IF provider = my_id THEN RAISE EXCEPTION 'Você não pode conversar consigo mesmo.'; END IF;
+
+  -- Reusa a sessão existente entre este cliente e o provider para o anúncio.
+  SELECT cs.id INTO existing_session
+  FROM chat_sessions cs
+  WHERE cs.ad_id = p_ad_id
+    AND EXISTS (
+      SELECT 1 FROM chat_participants cp
+      WHERE cp.session_id = cs.id AND cp.user_id = my_id
+    );
+  IF existing_session IS NOT NULL THEN
+    RETURN existing_session;
+  END IF;
+
+  INSERT INTO chat_sessions (ad_id) VALUES (p_ad_id) RETURNING id INTO new_session;
+  INSERT INTO chat_participants (session_id, user_id) VALUES
+    (new_session, my_id),
+    (new_session, provider);
+
+  RETURN new_session;
 END;
 $$;
 
@@ -713,6 +922,9 @@ REVOKE ALL ON FUNCTION set_user_certified(uuid, boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION get_my_permissions() FROM PUBLIC;
 REVOKE ALL ON FUNCTION get_admin_permissions(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION set_admin_permissions(uuid, text[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION recalculate_ad_rating(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_admin_user_list() FROM PUBLIC;
+REVOKE ALL ON FUNCTION start_chat(uuid) FROM PUBLIC;
 -- A contagem de views é pública (visitantes anônimos também contam)
 REVOKE ALL ON FUNCTION increment_ad_view(uuid) FROM PUBLIC;
 
@@ -735,6 +947,9 @@ GRANT EXECUTE ON FUNCTION set_user_certified(uuid, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_my_permissions() TO authenticated;
 GRANT EXECUTE ON FUNCTION get_admin_permissions(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION set_admin_permissions(uuid, text[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION recalculate_ad_rating(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_admin_user_list() TO authenticated;
+GRANT EXECUTE ON FUNCTION start_chat(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 
@@ -747,8 +962,15 @@ GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 -- create policy "Público lê imagens de anúncios" on storage.objects
 --   for select using (bucket_id = 'ad-images');
 -- create policy "Autenticado envia imagens de anúncios" on storage.objects
---   for insert with check (bucket_id = 'ad-images' and auth.role() = 'authenticated');
+--   for insert with check (
+--     bucket_id = 'ad-images' and auth.role() = 'authenticated'
+--     -- Evita SVG (stored XSS): SÓ aceite image/jpeg, image/png, image/webp, image/gif
+--     and (metadata->>'contentType' in ('image/jpeg','image/png','image/webp','image/gif'))
+--   );
 -- create policy "Público lê avatares" on storage.objects
 --   for select using (bucket_id = 'avatars');
 -- create policy "Autenticado envia avatares" on storage.objects
---   for insert with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
+--   for insert with check (
+--     bucket_id = 'avatars' and auth.role() = 'authenticated'
+--     and (metadata->>'contentType' in ('image/jpeg','image/png','image/webp','image/gif'))
+--   );

@@ -45,7 +45,7 @@ const PublicProfile: React.FC = () => {
     if (user.id === id) return; // Can't chat with self
 
     try {
-        const chatId = await store.startChat(user.id, id!, adId);
+        const chatId = await store.startChat(user.id, id!, adId, '');
         navigate(`/dashboard/chat/${chatId}`);
     } catch (e) {
         console.error(e);
