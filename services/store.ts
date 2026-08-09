@@ -1057,7 +1057,7 @@ class Store {
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
       appointmentsCancelled, newAppointmentsWeek,
-      totalReviews
+      totalReviews, newReviewsWeek
     ] = await Promise.all([
       count('profiles'),
       count('profiles', q => q.eq('role', 'PROVIDER')),
@@ -1078,6 +1078,7 @@ class Store {
       count('appointments', q => q.eq('status', 'cancelled')),
       count('appointments', q => q.gte('created_at', weekAgo)),
       count('reviews'),
+      count('reviews', q => q.gte('created_at', weekAgo)),
     ]);
 
     const { data: reviewRows } = await supabase.from('reviews').select('rating');
@@ -1098,6 +1099,8 @@ class Store {
     const adsByCategory = Array.from(byCategory.entries())
       .map(([category, count]) => ({ category, count }))
       .sort((a, b) => b.count - a.count);
+    const approvalRate = totalAds > 0 ? Math.round((adsApproved / totalAds) * 100) : 0;
+    const avgViewsPerApprovedAd = adsApproved > 0 ? Math.round(totalViews / adsApproved) : 0;
 
     // Top anúncios mais avaliados
     const { data: topRows } = await supabase
@@ -1121,7 +1124,7 @@ class Store {
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
       appointmentsCancelled, newAppointmentsWeek,
-      totalReviews, avgRating, adsByCategory, topAds, totalViews
+      totalReviews, newReviewsWeek, avgRating, totalViews, approvalRate, avgViewsPerApprovedAd, adsByCategory, topAds
     };
   }
 }

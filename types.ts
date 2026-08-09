@@ -74,8 +74,11 @@ export interface AdminStats {
   appointmentsCancelled: number;
   newAppointmentsWeek: number;
   totalReviews: number;
+  newReviewsWeek: number;
   avgRating: number;
   totalViews: number;
+  approvalRate: number;
+  avgViewsPerApprovedAd: number;
   adsByCategory: { category: string; count: number }[];
   topAds: {
     id: string;

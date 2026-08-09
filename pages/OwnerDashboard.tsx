@@ -539,7 +539,10 @@ const OwnerDashboard: React.FC = () => {
                   <p className="text-xs text-gray-500">Feedback dos clientes</p>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <StatCard label="Avaliações" value={stats?.totalReviews ?? 0} icon={MessageSquare} color="bg-purple-50 text-purple-600" />
+                    <StatCard label="Novas avaliações (7d)" value={stats?.newReviewsWeek ?? 0} icon={TrendingUp} color="bg-blue-50 text-blue-600" />
                     <StatCard label="Nota média" value={stats?.avgRating ?? 0} icon={Star} color="bg-yellow-50 text-yellow-600" />
+                    <StatCard label="Aprovação" value={stats ? `${stats.approvalRate}%` : '0%'} icon={Check} color="bg-green-50 text-green-600" />
+                    <StatCard label="Média de views" value={stats?.avgViewsPerApprovedAd ?? 0} icon={Eye} color="bg-brand-50 text-brand-600" />
                   </div>
                 </div>
               </div>
