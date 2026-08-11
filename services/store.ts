@@ -87,8 +87,6 @@ export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET)
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
   return urlData.publicUrl;
 }
-
-export const store = new Store();
 class Store {
   // Remove caracteres especiais do PostgREST (,( ) " ; * : . @ # ! ~ ^ + = |) para
   // evitar injeção de filtros em .or()/.ilike(). Mantém letras, números e espaços.
