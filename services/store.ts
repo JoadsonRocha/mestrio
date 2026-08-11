@@ -64,8 +64,8 @@ async function refreshSessionIfNeeded(): Promise<void> {
   }
 }
 
-const AD_IMAGES_BUCKET = import.meta.env.VITE_AD_IMAGES_BUCKET || 'ad-images';
-const AVATARS_BUCKET = import.meta.env.VITE_AVATARS_BUCKET || 'avatars';
+export const AD_IMAGES_BUCKET = import.meta.env.VITE_AD_IMAGES_BUCKET || 'ad-images';
+export const AVATARS_BUCKET = import.meta.env.VITE_AVATARS_BUCKET || 'avatars';
 
 /** Envia um arquivo para o Supabase Storage e retorna a URL pública. */
 const ALLOWED_IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
@@ -88,15 +88,13 @@ export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET)
   return urlData.publicUrl;
 }
 
-export { AD_IMAGES_BUCKET, AVATARS_BUCKET };
-
-// Remove caracteres especiais do PostgREST (,( ) " ; * : . @ # ! ~ ^ + = |) para
-// evitar injeção de filtros em .or()/.ilike(). Mantém letras, números e espaços.
-function sanitizeSearchTerm(term: string): string {
-  return String(term).replace(/[^\p{L}\p{N}\s]/gu, '').trim().slice(0, 100);
-}
-
+export const store = new Store();
 class Store {
+  // Remove caracteres especiais do PostgREST (,( ) " ; * : . @ # ! ~ ^ + = |) para
+  // evitar injeção de filtros em .or()/.ilike(). Mantém letras, números e espaços.
+  private sanitizeSearchTerm(term: string): string {
+    return String(term).replace(/[^\p{L}\p{N}\s]/gu, '').trim().slice(0, 100);
+  }
   private mapAd(data: any): ServiceAd {
     return {
       id: data.id,
@@ -169,7 +167,7 @@ class Store {
       query = query.eq('status', 'approved');
     }
     if (params?.location) {
-      const loc = sanitizeSearchTerm(params.location);
+      const loc = this.sanitizeSearchTerm(params.location);
       if (loc) query = query.ilike('location', `%${loc}%`);
     }
     if (params?.isPremium !== undefined) {
@@ -186,7 +184,7 @@ class Store {
     if (params?.searchTerm) {
       // Combina busca (título OU descrição) com não-expirado em um único `or`.
       // O termo é sanitizado para remover caracteres especiais do PostgREST.
-      const s = sanitizeSearchTerm(params.searchTerm);
+      const s = this.sanitizeSearchTerm(params.searchTerm);
       if (s) {
         const clauses: string[] = [];
         for (const col of ['title', 'description']) {
