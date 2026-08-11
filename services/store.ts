@@ -184,14 +184,19 @@ class Store {
 
     const nowIso = new Date().toISOString();
     if (params?.searchTerm) {
-      // Combina busca (título OU descrição) com não-expirado em um único `or`
-      const s = params.searchTerm;
-      const clauses: string[] = [];
-      for (const col of ['title', 'description']) {
-        clauses.push(`and(${col}.ilike.%${s}%,expires_at.is.null)`);
-        clauses.push(`and(${col}.ilike.%${s}%,expires_at.gt.${nowIso})`);
+      // Combina busca (título OU descrição) com não-expirado em um único `or`.
+      // O termo é sanitizado para remover caracteres especiais do PostgREST.
+      const s = sanitizeSearchTerm(params.searchTerm);
+      if (s) {
+        const clauses: string[] = [];
+        for (const col of ['title', 'description']) {
+          clauses.push(`and(${col}.ilike.%${s}%,expires_at.is.null)`);
+          clauses.push(`and(${col}.ilike.%${s}%,expires_at.gt.${nowIso})`);
+        }
+        query = query.or(clauses.join(','));
+      } else if (isPublic) {
+        query = query.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
       }
-      query = query.or(clauses.join(','));
     } else if (isPublic) {
       query = query.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
     }
@@ -234,16 +239,16 @@ class Store {
       .from('service_ads')
       .insert([{
         provider_id: ad.providerId,
-        title: ad.title,
-        description: ad.description,
-        category: ad.category,
+        title: sanitizeText(ad.title),
+        description: sanitizeHtmlLike(ad.description),
+        category: sanitizeText(ad.category),
         price: ad.price,
         price_unit: ad.priceUnit,
-        location: ad.location,
+        location: sanitizeText(ad.location),
         images: ad.images,
-        whatsapp: ad.whatsapp,
+        whatsapp: sanitizePhone(ad.whatsapp),
         availability: ad.availability,
-        tags: ad.tags || [],
+        tags: (ad.tags || []).map(t => sanitizeText(t)),
         is_premium: ad.isPremium || false,
         status: 'pending',
         expires_at: expiresAt
@@ -257,23 +262,23 @@ class Store {
 
   async updateAd(id: string, ad: Partial<ServiceAd>): Promise<void> {
     const updateData: any = { updated_at: new Date().toISOString() };
-    if (ad.title !== undefined) updateData.title = ad.title;
-    if (ad.description !== undefined) updateData.description = ad.description;
-    if (ad.category !== undefined) updateData.category = ad.category;
+    if (ad.title !== undefined) updateData.title = sanitizeText(ad.title);
+    if (ad.description !== undefined) updateData.description = sanitizeHtmlLike(ad.description);
+    if (ad.category !== undefined) updateData.category = sanitizeText(ad.category);
     if (ad.price !== undefined) updateData.price = ad.price;
     if (ad.priceUnit !== undefined) updateData.price_unit = ad.priceUnit;
-    if (ad.location !== undefined) updateData.location = ad.location;
-    if (ad.whatsapp !== undefined) updateData.whatsapp = ad.whatsapp;
+    if (ad.location !== undefined) updateData.location = sanitizeText(ad.location);
+    if (ad.whatsapp !== undefined) updateData.whatsapp = sanitizePhone(ad.whatsapp);
     if (ad.images !== undefined) updateData.images = ad.images;
     if (ad.availability !== undefined) updateData.availability = ad.availability;
-    if (ad.tags !== undefined) updateData.tags = ad.tags;
+    if (ad.tags !== undefined) updateData.tags = ad.tags.map(t => sanitizeText(t));
 
     const { error } = await supabase
       .from('service_ads')
       .update(updateData)
       .eq('id', id);
       
-    if (error) { console.error("Store Error [updateAd]:", error); throw error; }
+    if (error) { console.error("Store Error [updateAd]:", error); throw error;
   }
 
   async addReview(adId: string, review: Omit<Review, 'id' | 'date'>): Promise<void> {
