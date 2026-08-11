@@ -90,6 +90,12 @@ export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET)
 
 export { AD_IMAGES_BUCKET, AVATARS_BUCKET };
 
+// Remove caracteres especiais do PostgREST (,( ) " ; * : . @ # ! ~ ^ + = |) para
+// evitar injeção de filtros em .or()/.ilike(). Mantém letras, números e espaços.
+function sanitizeSearchTerm(term: string): string {
+  return String(term).replace(/[^\p{L}\p{N}\s]/gu, '').trim().slice(0, 100);
+}
+
 class Store {
   private mapAd(data: any): ServiceAd {
     return {
@@ -163,7 +169,8 @@ class Store {
       query = query.eq('status', 'approved');
     }
     if (params?.location) {
-      query = query.ilike('location', `%${params.location}%`);
+      const loc = sanitizeSearchTerm(params.location);
+      if (loc) query = query.ilike('location', `%${loc}%`);
     }
     if (params?.isPremium !== undefined) {
       query = query.eq('is_premium', params.isPremium);
