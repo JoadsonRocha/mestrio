@@ -278,7 +278,7 @@ class Store {
       .update(updateData)
       .eq('id', id);
       
-    if (error) { console.error("Store Error [updateAd]:", error); throw error;
+    if (error) { console.error("Store Error [updateAd]:", error); throw error; }
   }
 
   async addReview(adId: string, review: Omit<Review, 'id' | 'date'>): Promise<void> {
@@ -287,9 +287,9 @@ class Store {
       .insert([{
         ad_id: adId,
         author_id: review.authorId,
-        author_name: review.authorName,
+        author_name: sanitizeText(review.authorName),
         rating: review.rating,
-        comment: review.comment
+        comment: sanitizeHtmlLike(review.comment)
       }]);
     
     if (reviewError) { console.error("Store Error [addReview]:", reviewError); throw reviewError; }
@@ -427,7 +427,7 @@ class Store {
             .from('profiles')
             .insert([{
                 id: authData.user.id,
-                name: name,
+                name: sanitizeText(name),
                 // Novo profissional entra como CLIENT com solicitação pendente,
                 // até o dono aprovar (role_request = 'PROVIDER').
                 role: role === UserRole.PROVIDER ? UserRole.CLIENT : (role || UserRole.PROVIDER),
@@ -607,13 +607,13 @@ class Store {
     const { error: msgError } = await supabase.from('messages').insert([{
       session_id: chatId,
       sender_id: senderId,
-      text: text
+      text: sanitizeHtmlLike(text)
     }]);
 
     if (msgError) { console.error("Store Error [sendMessage]:", msgError); throw msgError; }
 
     await supabase.from('chat_sessions').update({
-      last_message: text,
+      last_message: sanitizeText(text).slice(0, 120),
       updated_at: new Date().toISOString()
     }).eq('id', chatId);
   }
@@ -628,8 +628,8 @@ class Store {
         ad_id: data.adId,
         date: data.date,
         time: data.time,
-        notes: data.notes,
-        client_location: data.clientLocation
+        notes: sanitizeHtmlLike(data.notes),
+        client_location: sanitizeText(data.clientLocation)
       }])
       .select()
       .single();
