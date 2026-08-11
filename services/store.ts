@@ -26,8 +26,17 @@ export interface GetAdsParams {
  *   WHERE id = 'SEU_AUTH_UID';
  */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Configuração Supabase ausente. Crie um arquivo .env na raiz com:\n' +
+    '  VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co\n' +
+    '  VITE_SUPABASE_ANON_KEY=sua_anon_key\n' +
+    'Encontre esses valores em Project Settings > API no dashboard do Supabase.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
