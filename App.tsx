@@ -3,7 +3,6 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar, Footer } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { SmartEstimator } from './components/SmartEstimator';
 const Home = lazy(() => import('./pages/Home'));
 const SearchPage = lazy(() => import('./pages/Search'));
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'));
@@ -22,6 +21,7 @@ const Privacy = lazy(() => import('./pages/Privacy'));
 const OwnerDashboard = lazy(() => import('./admin/pages/OwnerDashboard'));
 const FavoritesTab = lazy(() => import('./components/FavoritesTab').then(m => ({ default: m.FavoritesTab })));
 const JobRequestsTab = lazy(() => import('./components/JobRequestsTab').then(m => ({ default: m.JobRequestsTab })));
+const QuoteBuilder = lazy(() => import('./components/QuoteBuilder').then(m => ({ default: m.QuoteBuilder })));
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
@@ -38,6 +38,7 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/dashboard\/ads/, title: 'Meus Anúncios' },
   { match: /^\/dashboard\/favorites/, title: 'Favoritos' },
   { match: /^\/dashboard\/job-requests/, title: 'Solicitações de Orçamento' },
+  { match: /^\/dashboard\/quote-builder/, title: 'Gerador de Orçamentos IA' },
   { match: /^\/dashboard/, title: 'Meu Painel' },
   { match: /^\/owner/, title: 'Painel do Dono' },
   { match: /^\/profile\/edit/, title: 'Editar Perfil' },
@@ -85,6 +86,7 @@ const MainLayout: React.FC = () => {
             <Route path="chat/:id" element={<Chat />} />
             <Route path="favorites" element={<FavoritesTab />} />
             <Route path="job-requests" element={<JobRequestsTab />} />
+            <Route path="quote-builder" element={<QuoteBuilder />} />
           </Route>
 
           <Route path="/profile/edit" element={<EditProfile />} />
@@ -100,7 +102,6 @@ const MainLayout: React.FC = () => {
         </Suspense>
       </main>
       {!isDashboardRoute && <Footer />}
-      {!isDashboardRoute && <SmartEstimator />}
     </div>
   );
 };

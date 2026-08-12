@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { Settings, Plus, MessageSquare, LogOut, Calendar, Megaphone, LayoutDashboard, Heart, Briefcase } from 'lucide-react';
+import { Settings, Plus, MessageSquare, LogOut, Calendar, Megaphone, LayoutDashboard, Heart, Briefcase, Calculator } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 
@@ -37,7 +37,12 @@ const Dashboard: React.FC = () => {
     { to: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
     { to: '/dashboard/appointments', label: 'Meus Agendamentos', icon: Calendar },
     { to: '/dashboard/job-requests', label: isClient ? 'Solicitar Orçamento' : 'Oportunidades', icon: Briefcase },
-    ...(isClient ? [{ to: '/dashboard/favorites', label: 'Favoritos', icon: Heart }] : [{ to: '/dashboard/ads', label: 'Meus Anúncios', icon: Megaphone }]),
+    ...(isClient 
+      ? [{ to: '/dashboard/favorites', label: 'Favoritos', icon: Heart }] 
+      : [
+          { to: '/dashboard/ads', label: 'Meus Anúncios', icon: Megaphone },
+          { to: '/dashboard/quote-builder', label: 'Gerador de Orçamentos IA', icon: Calculator }
+        ]),
   ];
 
 
