@@ -383,6 +383,8 @@ const OwnerDashboard: React.FC = () => {
   if (can('view_metrics')) visibleTabs.push('overview');
   if (can('moderate_ads')) visibleTabs.push('ads');
   if (can('manage_users') || can('approve_providers') || can('verify_providers')) visibleTabs.push('users');
+  visibleTabs.push('reports');
+  visibleTabs.push('kyc');
   if (can('manage_categories')) visibleTabs.push('categories');
   visibleTabs.push('audit');
   visibleTabs.push('broadcasts');
@@ -1294,7 +1296,195 @@ const OwnerDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* 4️⃣ CATEGORIES MANAGEMENT TAB */}
+        {/* 4️⃣ REPORTS & DISPUTES TAB */}
+        {activeTab === 'reports' && (
+          <div className={`rounded-xl border shadow-sm p-6 ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  <ShieldAlert size={18} className="text-rose-400" /> Denúncias & Disputas
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Gerencie denúncias de usuários contra profissionais ou anúncios</p>
+              </div>
+              <div className="flex gap-1.5">
+                {(['pending', 'resolved', 'dismissed', 'all'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setReportFilter(f)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition ${
+                      reportFilter === f
+                        ? 'bg-[#F2C811] text-slate-950'
+                        : isDark ? 'bg-slate-700/60 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f === 'all' ? 'Todas' : f === 'pending' ? 'Pendentes' : f === 'resolved' ? 'Resolvidas' : 'Arquivadas'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-500/10">
+              {reports.filter(r => reportFilter === 'all' || r.status === reportFilter).length === 0 ? (
+                <p className="text-xs text-slate-400 py-10 text-center">Nenhuma denúncia encontrada nesta categoria.</p>
+              ) : (
+                reports
+                  .filter(r => reportFilter === 'all' || r.status === reportFilter)
+                  .map(report => (
+                    <div key={report.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold border uppercase ${
+                            report.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                            report.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                          }`}>{report.status === 'pending' ? 'Pendente' : report.status === 'resolved' ? 'Resolvida' : 'Arquivada'}</span>
+                          <span className="text-xs font-bold text-[#F2C811]">{report.reason}</span>
+                        </div>
+                        <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          Denunciado: {report.reportedName || report.reportedId}
+                        </p>
+                        {report.description && (
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{report.description}</p>
+                        )}
+                        <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                          Por: {report.reporterName || report.reporterId} • {new Date(report.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      {report.status === 'pending' && (
+                        <div className="flex gap-2 shrink-0 text-xs">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await store.updateReportStatus(report.id, 'resolved');
+                                loadReports();
+                                toast('Denúncia marcada como resolvida.', 'success');
+                              } catch { toast('Erro ao atualizar denúncia.', 'error'); }
+                            }}
+                            className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1"
+                          >
+                            <Check size={13} /> Resolver
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await store.updateReportStatus(report.id, 'dismissed');
+                                loadReports();
+                                toast('Denúncia arquivada.', 'info');
+                              } catch { toast('Erro ao arquivar denúncia.', 'error'); }
+                            }}
+                            className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold"
+                          >
+                            Arquivar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 5️⃣ KYC VALIDATION TAB */}
+        {activeTab === 'kyc' && (
+          <div className={`rounded-xl border shadow-sm p-6 ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  <ShieldCheck size={18} className="text-emerald-400" /> Validação KYC de Profissionais
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Analise documentos enviados para concessão do Selo de Verificado</p>
+              </div>
+              <div className="flex gap-1.5">
+                {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setKycFilter(f)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition ${
+                      kycFilter === f
+                        ? 'bg-[#F2C811] text-slate-950'
+                        : isDark ? 'bg-slate-700/60 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendentes' : f === 'approved' ? 'Aprovados' : 'Rejeitados'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-500/10">
+              {kycDocs.filter(k => kycFilter === 'all' || k.status === kycFilter).length === 0 ? (
+                <p className="text-xs text-slate-400 py-10 text-center">Nenhum documento KYC nesta categoria.</p>
+              ) : (
+                kycDocs
+                  .filter(k => kycFilter === 'all' || k.status === kycFilter)
+                  .map(doc => (
+                    <div key={doc.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold border uppercase ${
+                            doc.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                            doc.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          }`}>{doc.status === 'pending' ? 'Pendente' : doc.status === 'approved' ? 'Aprovado' : 'Rejeitado'}</span>
+                          <span className="text-xs font-bold text-slate-300">{doc.documentType}</span>
+                        </div>
+                        <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                          Profissional: {doc.providerName || doc.providerId}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                          Enviado em: {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                        {doc.documentUrl && (
+                          <a
+                            href={doc.documentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[#F2C811] hover:underline mt-1 inline-flex items-center gap-1"
+                          >
+                            <Eye size={12} /> Ver Documento
+                          </a>
+                        )}
+                      </div>
+                      {doc.status === 'pending' && (
+                        <div className="flex gap-2 shrink-0 text-xs">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await store.updateKYCStatus(doc.id, 'approved');
+                                const u = users.find(u => u.id === doc.providerId);
+                                if (u) await store.setUserCertified(doc.providerId, true);
+                                setUsers(prev => prev.map(x => x.id === doc.providerId ? { ...x, isCertified: true } : x));
+                                loadKYCDocs();
+                                toast('KYC aprovado — Selo de Verificado concedido!', 'success');
+                              } catch { toast('Erro ao aprovar KYC.', 'error'); }
+                            }}
+                            className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1"
+                          >
+                            <ShieldCheck size={13} /> Aprovar & Verificar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await store.updateKYCStatus(doc.id, 'rejected');
+                                loadKYCDocs();
+                                toast('Documento KYC rejeitado.', 'info');
+                              } catch { toast('Erro ao rejeitar KYC.', 'error'); }
+                            }}
+                            className="px-3 py-1.5 rounded bg-rose-600/20 text-rose-400 border border-rose-500/30 hover:bg-rose-600/30 font-bold"
+                          >
+                            Rejeitar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 6️⃣ CATEGORIES MANAGEMENT TAB */}
         {activeTab === 'categories' && (
           <div className={`rounded-xl border shadow-sm p-6 ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
             <h2 className={`text-base font-bold flex items-center gap-2 mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
