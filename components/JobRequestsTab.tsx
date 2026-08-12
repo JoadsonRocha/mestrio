@@ -6,9 +6,12 @@ import { useToast } from '../context/ToastContext';
 import { JobRequest, QuoteProposal, UserRole } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
+import { useNavigate } from 'react-router-dom';
+
 export const JobRequestsTab: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [requests, setRequests] = useState<JobRequest[]>([]);
   const [proposals, setProposals] = useState<QuoteProposal[]>([]);
@@ -27,22 +30,6 @@ export const JobRequestsTab: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<JobRequest | null>(null);
   const [estPrice, setEstPrice] = useState('');
   const [estDays, setEstDays] = useState('1');
-  // Lead Unlock State
-  const [unlockedLeads, setUnlockedLeads] = useState<string[]>([]);
-
-  const handleUnlockLead = (jobId: string) => {
-    if (!user) return;
-    if (unlockedLeads.includes(jobId)) return;
-
-    if ((user.referralCredits || 0) < 10) {
-      toast('Você precisa de pelo menos 10 créditos para desbloquear o contato direto.', 'error');
-      return;
-    }
-
-    setUnlockedLeads(prev => [...prev, jobId]);
-    toast('Contato do cliente desbloqueado com sucesso!', 'success');
-  };
-
   const isClient = user?.role === UserRole.CLIENT;
 
   const loadData = async () => {
@@ -261,20 +248,20 @@ export const JobRequestsTab: React.FC = () => {
                   </div>
                 )}
 
-                {/* Se for Profissional: Desbloquear Contato & Enviar Proposta */}
+                {/* Se for Profissional ou Usuário Logado: Ver Contato Gratuito & Enviar Proposta */}
                 {!isClient && (
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
-                    {unlockedLeads.includes(job.id) ? (
-                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2 rounded-lg flex items-center gap-2 font-medium">
+                    {user ? (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3.5 py-2 rounded-lg flex items-center gap-2 font-medium">
                         <Phone size={14} className="text-emerald-600 shrink-0" />
-                        <span>Contato: <strong>(11) 98877-6655</strong> • {job.clientName}</span>
+                        <span>Contato do Cliente: <strong>(11) 98877-6655</strong> • {job.clientName}</span>
                       </div>
                     ) : (
                       <button
-                        onClick={() => handleUnlockLead(job.id)}
-                        className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition inline-flex items-center gap-1.5 shadow-sm"
+                        onClick={() => navigate('/login')}
+                        className="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-lg transition inline-flex items-center gap-1.5 shadow-sm"
                       >
-                        <Unlock size={14} /> Desbloquear Telefone do Cliente (10 Créditos)
+                        <Phone size={14} /> Faça Login para Ver o Contato
                       </button>
                     )}
 
@@ -285,7 +272,10 @@ export const JobRequestsTab: React.FC = () => {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setSelectedJob(job)}
+                        onClick={() => {
+                          if (!user) { navigate('/login'); return; }
+                          setSelectedJob(job);
+                        }}
                         className="px-4 py-2 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition inline-flex items-center"
                       >
                         <Send size={14} className="mr-1.5" /> Enviar Proposta
