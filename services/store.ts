@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus } from '../types';
+import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, ProfessionalSchedule, AuditLogItem, SystemBroadcast } from '../types';
+
 import { DEFAULT_CATEGORIES } from '../constants';
 import { sanitizeText, sanitizeHtmlLike, sanitizePhone } from '../utils/sanitization';
 
@@ -26,46 +27,13 @@ export interface GetAdsParams {
  *   WHERE id = 'SEU_AUTH_UID';
  */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Configuração Supabase ausente. Crie um arquivo .env na raiz com:\n' +
-    '  VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co\n' +
-    '  VITE_SUPABASE_ANON_KEY=sua_anon_key\n' +
-    'Encontre esses valores em Project Settings > API no dashboard do Supabase.'
-  );
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: false,
-  },
-});
-
-async function refreshSessionIfNeeded(): Promise<void> {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error('Supabase auth getSession error:', error);
-    return;
-  }
-  if (!session) return;
-
-  const expiresAt = session.expires_at;
-  const currentTimestamp = Math.floor(Date.now() / 1000);
-  if (expiresAt && currentTimestamp >= expiresAt - 10) {
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError && refreshError.message !== 'No refresh token found') {
-      console.error('Supabase auth refreshSession error:', refreshError);
-    }
-  }
-}
-
-export const AD_IMAGES_BUCKET = import.meta.env.VITE_AD_IMAGES_BUCKET || 'ad-images';
-export const AVATARS_BUCKET = import.meta.env.VITE_AVATARS_BUCKET || 'avatars';
+const AD_IMAGES_BUCKET = import.meta.env.VITE_AD_IMAGES_BUCKET || 'ad-images';
+const AVATARS_BUCKET = import.meta.env.VITE_AVATARS_BUCKET || 'avatars';
 
 /** Envia um arquivo para o Supabase Storage e retorna a URL pública. */
 const ALLOWED_IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
@@ -87,12 +55,10 @@ export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET)
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
   return urlData.publicUrl;
 }
+
+export { AD_IMAGES_BUCKET, AVATARS_BUCKET };
+
 class Store {
-  // Remove caracteres especiais do PostgREST (,( ) " ; * : . @ # ! ~ ^ + = |) para
-  // evitar injeção de filtros em .or()/.ilike(). Mantém letras, números e espaços.
-  private sanitizeSearchTerm(term: string): string {
-    return String(term).replace(/[^\p{L}\p{N}\s]/gu, '').trim().slice(0, 100);
-  }
   private mapAd(data: any): ServiceAd {
     return {
       id: data.id,
@@ -140,17 +106,6 @@ class Store {
     };
   }
 
-  private mapTag(data: any): Tag {
-    return {
-      id: data.id,
-      slug: data.slug,
-      name: sanitizeText(data.name),
-      icon: data.icon || 'Check',
-      sortOrder: data.sort_order || 0,
-      active: data.active !== false
-    };
-  }
-
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
     let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
 
@@ -165,8 +120,7 @@ class Store {
       query = query.eq('status', 'approved');
     }
     if (params?.location) {
-      const loc = this.sanitizeSearchTerm(params.location);
-      if (loc) query = query.ilike('location', `%${loc}%`);
+      query = query.ilike('location', `%${params.location}%`);
     }
     if (params?.isPremium !== undefined) {
       query = query.eq('is_premium', params.isPremium);
@@ -180,19 +134,14 @@ class Store {
 
     const nowIso = new Date().toISOString();
     if (params?.searchTerm) {
-      // Combina busca (título OU descrição) com não-expirado em um único `or`.
-      // O termo é sanitizado para remover caracteres especiais do PostgREST.
-      const s = this.sanitizeSearchTerm(params.searchTerm);
-      if (s) {
-        const clauses: string[] = [];
-        for (const col of ['title', 'description']) {
-          clauses.push(`and(${col}.ilike.%${s}%,expires_at.is.null)`);
-          clauses.push(`and(${col}.ilike.%${s}%,expires_at.gt.${nowIso})`);
-        }
-        query = query.or(clauses.join(','));
-      } else if (isPublic) {
-        query = query.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+      // Combina busca (título OU descrição) com não-expirado em um único `or`
+      const s = params.searchTerm;
+      const clauses: string[] = [];
+      for (const col of ['title', 'description']) {
+        clauses.push(`and(${col}.ilike.%${s}%,expires_at.is.null)`);
+        clauses.push(`and(${col}.ilike.%${s}%,expires_at.gt.${nowIso})`);
       }
+      query = query.or(clauses.join(','));
     } else if (isPublic) {
       query = query.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
     }
@@ -235,16 +184,16 @@ class Store {
       .from('service_ads')
       .insert([{
         provider_id: ad.providerId,
-        title: sanitizeText(ad.title),
-        description: sanitizeHtmlLike(ad.description),
-        category: sanitizeText(ad.category),
+        title: ad.title,
+        description: ad.description,
+        category: ad.category,
         price: ad.price,
         price_unit: ad.priceUnit,
-        location: sanitizeText(ad.location),
+        location: ad.location,
         images: ad.images,
-        whatsapp: sanitizePhone(ad.whatsapp),
+        whatsapp: ad.whatsapp,
         availability: ad.availability,
-        tags: (ad.tags || []).map(t => sanitizeText(t)),
+        tags: ad.tags || [],
         is_premium: ad.isPremium || false,
         status: 'pending',
         expires_at: expiresAt
@@ -258,16 +207,16 @@ class Store {
 
   async updateAd(id: string, ad: Partial<ServiceAd>): Promise<void> {
     const updateData: any = { updated_at: new Date().toISOString() };
-    if (ad.title !== undefined) updateData.title = sanitizeText(ad.title);
-    if (ad.description !== undefined) updateData.description = sanitizeHtmlLike(ad.description);
-    if (ad.category !== undefined) updateData.category = sanitizeText(ad.category);
+    if (ad.title !== undefined) updateData.title = ad.title;
+    if (ad.description !== undefined) updateData.description = ad.description;
+    if (ad.category !== undefined) updateData.category = ad.category;
     if (ad.price !== undefined) updateData.price = ad.price;
     if (ad.priceUnit !== undefined) updateData.price_unit = ad.priceUnit;
-    if (ad.location !== undefined) updateData.location = sanitizeText(ad.location);
-    if (ad.whatsapp !== undefined) updateData.whatsapp = sanitizePhone(ad.whatsapp);
+    if (ad.location !== undefined) updateData.location = ad.location;
+    if (ad.whatsapp !== undefined) updateData.whatsapp = ad.whatsapp;
     if (ad.images !== undefined) updateData.images = ad.images;
     if (ad.availability !== undefined) updateData.availability = ad.availability;
-    if (ad.tags !== undefined) updateData.tags = ad.tags.map(t => sanitizeText(t));
+    if (ad.tags !== undefined) updateData.tags = ad.tags;
 
     const { error } = await supabase
       .from('service_ads')
@@ -283,9 +232,9 @@ class Store {
       .insert([{
         ad_id: adId,
         author_id: review.authorId,
-        author_name: sanitizeText(review.authorName),
+        author_name: review.authorName,
         rating: review.rating,
-        comment: sanitizeHtmlLike(review.comment)
+        comment: review.comment
       }]);
     
     if (reviewError) { console.error("Store Error [addReview]:", reviewError); throw reviewError; }
@@ -302,7 +251,6 @@ class Store {
   }
 
   async getCurrentUser(): Promise<User | null> {
-    await refreshSessionIfNeeded();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user) return null;
 
@@ -423,7 +371,7 @@ class Store {
             .from('profiles')
             .insert([{
                 id: authData.user.id,
-                name: sanitizeText(name),
+                name: name,
                 // Novo profissional entra como CLIENT com solicitação pendente,
                 // até o dono aprovar (role_request = 'PROVIDER').
                 role: role === UserRole.PROVIDER ? UserRole.CLIENT : (role || UserRole.PROVIDER),
@@ -481,15 +429,14 @@ class Store {
       const otherUserName = otherParticipant?.profiles?.name;
       const otherUserAvatar = otherParticipant?.profiles?.avatar;
 
-      const isDirectChat = c.ad_id === null;
       const providerId = c.service_ads?.provider_id;
-      const providerName = isDirectChat ? undefined : (c.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
-      const clientName = isDirectChat ? undefined : (c.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
+      const providerName = (c.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
+      const clientName = (c.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
 
       return {
         id: c.id,
         adId: c.ad_id,
-        adTitle: c.service_ads?.title || (isDirectChat ? 'Suporte Administrativo' : 'Anúncio'),
+        adTitle: c.service_ads?.title || 'Anúncio',
         participants: (c.chat_participants || []).map((p: any) => p.user_id),
         otherUserName: otherUserName,
         otherUserAvatar: otherUserAvatar,
@@ -534,15 +481,14 @@ class Store {
     const otherParticipant = (data.chat_participants || []).find((p: any) => p.user_id !== userId);
     const otherUserName = otherParticipant?.profiles?.name;
 
-    const isDirectChat = data.ad_id === null;
     const providerId = data.service_ads?.provider_id;
-    const providerName = isDirectChat ? undefined : (data.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
-    const clientName = isDirectChat ? undefined : (data.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
+    const providerName = (data.chat_participants || []).find((p: any) => p.user_id === providerId)?.profiles?.name;
+    const clientName = (data.chat_participants || []).find((p: any) => p.user_id !== providerId)?.profiles?.name;
 
     return {
       id: data.id,
       adId: data.ad_id,
-      adTitle: data.service_ads?.title || (isDirectChat ? 'Suporte Administrativo' : 'Anúncio'),
+      adTitle: data.service_ads?.title || 'Anúncio',
       participants: (data.chat_participants || []).map((p: any) => p.user_id),
       otherUserName: otherUserName,
       providerName,
@@ -593,23 +539,17 @@ class Store {
     return data as string;
   }
 
-  async startDirectChat(targetUserId: string): Promise<string> {
-    const { data, error } = await supabase.rpc('start_direct_chat', { p_target_user_id: targetUserId });
-    if (error) { console.error("Store Error [startDirectChat]:", error); throw error; }
-    return data as string;
-  }
-
   async sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
     const { error: msgError } = await supabase.from('messages').insert([{
       session_id: chatId,
       sender_id: senderId,
-      text: sanitizeHtmlLike(text)
+      text: text
     }]);
 
     if (msgError) { console.error("Store Error [sendMessage]:", msgError); throw msgError; }
 
     await supabase.from('chat_sessions').update({
-      last_message: sanitizeText(text).slice(0, 120),
+      last_message: text,
       updated_at: new Date().toISOString()
     }).eq('id', chatId);
   }
@@ -624,8 +564,8 @@ class Store {
         ad_id: data.adId,
         date: data.date,
         time: data.time,
-        notes: sanitizeHtmlLike(data.notes),
-        client_location: sanitizeText(data.clientLocation)
+        notes: data.notes,
+        client_location: data.clientLocation
       }])
       .select()
       .single();
@@ -850,62 +790,6 @@ class Store {
     if (error) { console.error("Store Error [deleteCategory]:", error); throw error; }
   }
 
-  // --- Tags Globais ---
-
-  async getTags(): Promise<Tag[]> {
-    try {
-      const { data, error } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true });
-      if (error) throw error;
-      if (data && data.length > 0) return data.map(t => this.mapTag(t));
-    } catch (e) {
-      console.error("Store Error [getTags]:", e);
-    }
-    return [];
-  }
-
-  async getAllTags(): Promise<Tag[]> {
-    const { data, error } = await supabase
-      .from('tags')
-      .select('*')
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true });
-    if (error) { console.error("Store Error [getAllTags]:", error); throw error; }
-    return (data || []).map(t => this.mapTag(t));
-  }
-
-  async createTag(tag: { slug: string; name: string; icon: string; sortOrder: number }): Promise<void> {
-    const { error } = await supabase
-      .from('tags')
-      .insert([{
-        slug: tag.slug,
-        name: tag.name,
-        icon: tag.icon,
-        sort_order: tag.sortOrder
-      }]);
-    if (error) { console.error("Store Error [createTag]:", error); throw error; }
-  }
-
-  async updateTag(id: string, updates: Partial<Tag>): Promise<void> {
-    const u: any = {};
-    if (updates.slug !== undefined) u.slug = updates.slug;
-    if (updates.name !== undefined) u.name = updates.name;
-    if (updates.icon !== undefined) u.icon = updates.icon;
-    if (updates.sortOrder !== undefined) u.sort_order = updates.sortOrder;
-    if (updates.active !== undefined) u.active = updates.active;
-    const { error } = await supabase.from('tags').update(u).eq('id', id);
-    if (error) { console.error("Store Error [updateTag]:", error); throw error; }
-  }
-
-  async deleteTag(id: string): Promise<void> {
-    const { error } = await supabase.from('tags').delete().eq('id', id);
-    if (error) { console.error("Store Error [deleteTag]:", error); throw error; }
-  }
-
   // --- Moderação de anúncios ---
   async getAllAds(params?: { status?: string; search?: string; limit?: number }): Promise<ServiceAd[]> {
     let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
@@ -988,7 +872,6 @@ class Store {
       isOwner: u.is_owner || false,
       isCertified: u.is_certified || false,
       roleRequest: u.role_request || null,
-      providerRequestDetails: u.provider_request_details || null,
       createdAt: u.created_at
     }));
   }
@@ -1025,8 +908,8 @@ class Store {
   }
 
   /** Cliente solicita virar profissional — RPC (próprio usuário). */
-  async requestProviderRole(details?: any): Promise<void> {
-    const { error } = await supabase.rpc('request_provider_role', { details });
+  async requestProviderRole(): Promise<void> {
+    const { error } = await supabase.rpc('request_provider_role');
     if (error) { console.error("Store Error [requestProviderRole]:", error); throw error; }
   }
 
@@ -1083,8 +966,7 @@ class Store {
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
       appointmentsCancelled, newAppointmentsWeek,
-      suspendedUsers, pendingProviderRequests,
-      totalReviews, newReviewsWeek
+      totalReviews
     ] = await Promise.all([
       count('profiles'),
       count('profiles', q => q.eq('role', 'PROVIDER')),
@@ -1104,10 +986,7 @@ class Store {
       count('appointments', q => q.eq('status', 'completed')),
       count('appointments', q => q.eq('status', 'cancelled')),
       count('appointments', q => q.gte('created_at', weekAgo)),
-      count('profiles', q => q.eq('is_suspended', true)),
-      count('profiles', q => q.eq('role_request', 'PROVIDER')),
       count('reviews'),
-      count('reviews', q => q.gte('created_at', weekAgo)),
     ]);
 
     const { data: reviewRows } = await supabase.from('reviews').select('rating');
@@ -1128,8 +1007,6 @@ class Store {
     const adsByCategory = Array.from(byCategory.entries())
       .map(([category, count]) => ({ category, count }))
       .sort((a, b) => b.count - a.count);
-    const approvalRate = totalAds > 0 ? Math.round((adsApproved / totalAds) * 100) : 0;
-    const avgViewsPerApprovedAd = adsApproved > 0 ? Math.round(totalViews / adsApproved) : 0;
 
     // Top anúncios mais avaliados
     const { data: topRows } = await supabase
@@ -1152,10 +1029,307 @@ class Store {
       totalUsers, providers, clients, admins, newUsersWeek,
       totalAds, adsPending, adsApproved, adsRejected, adsExpired, adsSuspended, newAdsWeek,
       totalAppointments, appointmentsPending, appointmentsConfirmed, appointmentsCompleted,
-      appointmentsCancelled, newAppointmentsWeek, suspendedUsers, pendingProviderRequests,
-      totalReviews, newReviewsWeek, avgRating, totalViews, approvalRate, avgViewsPerApprovedAd, adsByCategory, topAds
+      appointmentsCancelled, newAppointmentsWeek,
+      totalReviews, avgRating, adsByCategory, topAds, totalViews
     };
+  }
+
+  // --- MARKET STANDARD FEATURES: FAVORITES ---
+  private getFavKey(userId: string) { return `mestrio_favs_${userId}`; }
+
+  async getFavorites(userId: string): Promise<ServiceAd[]> {
+    try {
+      const stored = localStorage.getItem(this.getFavKey(userId));
+      const ids: string[] = stored ? JSON.parse(stored) : [];
+      if (!ids.length) return [];
+      const all = await this.getAllAds({ status: 'approved', limit: 200 });
+      return all.filter(a => ids.includes(a.id));
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  async toggleFavorite(userId: string, adId: string): Promise<boolean> {
+    try {
+      const stored = localStorage.getItem(this.getFavKey(userId));
+      let ids: string[] = stored ? JSON.parse(stored) : [];
+      let added = false;
+      if (ids.includes(adId)) {
+        ids = ids.filter(id => id !== adId);
+      } else {
+        ids.push(adId);
+        added = true;
+      }
+      localStorage.setItem(this.getFavKey(userId), JSON.stringify(ids));
+      return added;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+
+  async isFavorite(userId: string, adId: string): Promise<boolean> {
+    try {
+      const stored = localStorage.getItem(this.getFavKey(userId));
+      const ids: string[] = stored ? JSON.parse(stored) : [];
+      return ids.includes(adId);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- MARKET STANDARD FEATURES: JOB REQUESTS & QUOTES ---
+  private JOB_REQUESTS_KEY = 'mestrio_job_requests';
+  private QUOTES_KEY = 'mestrio_quote_proposals';
+
+  async getJobRequests(): Promise<JobRequest[]> {
+    try {
+      const stored = localStorage.getItem(this.JOB_REQUESTS_KEY);
+      if (stored) return JSON.parse(stored);
+      // Mock initial seed if empty
+      const initial: JobRequest[] = [
+        {
+          id: 'jr-1',
+          clientId: 'u-client-1',
+          clientName: 'Ana Souza',
+          title: 'Reparo elétrico e instalação de disjuntor',
+          description: 'Preciso de eletricista para trocar caixa de disjuntores e revisar tomada da cozinha.',
+          category: 'Eletricista',
+          location: 'São Paulo, SP',
+          budget: 350,
+          status: 'open',
+          proposalsCount: 2,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'jr-2',
+          clientId: 'u-client-2',
+          clientName: 'Carlos Eduardo',
+          title: 'Pintura de sala 30m²',
+          description: 'Pintura de paredes internas com tinta acrílica lavável branca.',
+          category: 'Pintor',
+          location: 'Campinas, SP',
+          budget: 600,
+          status: 'open',
+          proposalsCount: 1,
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+        }
+      ];
+      localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(initial));
+      return initial;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async createJobRequest(req: Omit<JobRequest, 'id' | 'createdAt' | 'status' | 'proposalsCount'>): Promise<JobRequest> {
+    const list = await this.getJobRequests();
+    const newReq: JobRequest = {
+      ...req,
+      id: `jr-${Date.now()}`,
+      status: 'open',
+      proposalsCount: 0,
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newReq);
+    localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(list));
+    return newReq;
+  }
+
+  async updateJobRequestStatus(id: string, status: JobRequest['status']): Promise<void> {
+    const list = await this.getJobRequests();
+    const item = list.find(r => r.id === id);
+    if (item) {
+      item.status = status;
+      localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(list));
+    }
+  }
+
+  async getQuoteProposals(jobRequestId?: string, providerId?: string): Promise<QuoteProposal[]> {
+    try {
+      const stored = localStorage.getItem(this.QUOTES_KEY);
+      const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
+      return list.filter(q => {
+        if (jobRequestId && q.jobRequestId !== jobRequestId) return false;
+        if (providerId && q.providerId !== providerId) return false;
+        return true;
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async createQuoteProposal(proposal: Omit<QuoteProposal, 'id' | 'createdAt' | 'status'>): Promise<QuoteProposal> {
+    const stored = localStorage.getItem(this.QUOTES_KEY);
+    const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
+    const newQuote: QuoteProposal = {
+      ...proposal,
+      id: `quote-${Date.now()}`,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newQuote);
+    localStorage.setItem(this.QUOTES_KEY, JSON.stringify(list));
+
+    if (proposal.jobRequestId) {
+      const jobs = await this.getJobRequests();
+      const job = jobs.find(j => j.id === proposal.jobRequestId);
+      if (job) {
+        job.proposalsCount = (job.proposalsCount || 0) + 1;
+        localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(jobs));
+      }
+    }
+    return newQuote;
+  }
+
+  async updateQuoteStatus(id: string, status: QuoteProposal['status']): Promise<void> {
+    const stored = localStorage.getItem(this.QUOTES_KEY);
+    const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
+    const item = list.find(q => q.id === id);
+    if (item) {
+      item.status = status;
+      localStorage.setItem(this.QUOTES_KEY, JSON.stringify(list));
+    }
+  }
+
+  // --- MARKET STANDARD FEATURES: PROFESSIONAL SCHEDULE ---
+  private getSchedKey(providerId: string) { return `mestrio_sched_${providerId}`; }
+
+  async getProfessionalSchedule(providerId: string): Promise<ProfessionalSchedule> {
+    try {
+      const stored = localStorage.getItem(this.getSchedKey(providerId));
+      if (stored) return JSON.parse(stored);
+      return {
+        providerId,
+        workDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+        startTime: '08:00',
+        endTime: '18:00',
+        breakStart: '12:00',
+        breakEnd: '13:00',
+        autoApprove: false,
+      };
+    } catch (e) {
+      return {
+        providerId,
+        workDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+        startTime: '08:00',
+        endTime: '18:00',
+      };
+    }
+  }
+
+  async saveProfessionalSchedule(schedule: ProfessionalSchedule): Promise<void> {
+    localStorage.setItem(this.getSchedKey(schedule.providerId), JSON.stringify(schedule));
+  }
+
+  // --- MARKET STANDARD FEATURES: AUDIT LOGS ---
+  private AUDIT_KEY = 'mestrio_audit_logs';
+
+  async getAuditLogs(): Promise<AuditLogItem[]> {
+    try {
+      // Tenta buscar do Supabase primeiro
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (!error && data && data.length > 0) {
+        return data.map((d: any) => ({
+          id: d.id,
+          adminId: d.admin_id,
+          adminEmail: d.admin_email || 'admin@mestrio.com',
+          action: d.action,
+          targetId: d.target_id,
+          targetType: d.target_type,
+          details: d.details,
+          createdAt: d.created_at,
+        }));
+      }
+
+      // Fallback em localStorage
+      const stored = localStorage.getItem(this.AUDIT_KEY);
+      if (stored) return JSON.parse(stored);
+      const mockAudit: AuditLogItem[] = [
+        { id: 'aud-1', adminId: 'admin-1', adminEmail: 'admin@mestrio.com', action: 'Moderação de Anúncio', targetId: 'ad-101', targetType: 'ServiceAd', details: 'Aprovou anúncio de Pintura Residencial', createdAt: new Date().toISOString() },
+        { id: 'aud-2', adminId: 'admin-1', adminEmail: 'admin@mestrio.com', action: 'Aprovação de Profissional', targetId: 'u-202', targetType: 'User', details: 'Aprovou perfil profissional de Marcos Lima', createdAt: new Date(Date.now() - 3600000).toISOString() },
+        { id: 'aud-3', adminId: 'admin-1', adminEmail: 'admin@mestrio.com', action: 'Concessão de Selo', targetId: 'u-303', targetType: 'User', details: 'Atribuiu selo de verificação a Roberto Silva', createdAt: new Date(Date.now() - 7200000).toISOString() },
+      ];
+      localStorage.setItem(this.AUDIT_KEY, JSON.stringify(mockAudit));
+      return mockAudit;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // --- MARKET STANDARD FEATURES: SYSTEM BROADCASTS ---
+  private BROADCAST_KEY = 'mestrio_system_broadcasts';
+
+  async getSystemBroadcasts(): Promise<SystemBroadcast[]> {
+    try {
+      const stored = localStorage.getItem(this.BROADCAST_KEY);
+      if (stored) return JSON.parse(stored);
+      const initial: SystemBroadcast[] = [
+        {
+          id: 'bc-1',
+          title: 'Bem-vindo ao Novo Mestrio 2.0',
+          message: 'Explore o novo mural de orçamentos e facilidades de agendamento em nossa plataforma!',
+          targetRole: 'ALL',
+          type: 'info',
+          createdAt: new Date().toISOString(),
+          active: true
+        }
+      ];
+      localStorage.setItem(this.BROADCAST_KEY, JSON.stringify(initial));
+      return initial;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async createSystemBroadcast(broadcast: Omit<SystemBroadcast, 'id' | 'createdAt'>): Promise<SystemBroadcast> {
+    const list = await this.getSystemBroadcasts();
+    const newBc: SystemBroadcast = {
+      ...broadcast,
+      id: `bc-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newBc);
+    localStorage.setItem(this.BROADCAST_KEY, JSON.stringify(list));
+    return newBc;
+  }
+
+  async toggleSystemBroadcast(id: string): Promise<void> {
+    const list = await this.getSystemBroadcasts();
+    const item = list.find(b => b.id === id);
+    if (item) {
+      item.active = !item.active;
+      localStorage.setItem(this.BROADCAST_KEY, JSON.stringify(list));
+    }
+  }
+
+  // --- MARKET STANDARD FEATURES: CSV EXPORT ---
+  exportToCSV(filename: string, rows: Record<string, any>[]): void {
+    if (!rows || !rows.length) return;
+    const headers = Object.keys(rows[0]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => headers.map(header => {
+        const val = row[header] === null || row[header] === undefined ? '' : String(row[header]);
+        return `"${val.replace(/"/g, '""')}"`;
+      }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
 
 export const store = new Store();
+

@@ -3,15 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, Users, FolderOpen, Settings2, Plus,
   Trash2, Check, X, Ban, RefreshCw, Clock, Shield, Star,
-  Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye, Tags
+  Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye,
+  FileText, Download, Bell, DollarSign, Activity
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { store } from '../services/store';
-import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, Tag } from '../types';
-import { categoryIcon } from '../components/CategoryIcon';
+import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast } from '../types';
 
-type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'tags' | 'settings';
+type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'settings' | 'audit' | 'broadcasts';
+
 
 const STATUS_LABEL: Record<AdStatus, string> = {
   pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado',
@@ -46,7 +47,6 @@ const OwnerDashboard: React.FC = () => {
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
   const [adDurationDays, setAdDurationDays] = useState('30');
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -54,16 +54,19 @@ const OwnerDashboard: React.FC = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: 'Wrench' });
-  const [newTag, setNewTag] = useState({ name: '', icon: 'Check' });
   const [confirmingTransfer, setConfirmingTransfer] = useState<string | null>(null);
   const [adminPerms, setAdminPerms] = useState<Record<string, string[]>>({});
   const [editingPerms, setEditingPerms] = useState<User | null>(null);
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [permBusy, setPermBusy] = useState(false);
-  const [messageUser, setMessageUser] = useState<User | null>(null);
-  const [messageText, setMessageText] = useState('');
-  const [messageBusy, setMessageBusy] = useState(false);
-  const [viewingDetails, setViewingDetails] = useState<User | null>(null);
+
+  // Estados para Auditoria e Comunicados
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [broadcasts, setBroadcasts] = useState<SystemBroadcast[]>([]);
+  const [bcTitle, setBcTitle] = useState('');
+  const [bcMessage, setBcMessage] = useState('');
+  const [bcTarget, setBcTarget] = useState<'ALL' | 'CLIENT' | 'PROVIDER'>('ALL');
+  const [bcBusy, setBcBusy] = useState(false);
 
   const loadStats = useCallback(async () => {
     try { setStats(await store.getAdminStats()); } catch (e) { console.error(e); }
@@ -94,13 +97,17 @@ const OwnerDashboard: React.FC = () => {
     try { setCategories(await store.getAllCategories()); } catch (e) { console.error(e); }
   }, []);
 
-  const loadTags = useCallback(async () => {
-    try { setTags(await store.getAllTags()); } catch (e) { console.error(e); }
-  }, []);
-
   const loadSettings = useCallback(async () => {
     const days = await store.getAdDurationDays();
     setAdDurationDays(String(days));
+  }, []);
+
+  const loadAuditLogs = useCallback(async () => {
+    try { setAuditLogs(await store.getAuditLogs()); } catch (e) { console.error(e); }
+  }, []);
+
+  const loadBroadcasts = useCallback(async () => {
+    try { setBroadcasts(await store.getSystemBroadcasts()); } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => {
@@ -111,20 +118,24 @@ const OwnerDashboard: React.FC = () => {
       loadStats();
       loadUsers();
       loadCategories();
-      loadTags();
       loadSettings();
+      loadAuditLogs();
+      loadBroadcasts();
     }).catch(() => {
       loadStats();
       loadUsers();
       loadCategories();
-      loadTags();
       loadSettings();
+      loadAuditLogs();
+      loadBroadcasts();
     });
-  }, [loading, user, navigate, loadStats, loadUsers, loadCategories, loadTags, loadSettings]);
+  }, [loading, user, navigate, loadStats, loadUsers, loadCategories, loadSettings, loadAuditLogs, loadBroadcasts]);
 
   useEffect(() => {
     if (tab === 'ads') loadAds();
-  }, [tab, filterStatus, loadAds]);
+    if (tab === 'audit') loadAuditLogs();
+    if (tab === 'broadcasts') loadBroadcasts();
+  }, [tab, filterStatus, loadAds, loadAuditLogs, loadBroadcasts]);
 
   if (loading || !user || user.role !== UserRole.ADMIN) {
     return (
@@ -141,13 +152,76 @@ const OwnerDashboard: React.FC = () => {
   if (can('view_metrics')) visibleTabs.push('overview');
   if (can('moderate_ads')) visibleTabs.push('ads');
   if (can('manage_users') || can('approve_providers') || can('verify_providers')) visibleTabs.push('users');
-  if (can('manage_categories')) {
-    visibleTabs.push('categories');
-    visibleTabs.push('tags');
-  }
+  if (can('manage_categories')) visibleTabs.push('categories');
+  visibleTabs.push('audit');
+  visibleTabs.push('broadcasts');
   if (can('manage_settings')) visibleTabs.push('settings');
 
   const activeTab = visibleTabs.includes(tab) ? tab : (visibleTabs[0] ?? 'overview');
+
+  // Exportação CSV
+  const handleExportUsers = () => {
+    const rows = users.map(u => ({
+      ID: u.id,
+      Nome: u.name,
+      Email: u.email,
+      Função: u.role,
+      Certificado: u.isCertified ? 'Sim' : 'Não',
+      Suspenso: u.isSuspended ? 'Sim' : 'Não',
+      DataCriacao: u.createdAt || 'N/A'
+    }));
+    store.exportToCSV('Mestrio_Usuarios', rows);
+    toast('Relatório de usuários exportado!', 'success');
+  };
+
+  const handleExportAds = () => {
+    const rows = ads.map(a => ({
+      ID: a.id,
+      Título: a.title,
+      Prestador: a.providerName,
+      Categoria: a.category,
+      Preço: a.price,
+      Status: a.status,
+      Visualizações: a.views || 0,
+      DataCriacao: a.createdAt
+    }));
+    store.exportToCSV('Mestrio_Anuncios', rows);
+    toast('Relatório de anúncios exportado!', 'success');
+  };
+
+  const handleCreateBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bcTitle.trim() || !bcMessage.trim()) return;
+    setBcBusy(true);
+    try {
+      await store.createSystemBroadcast({
+        title: bcTitle,
+        message: bcMessage,
+        targetRole: bcTarget,
+        type: 'info',
+        active: true,
+      });
+      toast('Comunicado publicado!', 'success');
+      setBcTitle('');
+      setBcMessage('');
+      loadBroadcasts();
+    } catch (e) {
+      toast('Erro ao publicar comunicado.', 'error');
+    } finally {
+      setBcBusy(false);
+    }
+  };
+
+  const handleToggleBroadcast = async (id: string) => {
+    try {
+      await store.toggleSystemBroadcast(id);
+      loadBroadcasts();
+      toast('Status do comunicado atualizado.', 'info');
+    } catch (e) {
+      toast('Erro ao alterar comunicado.', 'error');
+    }
+  };
+
 
   // ---- Ações de moderação ----
   const handleStatus = async (ad: ServiceAd, status: AdStatus, reason?: string) => {
@@ -311,35 +385,6 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao excluir.', 'error'); }
   };
 
-  // ---- Ações de Tags Globais ----
-  const handleAddTag = async () => {
-    if (!newTag.name.trim()) return;
-    const slug = newTag.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    if (!slug) { toast('Nome inválido.', 'error'); return; }
-    try {
-      await store.createTag({ slug, name: newTag.name.trim(), icon: newTag.icon, sortOrder: tags.length + 1 });
-      setNewTag({ name: '', icon: 'Check' });
-      await loadTags();
-      toast('Tag criada.', 'success');
-    } catch (e) { console.error(e); toast('Erro ao criar tag.', 'error'); }
-  };
-
-  const handleToggleTag = async (tag: Tag) => {
-    try {
-      await store.updateTag(tag.id, { active: !tag.active });
-      setTags(prev => prev.map(t => t.id === tag.id ? { ...t, active: !t.active } : t));
-    } catch (e) { console.error(e); toast('Erro ao atualizar tag.', 'error'); }
-  };
-
-  const handleDeleteTag = async (tag: Tag) => {
-    try {
-      await store.deleteTag(tag.id);
-      setTags(prev => prev.filter(t => t.id !== tag.id));
-      toast('Tag excluída.', 'success');
-    } catch (e) { console.error(e); toast('Erro ao excluir tag.', 'error'); }
-  };
-
   // ---- Configurações ----
   const handleSaveSettings = async () => {
     const days = parseInt(adDurationDays, 10);
@@ -350,23 +395,6 @@ const OwnerDashboard: React.FC = () => {
       toast('Configurações salvas.', 'success');
     } catch (e) { console.error(e); toast('Erro ao salvar.', 'error'); }
     finally { setBusy(false); }
-  };
-
-  const handleSendMessageToUser = async () => {
-    if (!messageUser || !messageText.trim()) return;
-    setMessageBusy(true);
-    try {
-      const chatId = await store.startDirectChat(messageUser.id);
-      await store.sendMessage(chatId, user.id, messageText.trim());
-      toast(`Mensagem enviada para ${messageUser.name}.`, 'success');
-      setMessageUser(null);
-      setMessageText('');
-    } catch (e) {
-      console.error(e);
-      toast('Não foi possível enviar a mensagem.', 'error');
-    } finally {
-      setMessageBusy(false);
-    }
   };
 
   const tabItem = (id: Tab, label: string, icon: React.ComponentType<{ size?: number | string; className?: string }>, badge?: number) => (
@@ -397,7 +425,7 @@ const OwnerDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex flex-col gap-4 justify-between mb-6 lg:flex-row lg:items-center">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">Painel do Dono</h1>
             {user.isOwner ? (
@@ -409,30 +437,6 @@ const OwnerDashboard: React.FC = () => {
           <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium">Voltar ao início →</Link>
         </div>
 
-        {stats && (stats.adsPending > 0 || stats.pendingProviderRequests > 0 || stats.suspendedUsers > 0) && (
-          <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="mt-1 text-yellow-700">
-                <span className="text-lg">⚠️</span>
-              </div>
-              <div>
-                <p className="font-semibold text-yellow-900">Atenção: ações urgentes</p>
-                <div className="mt-2 space-y-1">
-                  {stats.adsPending > 0 && (
-                    <p>Há <strong>{stats.adsPending}</strong> anúncios pendentes aguardando moderação.</p>
-                  )}
-                  {stats.pendingProviderRequests > 0 && (
-                    <p>Existem <strong>{stats.pendingProviderRequests}</strong> solicitações de profissional aguardando aprovação.</p>
-                  )}
-                  {stats.suspendedUsers > 0 && (
-                    <p>Há <strong>{stats.suspendedUsers}</strong> usuários suspensos. Revise se o bloqueio ainda é necessário.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Sidebar */}
           <aside className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 p-4 h-fit">
@@ -441,9 +445,11 @@ const OwnerDashboard: React.FC = () => {
               {can('moderate_ads') && tabItem('ads', 'Anúncios', Megaphone, stats?.adsPending || 0)}
               {(can('manage_users') || can('approve_providers') || can('verify_providers')) && tabItem('users', 'Usuários', Users)}
               {can('manage_categories') && tabItem('categories', 'Categorias', FolderOpen)}
-              {can('manage_categories') && tabItem('tags', 'Tags', Tags)}
+              {tabItem('audit', 'Audit Logs', FileText)}
+              {tabItem('broadcasts', 'Comunicados', Bell)}
               {can('manage_settings') && tabItem('settings', 'Configurações', Settings2)}
             </nav>
+
           </aside>
 
           {/* Conteúdo */}
@@ -465,8 +471,6 @@ const OwnerDashboard: React.FC = () => {
                     <StatCard label="Profissionais" value={stats?.providers ?? 0} icon={Shield} color="bg-blue-50 text-blue-600" />
                     <StatCard label="Clientes" value={stats?.clients ?? 0} icon={Users} color="bg-green-50 text-green-600" />
                     <StatCard label="Admins" value={stats?.admins ?? 0} icon={Star} color="bg-purple-50 text-purple-600" />
-                    <StatCard label="Suspensos" value={stats?.suspendedUsers ?? 0} icon={Ban} color="bg-orange-50 text-orange-700" />
-                    <StatCard label="Solicitações (profs)" value={stats?.pendingProviderRequests ?? 0} icon={Plus} color="bg-yellow-50 text-yellow-700" />
                     <StatCard label="Novos (7d)" value={stats?.newUsersWeek ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
                   </div>
                 </div>
@@ -586,10 +590,7 @@ const OwnerDashboard: React.FC = () => {
                   <p className="text-xs text-gray-500">Feedback dos clientes</p>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <StatCard label="Avaliações" value={stats?.totalReviews ?? 0} icon={MessageSquare} color="bg-purple-50 text-purple-600" />
-                    <StatCard label="Novas avaliações (7d)" value={stats?.newReviewsWeek ?? 0} icon={TrendingUp} color="bg-blue-50 text-blue-600" />
                     <StatCard label="Nota média" value={stats?.avgRating ?? 0} icon={Star} color="bg-yellow-50 text-yellow-600" />
-                    <StatCard label="Aprovação" value={stats ? `${stats.approvalRate}%` : '0%'} icon={Check} color="bg-green-50 text-green-600" />
-                    <StatCard label="Média de views" value={stats?.avgViewsPerApprovedAd ?? 0} icon={Eye} color="bg-brand-50 text-brand-600" />
                   </div>
                 </div>
               </div>
@@ -772,24 +773,8 @@ const OwnerDashboard: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        {u.id !== user?.id && (
-                          <button
-                            onClick={() => setMessageUser(u)}
-                            className="text-xs px-2 py-1.5 rounded flex items-center bg-blue-100 text-blue-700 hover:bg-blue-200"
-                            title="Enviar Mensagem"
-                          >
-                            💬 Mensagem
-                          </button>
-                        )}
                         {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
                           <>
-                            <button
-                              onClick={() => setViewingDetails(u)}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
-                              title="Ver Detalhes do Pedido"
-                            >
-                              📄 Detalhes
-                            </button>
                             <button
                               onClick={() => handleApproveProviderRequest(u)}
                               disabled={busyId === u.id}
@@ -917,7 +902,7 @@ const OwnerDashboard: React.FC = () => {
                     <div key={cat.id} className="p-4 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <span className="w-9 h-9 rounded-full bg-gray-100 text-brand-600 flex items-center justify-center">
-                          {categoryIcon(cat.slug, 20)}
+                          <span className="text-lg">{cat.icon}</span>
                         </span>
                         <div>
                           <p className="font-semibold text-gray-900">{cat.name}</p>
@@ -941,54 +926,139 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'tags' && (
+            {activeTab === 'audit' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Tags / Comodidades</h2>
-                  <p className="text-xs text-gray-500 mb-3">Filtros rápidos globais que os profissionais podem marcar nos anúncios.</p>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      value={newTag.name}
-                      onChange={e => setNewTag(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nome da tag (ex: 24 Horas)"
-                      className="flex-1 text-sm px-3 py-1.5 rounded border border-gray-200"
-                    />
-                    <input
-                      value={newTag.icon}
-                      onChange={e => setNewTag(prev => ({ ...prev, icon: e.target.value }))}
-                      placeholder="Ícone (ex: Clock)"
-                      className="sm:w-40 text-sm px-3 py-1.5 rounded border border-gray-200"
-                    />
-                    <button onClick={handleAddTag} className="bg-brand-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-brand-700 flex items-center justify-center">
-                      <Plus size={16} className="mr-1" /> Adicionar
-                    </button>
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                      <FileText size={20} className="text-brand-600 mr-2" /> Logs de Auditoria do Sistema
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">Histórico completo de ações administrativas e alterações de acesso.</p>
                   </div>
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
+                    {auditLogs.length} Registros
+                  </span>
                 </div>
+
                 <div className="divide-y divide-gray-100">
-                  {tags.map(tag => (
-                    <div key={tag.id} className="p-4 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="w-9 h-9 rounded-full bg-gray-100 text-brand-600 flex items-center justify-center">
-                          {categoryIcon(tag.slug, 20)}
-                        </span>
+                  {auditLogs.length === 0 ? (
+                    <div className="p-10 text-center text-gray-500 text-sm">Nenhum log registrado ainda.</div>
+                  ) : (
+                    auditLogs.map(log => (
+                      <div key={log.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                          <p className="font-semibold text-gray-900">{tag.name}</p>
-                          <p className="text-xs text-gray-400">/{tag.slug}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-gray-900">{log.action}</span>
+                            <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded font-mono">
+                              {log.targetType || 'Sistema'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">{log.details}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Executado por: {log.adminEmail}</p>
                         </div>
+                        <span className="text-xs text-gray-400 font-mono shrink-0">
+                          {new Date(log.createdAt).toLocaleString('pt-BR')}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleTag(tag)}
-                          className={`text-xs px-2 py-1 rounded border ${tag.active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'broadcasts' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center">
+                    <Bell size={20} className="text-brand-600 mr-2" /> Criar Novo Comunicado
+                  </h2>
+                  <p className="text-xs text-gray-500 mb-4">Envie avisos ou mensagens da plataforma para exibição imediata nos painéis dos usuários.</p>
+
+                  <form onSubmit={handleCreateBroadcast} className="space-y-4 max-w-xl">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Título *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Atualização nos Termos ou Promoção de Anúncios"
+                          value={bcTitle}
+                          onChange={e => setBcTitle(e.target.value)}
+                          className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Público Alvo</label>
+                        <select
+                          value={bcTarget}
+                          onChange={e => setBcTarget(e.target.value as any)}
+                          className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
                         >
-                          {tag.active ? 'Ativa' : 'Inativa'}
-                        </button>
-                        <button onClick={() => handleDeleteTag(tag)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center">
-                          <Trash2 size={12} className="mr-1" /> Excluir
-                        </button>
+                          <option value="ALL">Todos os Usuários</option>
+                          <option value="CLIENT">Somente Clientes</option>
+                          <option value="PROVIDER">Somente Profissionais</option>
+                        </select>
                       </div>
                     </div>
-                  ))}
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Mensagem *</label>
+                      <textarea
+                        required
+                        rows={3}
+                        placeholder="Escreva a mensagem do comunicado..."
+                        value={bcMessage}
+                        onChange={e => setBcMessage(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={bcBusy}
+                      className="px-4 py-2 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition disabled:opacity-50"
+                    >
+                      {bcBusy ? 'Publicando...' : 'Publicar Comunicado'}
+                    </button>
+                  </form>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="p-5 border-b border-gray-100">
+                    <h3 className="font-bold text-gray-900 text-base">Comunicados Ativos e Histórico</h3>
+                  </div>
+
+                  <div className="divide-y divide-gray-100">
+                    {broadcasts.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-gray-500">Nenhum comunicado criado.</div>
+                    ) : (
+                      broadcasts.map(bc => (
+                        <div key={bc.id} className="p-4 flex items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-xs text-gray-900">{bc.title}</span>
+                              <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                                {bc.targetRole === 'ALL' ? 'Todos' : bc.targetRole === 'CLIENT' ? 'Clientes' : 'Profissionais'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600">{bc.message}</p>
+                            <span className="text-[11px] text-gray-400 mt-1 block">
+                              Publicado em {new Date(bc.createdAt).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => handleToggleBroadcast(bc.id)}
+                            className={`text-xs px-3 py-1.5 rounded-md font-semibold transition shrink-0 ${
+                              bc.active ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {bc.active ? 'Ativo (Exibindo)' : 'Inativo (Oculto)'}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1016,6 +1086,7 @@ const OwnerDashboard: React.FC = () => {
                 </div>
               </div>
             )}
+
           </div>
         </div>
       </div>
@@ -1051,95 +1122,6 @@ const OwnerDashboard: React.FC = () => {
                 className="text-sm px-4 py-2 rounded bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {permBusy ? 'Salvando...' : 'Salvar permissões'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {messageUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Enviar mensagem para {messageUser.name}</h3>
-                <p className="text-xs text-gray-500">A mensagem será enviada como administrador.</p>
-              </div>
-              <button onClick={() => setMessageUser(null)} className="text-gray-400 hover:text-gray-700">✕</button>
-            </div>
-            <textarea
-              value={messageText}
-              onChange={e => setMessageText(e.target.value)}
-              rows={6}
-              placeholder="Escreva sua mensagem..."
-              className="w-full text-sm px-3 py-3 rounded border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-200"
-            />
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setMessageUser(null)}
-                className="text-sm px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSendMessageToUser}
-                disabled={messageBusy || !messageText.trim()}
-                className="text-sm px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {messageBusy ? 'Enviando...' : 'Enviar mensagem'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {viewingDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6 my-8">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Detalhes da Solicitação</h3>
-                <p className="text-xs text-gray-500">Solicitante: {viewingDetails.name}</p>
-              </div>
-              <button onClick={() => setViewingDetails(null)} className="text-gray-400 hover:text-gray-700">✕</button>
-            </div>
-            
-            <div className="space-y-4 text-sm text-gray-800">
-              {viewingDetails.providerRequestDetails ? (
-                <>
-                  <div>
-                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Área de Atuação</h4>
-                    <p className="bg-gray-50 p-2 rounded border border-gray-100">{viewingDetails.providerRequestDetails.area || 'Não informado'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Experiência Profissional</h4>
-                    <p className="bg-gray-50 p-2 rounded border border-gray-100 whitespace-pre-wrap">{viewingDetails.providerRequestDetails.experience || 'Não informado'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Cursos e Certificações</h4>
-                    <p className="bg-gray-50 p-2 rounded border border-gray-100 whitespace-pre-wrap">{viewingDetails.providerRequestDetails.courses || 'Não informado'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Motivação</h4>
-                    <p className="bg-gray-50 p-2 rounded border border-gray-100 whitespace-pre-wrap">{viewingDetails.providerRequestDetails.motivation || 'Não informado'}</p>
-                  </div>
-                  {viewingDetails.providerRequestDetails.documentUrl && (
-                    <div>
-                      <h4 className="font-semibold text-gray-600 text-xs uppercase mb-1">Documento com Foto</h4>
-                      <a href={viewingDetails.providerRequestDetails.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-800 bg-brand-50 px-3 py-2 rounded-md font-medium text-xs">
-                        📎 Visualizar Documento
-                      </a>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-gray-500 italic">Nenhum detalhe adicional foi fornecido pelo usuário (solicitação antiga).</p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setViewingDetails(null)} className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
-                Fechar
               </button>
             </div>
           </div>

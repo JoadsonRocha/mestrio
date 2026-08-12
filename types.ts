@@ -17,7 +17,6 @@ export interface User {
   isSuspended?: boolean;
   isOwner?: boolean;
   roleRequest?: string | null;
-  providerRequestDetails?: any;
   permissions?: string[];
   referralCode?: string;
   referredBy?: string;
@@ -46,15 +45,6 @@ export interface Category {
   active: boolean;
 }
 
-export interface Tag {
-  id: string;
-  slug: string;
-  name: string;
-  icon: string;
-  sortOrder: number;
-  active: boolean;
-}
-
 export interface AdminStats {
   totalUsers: number;
   providers: number;
@@ -74,14 +64,9 @@ export interface AdminStats {
   appointmentsCompleted: number;
   appointmentsCancelled: number;
   newAppointmentsWeek: number;
-  suspendedUsers: number;
-  pendingProviderRequests: number;
   totalReviews: number;
-  newReviewsWeek: number;
   avgRating: number;
   totalViews: number;
-  approvalRate: number;
-  avgViewsPerApprovedAd: number;
   adsByCategory: { category: string; count: number }[];
   topAds: {
     id: string;
@@ -191,3 +176,64 @@ export interface Appointment {
   providerName?: string;
   clientAvatar?: string;
 }
+
+export interface JobRequest {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientAvatar?: string;
+  title: string;
+  description: string;
+  category: string;
+  location: string;
+  budget?: number;
+  status: 'open' | 'in_progress' | 'closed';
+  proposalsCount?: number;
+  createdAt: string;
+}
+
+export interface QuoteProposal {
+  id: string;
+  jobRequestId?: string;
+  adId?: string;
+  providerId: string;
+  providerName: string;
+  providerAvatar?: string;
+  clientId: string;
+  estimatedPrice: number;
+  estimatedDays: number;
+  description: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+}
+
+export interface ProfessionalSchedule {
+  providerId: string;
+  workDays: ('mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun')[];
+  startTime: string;
+  endTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  autoApprove?: boolean;
+}
+
+export interface AuditLogItem {
+  id: string;
+  adminId: string;
+  adminEmail: string;
+  action: string;
+  targetId?: string;
+  targetType?: string;
+  details?: string;
+  createdAt: string;
+}
+
+export interface SystemBroadcast {
+  id: string;
+  title: string;
+  message: string;
+  targetRole: 'ALL' | 'CLIENT' | 'PROVIDER';
+  type: 'info' | 'warning' | 'success';
+  createdAt: string;
+  active: boolean;
+}

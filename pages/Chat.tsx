@@ -234,22 +234,18 @@ const Chat: React.FC = () => {
                         <ArrowLeft />
                     </button>
                     <div className="flex items-center">
-                        <div className="w-10 h-10 bg-brand-600 text-white rounded-full flex items-center justify-center font-bold mr-3">
-                            {(activeChat.otherUserName || activeChat.providerName || 'U').charAt(0).toUpperCase()}
-                        </div>
+                        {activeChat.providerName ? (
+                            <div className="w-10 h-10 bg-brand-600 text-white rounded-full flex items-center justify-center font-bold mr-3">
+                                {(activeChat.otherUserName || activeChat.providerName || 'P').charAt(0).toUpperCase()}
+                            </div>
+                        ) : null}
                         <div>
                             <h3 className="font-bold text-gray-800 text-sm md:text-base flex flex-col md:flex-row md:items-center">
-                                {activeChat.providerName ? (
-                                    <>
-                                        <span><span className="text-brand-600 font-semibold text-xs uppercase tracking-wider">Profissional:</span> {activeChat.providerName}</span>
-                                        <span className="hidden md:inline mx-2 text-gray-300">|</span>
-                                        <span><span className="text-gray-500 font-semibold text-xs uppercase tracking-wider">Cliente:</span> {activeChat.clientName || 'Não Informado'}</span>
-                                    </>
-                                ) : (
-                                    <span><span className="text-brand-600 font-semibold text-xs uppercase tracking-wider">Usuário:</span> {activeChat.otherUserName || 'Desconhecido'}</span>
-                                )}
+                                <span><span className="text-brand-600 font-semibold text-xs uppercase tracking-wider">Profissional:</span> {activeChat.providerName || 'Não Informado'}</span>
+                                <span className="hidden md:inline mx-2 text-gray-300">|</span>
+                                <span><span className="text-gray-500 font-semibold text-xs uppercase tracking-wider">Cliente:</span> {activeChat.clientName || 'Não Informado'}</span>
                             </h3>
-                            <p className="text-xs text-gray-600 font-medium bg-gray-100 inline-block px-2 py-1 rounded mt-1">{activeChat.providerName ? 'Serviço: ' : ''}{activeChat.adTitle}</p>
+                            <p className="text-xs text-gray-600 font-medium bg-gray-100 inline-block px-2 py-1 rounded mt-1">Serviço: {activeChat.adTitle}</p>
                         </div>
                     </div>
                 </div>

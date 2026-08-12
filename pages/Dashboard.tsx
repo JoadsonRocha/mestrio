@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { Settings, Plus, MessageSquare, LogOut, Calendar, Megaphone, LayoutDashboard } from 'lucide-react';
+import { Settings, Plus, MessageSquare, LogOut, Calendar, Megaphone, LayoutDashboard, Heart, Briefcase } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 
@@ -32,15 +32,14 @@ const Dashboard: React.FC = () => {
 
   const isClient = user.role === UserRole.CLIENT;
 
-  const isAdmin = user.isOwner || user.role === UserRole.ADMIN;
-
   const menuItems = [
     { to: '/dashboard', label: 'Meu Painel', icon: LayoutDashboard },
     { to: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
     { to: '/dashboard/appointments', label: 'Meus Agendamentos', icon: Calendar },
-    ...(isClient ? [] : [{ to: '/dashboard/ads', label: 'Meus Anúncios', icon: Megaphone }]),
-    ...(isAdmin ? [{ to: '/owner', label: 'Painel Admin', icon: Settings }] : []),
+    { to: '/dashboard/job-requests', label: isClient ? 'Solicitar Orçamento' : 'Oportunidades', icon: Briefcase },
+    ...(isClient ? [{ to: '/dashboard/favorites', label: 'Favoritos', icon: Heart }] : [{ to: '/dashboard/ads', label: 'Meus Anúncios', icon: Megaphone }]),
   ];
+
 
   const isActive = (to: string) => {
     if (to === '/dashboard') return location.pathname === '/dashboard';
@@ -59,7 +58,7 @@ const Dashboard: React.FC = () => {
                     <h2 className="text-lg font-bold text-center">{user.name}</h2>
                     <p className="text-gray-500 text-xs mb-3 text-center truncate max-w-full">{user.email}</p>
                     <div className="mb-3 bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-medium">
-                        {user.isOwner ? 'Dono (Admin)' : user.role === UserRole.ADMIN ? 'Administrador' : isClient ? 'Cliente' : 'Profissional'}
+                        {isClient ? 'Cliente' : 'Profissional'}
                     </div>
                 </div>
 

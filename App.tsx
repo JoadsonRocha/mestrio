@@ -20,6 +20,8 @@ const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
+const FavoritesTab = lazy(() => import('./components/FavoritesTab').then(m => ({ default: m.FavoritesTab })));
+const JobRequestsTab = lazy(() => import('./components/JobRequestsTab').then(m => ({ default: m.JobRequestsTab })));
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
@@ -34,6 +36,8 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/dashboard\/chat/, title: 'Mensagens' },
   { match: /^\/dashboard\/appointments/, title: 'Meus Agendamentos' },
   { match: /^\/dashboard\/ads/, title: 'Meus Anúncios' },
+  { match: /^\/dashboard\/favorites/, title: 'Favoritos' },
+  { match: /^\/dashboard\/job-requests/, title: 'Solicitações de Orçamento' },
   { match: /^\/dashboard/, title: 'Meu Painel' },
   { match: /^\/owner/, title: 'Painel do Dono' },
   { match: /^\/profile\/edit/, title: 'Editar Perfil' },
@@ -79,7 +83,10 @@ const MainLayout: React.FC = () => {
             <Route path="ads" element={<Ads />} />
             <Route path="chat" element={<Chat />} />
             <Route path="chat/:id" element={<Chat />} />
+            <Route path="favorites" element={<FavoritesTab />} />
+            <Route path="job-requests" element={<JobRequestsTab />} />
           </Route>
+
           <Route path="/profile/edit" element={<EditProfile />} />
           <Route path="/chat" element={<Navigate to="/dashboard/chat" replace />} />
           <Route path="/chat/:id" element={<Navigate to="/dashboard/chat/:id" replace />} />

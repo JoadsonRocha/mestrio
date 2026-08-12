@@ -4,15 +4,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ==========================================
 -- 1. ENUMS (Tipos customizados)
 -- ==========================================
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
-    CREATE TYPE user_role AS ENUM ('CLIENT', 'PROVIDER', 'ADMIN');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'price_unit') THEN
-    CREATE TYPE price_unit AS ENUM ('hour', 'job', 'estimate');
-  END IF;
-END $$;
+CREATE TYPE user_role AS ENUM ('CLIENT', 'PROVIDER', 'ADMIN');
+CREATE TYPE price_unit AS ENUM ('hour', 'job', 'estimate');
 
 -- ==========================================
 -- 2. TABELAS
@@ -83,13 +76,11 @@ END $$;
 -- Tabela de Sessões de Chat (Negociações)
 CREATE TABLE chat_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  ad_id UUID REFERENCES service_ads(id) ON DELETE CASCADE,
+  ad_id UUID NOT NULL REFERENCES service_ads(id) ON DELETE CASCADE,
   last_message TEXT,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-
-ALTER TABLE chat_sessions ALTER COLUMN ad_id DROP NOT NULL;
 
 -- Tabela de Participantes do Chat (Relacionamento N:M)
 CREATE TABLE chat_participants (
@@ -122,14 +113,8 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para Profiles
 CREATE POLICY "Usuários leem seus próprios perfis" ON profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Perfis públicos para leitura" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Usuários inserem seu próprio perfil" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Usuários atualizam seu próprio perfil" ON profiles FOR UPDATE USING (auth.uid() = id);
-
-DROP VIEW IF EXISTS public_profiles;
-CREATE VIEW public_profiles AS
-SELECT id, name, avatar, location, bio, role, is_certified, created_at
-FROM profiles;
 
 -- Políticas para Service Ads (Anúncios)
 CREATE POLICY "Anúncios são públicos para leitura" ON service_ads FOR SELECT USING (true);
@@ -147,21 +132,10 @@ DROP POLICY IF EXISTS "Usuários autenticados podem criar sessões" ON chat_sess
 DROP POLICY IF EXISTS "Usuários autenticados podem atualizar sessões" ON chat_sessions;
 DROP POLICY IF EXISTS "Participante vê sessão" ON chat_sessions;
 DROP POLICY IF EXISTS "Participante cria sessão" ON chat_sessions;
-CREATE OR REPLACE FUNCTION is_chat_participant(check_session_id UUID)
-RETURNS boolean
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM chat_participants 
-    WHERE session_id = check_session_id AND user_id = auth.uid()
-  );
-$$;
-
 CREATE POLICY "Participante vê sessão" ON chat_sessions
-  FOR SELECT USING (is_chat_participant(id));
+  FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
+  );
 -- Sessões de chat: criadas apenas para um anúncio real e de OUTRO usuário.
 -- (A RPC start_chat é o caminho oficial; bloqueia sessões fantasma.)
 CREATE POLICY "Participante cria sessão" ON chat_sessions
@@ -172,7 +146,9 @@ CREATE POLICY "Participante cria sessão" ON chat_sessions
     )
   );
 CREATE POLICY "Participante atualiza sessão" ON chat_sessions
-  FOR UPDATE USING (is_chat_participant(id));
+  FOR UPDATE USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = id)
+  );
 
 -- Políticas para Chat Participants (somente participantes da própria sessão)
 ALTER TABLE chat_participants ENABLE ROW LEVEL SECURITY;
@@ -181,7 +157,9 @@ DROP POLICY IF EXISTS "Usuários autenticados podem inserir participantes" ON ch
 DROP POLICY IF EXISTS "Participante vê participante" ON chat_participants;
 DROP POLICY IF EXISTS "Participante entra na sessão" ON chat_participants;
 CREATE POLICY "Participante vê participante" ON chat_participants
-  FOR SELECT USING (is_chat_participant(session_id));
+  FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+  );
 CREATE POLICY "Participante entra na sessão" ON chat_participants
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -193,15 +171,19 @@ DROP POLICY IF EXISTS "Participante lê mensagens" ON messages;
 DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 DROP POLICY IF EXISTS "Participante marca como lida" ON messages;
 CREATE POLICY "Participante lê mensagens" ON messages
-  FOR SELECT USING (is_chat_participant(session_id));
+  FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+  );
 DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 CREATE POLICY "Participante envia mensagem" ON messages
   FOR INSERT WITH CHECK (
     auth.uid() = sender_id
-    AND is_chat_participant(session_id)
+    AND auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = messages.session_id)
   );
 CREATE POLICY "Participante marca como lida" ON messages
-  FOR UPDATE USING (is_chat_participant(session_id));
+  FOR UPDATE USING (
+    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+  );
 
 -- Tabela de Agendamentos (Appointments)
 -- IF NOT EXISTS permite rodar o script novamente sem erro
@@ -282,16 +264,6 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS tags (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  slug TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  icon TEXT DEFAULT 'Check',
-  sort_order INTEGER DEFAULT 0,
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT,
@@ -309,18 +281,10 @@ INSERT INTO categories (slug, name, icon, sort_order, active) VALUES
   ('assembly', 'Montagem de Móveis', 'Package', 8, true)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO tags (slug, name, icon, sort_order, active) VALUES
-  ('24h', 'Atendimento 24h', 'Clock', 1, true),
-  ('free_estimate', 'Orçamento Grátis', 'Calculator', 2, true),
-  ('credit_card', 'Aceita Cartão', 'CreditCard', 3, true),
-  ('guarantee', 'Com Garantia', 'ShieldCheck', 4, true)
-ON CONFLICT (slug) DO NOTHING;
-
 INSERT INTO app_settings (key, value) VALUES ('ad_duration_days', '30')
 ON CONFLICT (key) DO NOTHING;
 
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- PERMISSÕES POR ADMIN (RBAC): o DONO concede funções a cada admin.
@@ -368,18 +332,6 @@ CREATE POLICY "Somente admin deleta categorias"
   ON categories FOR DELETE USING (auth.role() = 'authenticated'
     AND is_admin_allowed('manage_categories'));
 
-CREATE POLICY "Tags são públicas para leitura"
-  ON tags FOR SELECT USING (true);
-CREATE POLICY "Somente admin insere tags"
-  ON tags FOR INSERT WITH CHECK (auth.role() = 'authenticated'
-    AND is_admin_allowed('manage_categories'));
-CREATE POLICY "Somente admin atualiza tags"
-  ON tags FOR UPDATE USING (auth.role() = 'authenticated'
-    AND is_admin_allowed('manage_categories'));
-CREATE POLICY "Somente admin deleta tags"
-  ON tags FOR DELETE USING (auth.role() = 'authenticated'
-    AND is_admin_allowed('manage_categories'));
-
 CREATE POLICY "Configurações são públicas para leitura"
   ON app_settings FOR SELECT USING (true);
 CREATE POLICY "Somente admin altera configurações"
@@ -407,14 +359,9 @@ CREATE POLICY "Dono edita seus dados privados" ON user_private
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Migração: move telefones existentes e remove as colunas de PII de profiles.
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'phone') THEN
-    EXECUTE 'INSERT INTO user_private (user_id, phone)
-             SELECT id, phone FROM profiles WHERE phone IS NOT NULL
-             ON CONFLICT (user_id) DO NOTHING';
-  END IF;
-END $$;
+INSERT INTO user_private (user_id, phone)
+SELECT id, phone FROM profiles WHERE phone IS NOT NULL
+ON CONFLICT (user_id) DO NOTHING;
 ALTER TABLE profiles DROP COLUMN IF EXISTS email;
 ALTER TABLE profiles DROP COLUMN IF EXISTS phone;
 
@@ -816,7 +763,7 @@ RETURNS TABLE (
   id uuid, name text, email text, role user_role, avatar text,
   location text, phone text, bio text,
   is_suspended boolean, is_owner boolean, is_certified boolean,
-  role_request text, provider_request_details jsonb, created_at timestamptz
+  role_request text, created_at timestamptz
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -830,7 +777,7 @@ BEGIN
   RETURN QUERY
   SELECT p.id, p.name, u.email::text, p.role, p.avatar, p.location,
          pr.phone, p.bio, p.is_suspended, p.is_owner, p.is_certified,
-         p.role_request, p.provider_request_details, p.created_at
+         p.role_request, p.created_at
   FROM profiles p
   JOIN auth.users u ON u.id = p.id
   LEFT JOIN user_private pr ON pr.user_id = p.id
@@ -877,52 +824,6 @@ BEGIN
   INSERT INTO chat_participants (session_id, user_id) VALUES
     (new_session, my_id),
     (new_session, provider);
-
-  RETURN new_session;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION start_direct_chat(p_target_user_id uuid)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  my_id uuid := auth.uid();
-  is_admin boolean;
-  existing_session uuid;
-  new_session uuid;
-BEGIN
-  IF my_id IS NULL THEN RAISE EXCEPTION 'Não autenticado.'; END IF;
-  IF my_id = p_target_user_id THEN RAISE EXCEPTION 'Não é possível iniciar chat com você mesmo.'; END IF;
-
-  SELECT (role = 'ADMIN' OR is_owner) INTO is_admin FROM profiles WHERE id = my_id;
-  IF NOT is_admin THEN
-    RAISE EXCEPTION 'Somente administradores podem iniciar conversas diretas com usuários.';
-  END IF;
-
-  SELECT cs.id INTO existing_session
-  FROM chat_sessions cs
-  WHERE cs.ad_id IS NULL
-    AND EXISTS (
-      SELECT 1 FROM chat_participants cp
-      WHERE cp.session_id = cs.id AND cp.user_id = my_id
-    )
-    AND EXISTS (
-      SELECT 1 FROM chat_participants cp
-      WHERE cp.session_id = cs.id AND cp.user_id = p_target_user_id
-    )
-    AND (SELECT COUNT(*) FROM chat_participants cp WHERE cp.session_id = cs.id) = 2;
-
-  IF existing_session IS NOT NULL THEN
-    RETURN existing_session;
-  END IF;
-
-  INSERT INTO chat_sessions (ad_id) VALUES (NULL) RETURNING id INTO new_session;
-  INSERT INTO chat_participants (session_id, user_id) VALUES
-    (new_session, my_id),
-    (new_session, p_target_user_id);
 
   RETURN new_session;
 END;
