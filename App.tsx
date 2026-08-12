@@ -3,25 +3,48 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar, Footer } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-const Home = lazy(() => import('./pages/Home'));
-const SearchPage = lazy(() => import('./pages/Search'));
-const ServiceDetail = lazy(() => import('./pages/ServiceDetail'));
-const CreateAd = lazy(() => import('./pages/CreateAd'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const DashboardHome = lazy(() => import('./pages/DashboardHome'));
-const Appointments = lazy(() => import('./pages/Appointments'));
-const Ads = lazy(() => import('./pages/Ads'));
-const Login = lazy(() => import('./pages/Login'));
-const Chat = lazy(() => import('./pages/Chat'));
-const EditProfile = lazy(() => import('./pages/EditProfile'));
-const CategoryPage = lazy(() => import('./pages/CategoryPage'));
-const PublicProfile = lazy(() => import('./pages/PublicProfile'));
-const Terms = lazy(() => import('./pages/Terms'));
-const Privacy = lazy(() => import('./pages/Privacy'));
-const OwnerDashboard = lazy(() => import('./admin/pages/OwnerDashboard'));
-const FavoritesTab = lazy(() => import('./components/FavoritesTab').then(m => ({ default: m.FavoritesTab })));
-const JobRequestsTab = lazy(() => import('./components/JobRequestsTab').then(m => ({ default: m.JobRequestsTab })));
-const QuoteBuilder = lazy(() => import('./components/QuoteBuilder').then(m => ({ default: m.QuoteBuilder })));
+const lazyRetry = (componentImport: () => Promise<any>) =>
+  lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error: any) {
+      const isChunkError =
+        error?.message?.includes('Failed to fetch dynamically imported module') ||
+        error?.message?.includes('Importing a module script failed') ||
+        error?.name === 'ChunkLoadError';
+      
+      if (isChunkError) {
+        const reloadKey = `railway_chunk_reload_${window.location.pathname}`;
+        const lastReload = sessionStorage.getItem(reloadKey);
+        if (!lastReload) {
+          sessionStorage.setItem(reloadKey, 'true');
+          window.location.reload();
+          return new Promise(() => {});
+        }
+      }
+      throw error;
+    }
+  });
+
+const Home = lazyRetry(() => import('./pages/Home'));
+const SearchPage = lazyRetry(() => import('./pages/Search'));
+const ServiceDetail = lazyRetry(() => import('./pages/ServiceDetail'));
+const CreateAd = lazyRetry(() => import('./pages/CreateAd'));
+const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
+const DashboardHome = lazyRetry(() => import('./pages/DashboardHome'));
+const Appointments = lazyRetry(() => import('./pages/Appointments'));
+const Ads = lazyRetry(() => import('./pages/Ads'));
+const Login = lazyRetry(() => import('./pages/Login'));
+const Chat = lazyRetry(() => import('./pages/Chat'));
+const EditProfile = lazyRetry(() => import('./pages/EditProfile'));
+const CategoryPage = lazyRetry(() => import('./pages/CategoryPage'));
+const PublicProfile = lazyRetry(() => import('./pages/PublicProfile'));
+const Terms = lazyRetry(() => import('./pages/Terms'));
+const Privacy = lazyRetry(() => import('./pages/Privacy'));
+const OwnerDashboard = lazyRetry(() => import('./admin/pages/OwnerDashboard'));
+const FavoritesTab = lazyRetry(() => import('./components/FavoritesTab').then(m => ({ default: m.FavoritesTab })));
+const JobRequestsTab = lazyRetry(() => import('./components/JobRequestsTab').then(m => ({ default: m.JobRequestsTab })));
+const QuoteBuilder = lazyRetry(() => import('./components/QuoteBuilder').then(m => ({ default: m.QuoteBuilder })));
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
