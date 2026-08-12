@@ -49,11 +49,25 @@ export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET)
     throw new Error('O arquivo precisa ser uma imagem.');
   }
 
-  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
-  if (error) throw error;
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-  return urlData.publicUrl;
+  try {
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return urlData.publicUrl;
+  } catch (err: any) {
+    console.warn(`[Storage Fallback] Falha no upload no bucket "${bucket}":`, err?.message || err);
+    // Fallback gracioso para Base64 data URL se o bucket não existir no Supabase
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) resolve(reader.result as string);
+        else reject(err);
+      };
+      reader.onerror = () => reject(err);
+      reader.readAsDataURL(file);
+    });
+  }
 }
 
 export { AD_IMAGES_BUCKET, AVATARS_BUCKET };
