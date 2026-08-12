@@ -30,6 +30,7 @@ export const JobRequestsTab: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<JobRequest | null>(null);
   const [estPrice, setEstPrice] = useState('');
   const [estDays, setEstDays] = useState('1');
+  const [quoteDesc, setQuoteDesc] = useState('');
   const isClient = user?.role === UserRole.CLIENT;
 
   const loadData = async () => {
