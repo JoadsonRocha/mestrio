@@ -358,12 +358,20 @@ CREATE POLICY "Dono insere seus dados privados" ON user_private
 CREATE POLICY "Dono edita seus dados privados" ON user_private
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Migração: move telefones existentes e remove as colunas de PII de profiles.
-INSERT INTO user_private (user_id, phone)
-SELECT id, phone FROM profiles WHERE phone IS NOT NULL
-ON CONFLICT (user_id) DO NOTHING;
+-- Migração segura: move telefones existentes se a coluna phone ainda existir em profiles
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.columns 
+    WHERE table_name = 'profiles' AND column_name = 'phone'
+  ) THEN
+    EXECUTE 'INSERT INTO user_private (user_id, phone) SELECT id, phone FROM profiles WHERE phone IS NOT NULL ON CONFLICT (user_id) DO NOTHING';
+    ALTER TABLE profiles DROP COLUMN IF EXISTS phone;
+  END IF;
+END $$;
+
 ALTER TABLE profiles DROP COLUMN IF EXISTS email;
-ALTER TABLE profiles DROP COLUMN IF EXISTS phone;
 
 DROP POLICY IF EXISTS "Anúncios são públicos para leitura" ON service_ads;
 CREATE POLICY "Anúncios visíveis: aprovados, do provedor ou admin"
@@ -978,3 +986,69 @@ GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 --     bucket_id = 'avatars' and auth.role() = 'authenticated'
 --     and (metadata->>'contentType' in ('image/jpeg','image/png','image/webp','image/gif'))
 --   );
+
+-- ==========================================
+-- 8. AUDITORIA, COMUNICADOS DO SISTEMA E FAVORITOS
+-- ==========================================
+
+-- Tabela de Logs de Auditoria do Sistema
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  admin_email TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_type TEXT,
+  target_id TEXT,
+  details TEXT NOT NULL,
+  ip_address TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin lê logs de auditoria" ON audit_logs;
+CREATE POLICY "Admin lê logs de auditoria" ON audit_logs
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Admin cria logs de auditoria" ON audit_logs;
+CREATE POLICY "Admin cria logs de auditoria" ON audit_logs
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Tabela de Comunicados do Sistema (System Broadcasts)
+CREATE TABLE IF NOT EXISTS system_broadcasts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'info' CHECK (type IN ('info', 'warning', 'urgent')),
+  target_role TEXT DEFAULT 'ALL' CHECK (target_role IN ('ALL', 'CLIENT', 'PROVIDER')),
+  active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE system_broadcasts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Comunicados são públicos para leitura" ON system_broadcasts;
+CREATE POLICY "Comunicados são públicos para leitura" ON system_broadcasts
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admin gerencia comunicados" ON system_broadcasts;
+CREATE POLICY "Admin gerencia comunicados" ON system_broadcasts
+  FOR ALL USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+
+-- Tabela de Anúncios Favoritados pelos Usuários
+CREATE TABLE IF NOT EXISTS user_favorites (
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  ad_id UUID REFERENCES service_ads(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  PRIMARY KEY (user_id, ad_id)
+);
+
+ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuário gerencia seus favoritos" ON user_favorites;
+CREATE POLICY "Usuário gerencia seus favoritos" ON user_favorites
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+

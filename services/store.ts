@@ -1039,8 +1039,21 @@ class Store {
 
   async getFavorites(userId: string): Promise<ServiceAd[]> {
     try {
-      const stored = localStorage.getItem(this.getFavKey(userId));
-      const ids: string[] = stored ? JSON.parse(stored) : [];
+      // 1. Tenta buscar da tabela user_favorites no Supabase
+      const { data, error } = await supabase
+        .from('user_favorites')
+        .select('ad_id')
+        .eq('user_id', userId);
+
+      let ids: string[] = [];
+      if (!error && data) {
+        ids = data.map((d: any) => d.ad_id);
+      } else {
+        // Fallback em localStorage
+        const stored = localStorage.getItem(this.getFavKey(userId));
+        ids = stored ? JSON.parse(stored) : [];
+      }
+
       if (!ids.length) return [];
       const all = await this.getAllAds({ status: 'approved', limit: 200 });
       return all.filter(a => ids.includes(a.id));
@@ -1052,6 +1065,7 @@ class Store {
 
   async toggleFavorite(userId: string, adId: string): Promise<boolean> {
     try {
+      // Atualiza estado local primeiro
       const stored = localStorage.getItem(this.getFavKey(userId));
       let ids: string[] = stored ? JSON.parse(stored) : [];
       let added = false;
@@ -1062,6 +1076,14 @@ class Store {
         added = true;
       }
       localStorage.setItem(this.getFavKey(userId), JSON.stringify(ids));
+
+      // Sincroniza com Supabase
+      if (added) {
+        await supabase.from('user_favorites').insert([{ user_id: userId, ad_id: adId }]);
+      } else {
+        await supabase.from('user_favorites').delete().eq('user_id', userId).eq('ad_id', adId);
+      }
+
       return added;
     } catch (e) {
       console.error(e);
@@ -1071,6 +1093,14 @@ class Store {
 
   async isFavorite(userId: string, adId: string): Promise<boolean> {
     try {
+      const { data, error } = await supabase
+        .from('user_favorites')
+        .select('ad_id')
+        .eq('user_id', userId)
+        .eq('ad_id', adId)
+        .single();
+      if (!error && data) return true;
+
       const stored = localStorage.getItem(this.getFavKey(userId));
       const ids: string[] = stored ? JSON.parse(stored) : [];
       return ids.includes(adId);
@@ -1267,6 +1297,26 @@ class Store {
 
   async getSystemBroadcasts(): Promise<SystemBroadcast[]> {
     try {
+      // 1. Busca do Supabase
+      const { data, error } = await supabase
+        .from('system_broadcasts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          message: d.message,
+          type: d.type || 'info',
+          targetRole: d.target_role || 'ALL',
+          active: d.active !== false,
+          createdBy: d.created_by,
+          createdAt: d.created_at,
+        }));
+      }
+
+      // Fallback em localStorage
       const stored = localStorage.getItem(this.BROADCAST_KEY);
       if (stored) return JSON.parse(stored);
       const initial: SystemBroadcast[] = [
@@ -1288,6 +1338,35 @@ class Store {
   }
 
   async createSystemBroadcast(broadcast: Omit<SystemBroadcast, 'id' | 'createdAt'>): Promise<SystemBroadcast> {
+    try {
+      const { data, error } = await supabase
+        .from('system_broadcasts')
+        .insert([{
+          title: broadcast.title,
+          message: broadcast.message,
+          type: broadcast.type || 'info',
+          target_role: broadcast.targetRole || 'ALL',
+          active: broadcast.active !== false,
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          title: data.title,
+          message: data.message,
+          type: data.type,
+          targetRole: data.target_role,
+          active: data.active,
+          createdAt: data.created_at,
+        };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Fallback local
     const list = await this.getSystemBroadcasts();
     const newBc: SystemBroadcast = {
       ...broadcast,
@@ -1303,8 +1382,15 @@ class Store {
     const list = await this.getSystemBroadcasts();
     const item = list.find(b => b.id === id);
     if (item) {
-      item.active = !item.active;
+      const newActive = !item.active;
+      item.active = newActive;
       localStorage.setItem(this.BROADCAST_KEY, JSON.stringify(list));
+
+      try {
+        await supabase.from('system_broadcasts').update({ active: newActive }).eq('id', id);
+      } catch (e) {
+        console.error(e);
+      }
     }
   }
 
