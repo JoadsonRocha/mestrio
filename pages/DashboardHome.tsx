@@ -462,6 +462,14 @@ const DashboardHome: React.FC = () => {
         isOpen={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}
       />
+
+      {/* Modal de Informações Profissionais & Verificação */}
+      <ProfessionalOnboardingModal
+        isOpen={onboardingModalOpen}
+        onClose={() => setOnboardingModalOpen(false)}
+        mode={onboardingMode}
+        onSuccess={() => refreshUser()}
+      />
     </div>
   );
 };
