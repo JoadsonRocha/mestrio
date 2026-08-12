@@ -1131,11 +1131,49 @@ const OwnerDashboard: React.FC = () => {
                 <h2 className={`text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   <Users size={18} className="text-[#F2C811]" /> Diretório de Usuários & Controle de Acessos
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Gerencie funções (Clientes, Profissionais, Admins), selos de verificação e suspensões</p>
+                <p className="text-xs text-slate-400 mt-0.5">Gerencie e filtre usuários por perfil, selos de verificação e permissões</p>
               </div>
-              <span className="text-xs font-mono font-bold px-3 py-1 rounded bg-slate-500/10 text-slate-400">
-                {filteredUsers.length} Usuários Encontrados
-              </span>
+
+              {/* Botões de Classificação por Papel (Slicers Power BI) */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(['all', 'PROVIDER', 'CLIENT', 'ADMIN', 'pending_provider'] as const).map(role => {
+                  const counts = {
+                    all: users.length,
+                    PROVIDER: users.filter(u => u.role === UserRole.PROVIDER).length,
+                    CLIENT: users.filter(u => u.role === UserRole.CLIENT).length,
+                    ADMIN: users.filter(u => u.role === UserRole.ADMIN || u.isOwner).length,
+                    pending_provider: users.filter(u => u.roleRequest === 'PROVIDER').length,
+                  };
+                  const labels = {
+                    all: 'Todos',
+                    PROVIDER: 'Profissionais',
+                    CLIENT: 'Clientes',
+                    ADMIN: 'Admins',
+                    pending_provider: 'Solicitações Pro',
+                  };
+
+                  return (
+                    <button
+                      key={role}
+                      onClick={() => setUserRoleFilter(role)}
+                      className={`text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
+                        userRoleFilter === role
+                          ? 'bg-[#F2C811] text-slate-950 shadow-md'
+                          : isDark
+                          ? 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {labels[role]}
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                        userRoleFilter === role ? 'bg-slate-900/20 text-slate-950' : 'bg-slate-500/20 text-slate-400'
+                      }`}>
+                        {counts[role]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="divide-y divide-slate-500/10">
