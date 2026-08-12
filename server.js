@@ -5,19 +5,42 @@ import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+
+app.set('trust proxy', 1); // Essencial para proxies como Railway (lê o X-Forwarded-For corretamente em req.ip)
+app.disable('x-powered-by');
+
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT_MAX_REQUESTS = 100;
+const RATE_LIMIT_MAX_REQUESTS = 300; // 300 chamadas de API por IP a cada 15 min
 const requestCounts = new Map();
 
+// Limpeza periódica do Map para evitar vazamento de memória com IPs inativos
+setInterval(() => {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  for (const [key, entries] of requestCounts.entries()) {
+    const valid = entries.filter((ts) => ts > windowStart);
+    if (valid.length === 0) {
+      requestCounts.delete(key);
+    } else {
+      requestCounts.set(key, valid);
+    }
+  }
+}, 10 * 60 * 1000);
+
 function getClientKey(req) {
-  // Com 'trust proxy' ativado, o req.ip conterá com segurança o IP original do cliente.
-  return req.ip || req.socket.remoteAddress || 'unknown';
+  return req.ip || req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
 }
 
 function rateLimit(req, res, next) {
+  // Rate limit aplica-se APENAS para rotas da API (/api/*), nunca para assets estáticos, HTML ou favicons
+  if (!req.path.startsWith('/api/')) {
+    return next();
+  }
+
   const key = getClientKey(req);
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW_MS;
@@ -26,20 +49,19 @@ function rateLimit(req, res, next) {
   requestCounts.set(key, entries);
 
   if (entries.length > RATE_LIMIT_MAX_REQUESTS) {
-    res.status(429).json({ error: 'Muitas requisições. Tente novamente mais tarde.' });
+    res.status(429).json({ error: 'Muitas requisições para a API. Tente novamente mais tarde.' });
     return;
   }
 
   next();
 }
-
-app.set('trust proxy', 1); // Essencial para proxies como Railway (lê o X-Forwarded-For corretamente em req.ip)
-app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 
-// Restringindo o CORS apenas para as origens permitidas
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173'];
-app.use(cors({ origin: allowedOrigins }));
+// CORS: Permite a origem configurada ou flexibiliza em produção para requisições do próprio domínio/Railway
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) 
+  : true;
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 app.use(rateLimit);
 
@@ -267,6 +289,18 @@ app.use('/assets', express.static(path.join(distDir, 'assets'), {
   immutable: true,
   fallthrough: false, // Retorna 404 para assets não encontrados (nunca retorna HTML)
 }));
+
+// Favicon handler
+app.get('/favicon.ico', (req, res) => {
+  const icoPath = path.join(distDir, 'favicon.ico');
+  const pngPath = path.join(distDir, 'favicon.png');
+  if (fs.existsSync(icoPath)) {
+    return res.sendFile(icoPath);
+  } else if (fs.existsSync(pngPath)) {
+    return res.sendFile(pngPath);
+  }
+  res.status(404).end();
+});
 
 // Arquivos raiz (favicon, manifest, etc.) → sem cache
 app.use(express.static(distDir, { maxAge: 0 }));
