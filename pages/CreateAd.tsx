@@ -220,7 +220,7 @@ const CreateAd: React.FC = () => {
         const options = {
           maxSizeMB: 1,
           maxWidthOrHeight: 1200,
-          useWebWorker: true,
+          useWebWorker: false,
         };
         const compressedFile = await imageCompression(file, options);
         const reader = new FileReader();
