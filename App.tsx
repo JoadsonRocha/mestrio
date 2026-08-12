@@ -19,7 +19,7 @@ const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
-const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
+const OwnerDashboard = lazy(() => import('./admin/pages/OwnerDashboard'));
 const FavoritesTab = lazy(() => import('./components/FavoritesTab').then(m => ({ default: m.FavoritesTab })));
 const JobRequestsTab = lazy(() => import('./components/JobRequestsTab').then(m => ({ default: m.JobRequestsTab })));
 import { AuthProvider } from './context/AuthContext';

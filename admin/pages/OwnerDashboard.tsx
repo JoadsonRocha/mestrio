@@ -6,13 +6,12 @@ import {
   Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye,
   FileText, Download, Bell, DollarSign, Activity
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
-import { store } from '../services/store';
-import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast } from '../types';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { store } from '../../services/store';
+import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast } from '../../types';
 
 type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'settings' | 'audit' | 'broadcasts';
-
 
 const STATUS_LABEL: Record<AdStatus, string> = {
   pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado',
@@ -222,7 +221,6 @@ const OwnerDashboard: React.FC = () => {
     }
   };
 
-
   // ---- Ações de moderação ----
   const handleStatus = async (ad: ServiceAd, status: AdStatus, reason?: string) => {
     setBusyId(ad.id);
@@ -256,7 +254,6 @@ const OwnerDashboard: React.FC = () => {
   };
 
   // ---- Ações de usuários ----
-  // Papel CLIENT/PROVIDER: somente o DONO (RPC set_user_role)
   const handleRole = async (id: string, role: UserRole) => {
     try {
       await store.setUserRole(id, role);
@@ -265,7 +262,6 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao atualizar papel.', 'error'); }
   };
 
-  // Promover/destituir ADMIN: somente o DONO (RPCs)
   const handlePromote = async (id: string) => {
     try {
       await store.promoteToAdmin(id);
@@ -284,7 +280,6 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao destituir. Somente o dono pode fazer isso.', 'error'); }
   };
 
-  // Transferir posse: somente o DONO (RPC transfer_ownership)
   const handleTransfer = async (id: string) => {
     try {
       await store.transferOwnership(id);
@@ -301,7 +296,6 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao suspender.', 'error'); }
   };
 
-  // Solicitação de profissional (cliente → PROVIDER) — aprovar/recusar admin ou dono
   const handleApproveProviderRequest = async (u: User) => {
     setBusyId(u.id);
     try {
@@ -322,7 +316,6 @@ const OwnerDashboard: React.FC = () => {
     finally { setBusyId(null); }
   };
 
-  // Selo de verificação — admin ou dono
   const handleCertify = async (u: User) => {
     setBusyId(u.id);
     try {
@@ -333,7 +326,6 @@ const OwnerDashboard: React.FC = () => {
     finally { setBusyId(null); }
   };
 
-  // ---- Permissões por admin (somente o DONO) ----
   const openPermModal = async (u: User) => {
     setEditingPerms(u);
     setSelectedPerms([]);
@@ -356,7 +348,6 @@ const OwnerDashboard: React.FC = () => {
     finally { setPermBusy(false); }
   };
 
-  // ---- Ações de categorias ----
   const handleAddCategory = async () => {
     if (!newCat.name.trim()) return;
     const slug = newCat.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -385,7 +376,6 @@ const OwnerDashboard: React.FC = () => {
     } catch (e) { console.error(e); toast('Erro ao excluir.', 'error'); }
   };
 
-  // ---- Configurações ----
   const handleSaveSettings = async () => {
     const days = parseInt(adDurationDays, 10);
     if (isNaN(days) || days <= 0) { toast('Informe um número válido de dias.', 'error'); return; }
@@ -449,7 +439,6 @@ const OwnerDashboard: React.FC = () => {
               {tabItem('broadcasts', 'Comunicados', Bell)}
               {can('manage_settings') && tabItem('settings', 'Configurações', Settings2)}
             </nav>
-
           </aside>
 
           {/* Conteúdo */}
