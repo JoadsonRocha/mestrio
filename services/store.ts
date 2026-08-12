@@ -1146,7 +1146,12 @@ class Store {
   async getJobRequests(): Promise<JobRequest[]> {
     try {
       const stored = localStorage.getItem(this.JOB_REQUESTS_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const list: JobRequest[] = JSON.parse(stored);
+        const cleaned = list.filter(item => !item.id.startsWith('jr-1') && !item.id.startsWith('jr-2') && item.clientName !== 'Ana Souza' && item.clientName !== 'Carlos Eduardo');
+        localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(cleaned));
+        return cleaned;
+      }
       return [];
     } catch (e) {
       return [];
@@ -1281,7 +1286,12 @@ class Store {
 
       // Fallback em localStorage
       const stored = localStorage.getItem(this.AUDIT_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const list: AuditLogItem[] = JSON.parse(stored);
+        const cleaned = list.filter(item => !item.id.startsWith('aud-') && item.adminEmail !== 'admin@mestrio.com');
+        localStorage.setItem(this.AUDIT_KEY, JSON.stringify(cleaned));
+        return cleaned;
+      }
       return [];
     } catch (e) {
       return [];
@@ -1314,7 +1324,12 @@ class Store {
 
       // Fallback em localStorage
       const stored = localStorage.getItem(this.BROADCAST_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const list: SystemBroadcast[] = JSON.parse(stored);
+        const cleaned = list.filter(item => !item.id.startsWith('bc-1') && !item.title.includes('Bem-vindo ao Novo Mestrio'));
+        localStorage.setItem(this.BROADCAST_KEY, JSON.stringify(cleaned));
+        return cleaned;
+      }
       return [];
     } catch (e) {
       return [];
