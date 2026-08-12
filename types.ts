@@ -13,6 +13,8 @@ export interface User {
   location?: string;
   phone?: string;
   bio?: string;
+  documentNumber?: string;
+  hasCompletedOnboarding?: boolean;
   isCertified?: boolean;
   isSuspended?: boolean;
   isOwner?: boolean;

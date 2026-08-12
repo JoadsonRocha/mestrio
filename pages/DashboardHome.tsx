@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { ServiceAd, UserRole, Appointment, ChatSession, SystemBroadcast, JobRequest } from '../types';
 import { ProfessionalScheduleModal } from '../components/ProfessionalScheduleModal';
+import { ProfessionalOnboardingModal } from '../components/ProfessionalOnboardingModal';
 import { Link as RouterLink } from 'react-router-dom';
 
 const QUICK_CATEGORIES = [
@@ -31,6 +32,15 @@ const DashboardHome: React.FC = () => {
   const [jobRequests, setJobRequests] = useState<JobRequest[]>([]);
   const [requesting, setRequesting] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
+  const [onboardingMode, setOnboardingMode] = useState<'onboarding' | 'request_provider' | 'request_verification'>('onboarding');
+
+  useEffect(() => {
+    if (user && user.role === UserRole.PROVIDER && !user.hasCompletedOnboarding) {
+      setOnboardingMode('onboarding');
+      setOnboardingModalOpen(true);
+    }
+  }, [user]);
 
   const handleRequestProvider = async () => {
     setRequesting(true);
@@ -165,6 +175,21 @@ const DashboardHome: React.FC = () => {
             </>
           ) : (
             <>
+              {!user.isCertified ? (
+                <button
+                  onClick={() => {
+                    setOnboardingMode('request_verification');
+                    setOnboardingModalOpen(true);
+                  }}
+                  className="bg-blue-50 text-blue-700 border border-blue-200 px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-blue-100 transition"
+                >
+                  <ShieldCheck size={14} className="mr-1.5 text-blue-600" /> Solicitar Selo de Verificação
+                </button>
+              ) : (
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs font-bold rounded-xl flex items-center">
+                  <CheckCircle2 size={14} className="mr-1 text-emerald-600" /> Profissional Verificado
+                </span>
+              )}
               <button
                 onClick={() => setShowScheduleModal(true)}
                 className="bg-gray-100 text-gray-700 px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-gray-200 transition"
@@ -325,7 +350,10 @@ const DashboardHome: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={handleRequestProvider}
+                onClick={() => {
+                  setOnboardingMode('request_provider');
+                  setOnboardingModalOpen(true);
+                }}
                 disabled={requesting}
                 className="text-xs font-bold px-4 py-2.5 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition shadow-sm disabled:opacity-50 shrink-0"
               >
