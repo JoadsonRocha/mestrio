@@ -1977,9 +1977,19 @@ const OwnerDashboard: React.FC = () => {
             <div className="space-y-3 text-xs">
               <p><strong>ID:</strong> <span className="font-mono text-slate-400">{inspectUser.id}</span></p>
               <p><strong>Papel (Role):</strong> <span className="font-bold text-[#F2C811]">{inspectUser.role}</span> {inspectUser.isOwner && '(Dono Master)'}</p>
+              <p><strong>Telefone / WhatsApp:</strong> {inspectUser.phone || 'Não informado'}</p>
+              <p><strong>Localização / Região:</strong> {inspectUser.location || 'Não informada'}</p>
+              <p><strong>Documento (CPF/CNPJ):</strong> {inspectUser.documentNumber || 'Não informado'}</p>
               <p><strong>Selo de Verificação:</strong> {inspectUser.isCertified ? '✅ Verificado' : '❌ Não Verificado'}</p>
-              <p><strong>Status de Suspensão:</strong> {inspectUser.isSuspended ? '⚠️ Suspenso' : '🟢 Ativo'}</p>
-              <p><strong>Solicitação de Função:</strong> {inspectUser.roleRequest === 'PROVIDER' ? '🟡 Solicitou conta de Profissional' : 'Nenhuma'}</p>
+              <p><strong>Solicitação de Função:</strong> {inspectUser.roleRequest === 'PROVIDER' ? '🟡 Solicitou virar Profissional' : 'Nenhuma'}</p>
+              {inspectUser.bio && (
+                <div>
+                  <strong>Biografia / Apresentação do Trabalho:</strong>
+                  <div className={`mt-1 p-2.5 rounded border leading-relaxed ${isDark ? 'bg-slate-900/60 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'}`}>
+                    {inspectUser.bio}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Lista de Anúncios deste Usuário */}
@@ -2001,10 +2011,39 @@ const OwnerDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-500/20">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-500/20 gap-2 flex-wrap">
               <button onClick={() => setInspectUser(null)} className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 font-semibold text-xs transition">
                 Fechar
               </button>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {inspectUser.roleRequest === 'PROVIDER' && can('approve_providers') && (
+                  <button
+                    onClick={async () => {
+                      await handleApproveProviderRequest(inspectUser);
+                      setInspectUser(null);
+                    }}
+                    disabled={busyId === inspectUser.id}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition"
+                  >
+                    <Check size={14} /> Aprovar como Profissional
+                  </button>
+                )}
+
+                {inspectUser.role === UserRole.PROVIDER && !inspectUser.isCertified && can('verify_providers') && (
+                  <button
+                    onClick={async () => {
+                      await store.setUserCertified(inspectUser.id, true);
+                      setUsers(prev => prev.map(x => x.id === inspectUser.id ? { ...x, isCertified: true } : x));
+                      toast('Selo de Verificação concedido!', 'success');
+                      setInspectUser(null);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1 transition"
+                  >
+                    <ShieldCheck size={14} /> Conceder Selo de Verificação
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
