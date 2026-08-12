@@ -30,6 +30,38 @@ const ServiceDetail: React.FC = () => {
   // Lightbox State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Report Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  const handleReportAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) { navigate('/login'); return; }
+    if (!ad) return;
+    if (!reportReason.trim()) { toast('Informe o motivo da denúncia.', 'error'); return; }
+
+    setIsSubmittingReport(true);
+    try {
+      await store.createReport({
+        reporterId: user.id,
+        targetType: 'ad',
+        targetId: ad.id,
+        reason: reportReason.trim(),
+        details: reportDetails.trim(),
+      });
+      toast('Denúncia enviada com sucesso. Nossa equipe analisará em breve.', 'success');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDetails('');
+    } catch (e) {
+      toast('Erro ao enviar denúncia.', 'error');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const parseAvailability = (availability?: string): { days: string[]; start: string; end: string } | null => {
     if (!availability) return null;
     const timeMatch = availability.match(/(\d{1,2}:\d{2})\s*[-àa]\s*(\d{1,2}:\d{2})/i);
@@ -348,17 +380,27 @@ const ServiceDetail: React.FC = () => {
                       <Badge variant="primary">{ad.category}</Badge>
                       {ad.isPremium && <Badge variant="secondary">Destaque</Badge>}
                     </div>
-                    <button
-                      onClick={handleToggleFavorite}
-                      className={`pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow ${
-                        isFav
-                          ? 'bg-rose-600 text-white shadow-rose-600/30'
-                          : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border border-white/20'
-                      }`}
-                    >
-                      <Heart size={15} className={isFav ? 'fill-white' : ''} />
-                      {isFav ? 'Salvo nos Favoritos' : 'Favoritar Anúncio'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleFavorite}
+                        className={`pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow ${
+                          isFav
+                            ? 'bg-rose-600 text-white shadow-rose-600/30'
+                            : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border border-white/20'
+                        }`}
+                      >
+                        <Heart size={15} className={isFav ? 'fill-white' : ''} />
+                        {isFav ? 'Salvo nos Favoritos' : 'Favoritar Anúncio'}
+                      </button>
+
+                      <button
+                        onClick={() => setShowReportModal(true)}
+                        className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow bg-white/20 text-white hover:bg-rose-600/80 backdrop-blur-md border border-white/20"
+                        title="Denunciar este anúncio"
+                      >
+                        <AlertTriangle size={15} /> Denunciar
+                      </button>
+                    </div>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{ad.title}</h1>
                 <div className="flex items-center text-gray-300 text-sm mb-4 flex-wrap gap-2">
@@ -779,6 +821,68 @@ const ServiceDetail: React.FC = () => {
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/90 text-sm font-medium bg-black/50 rounded-full px-4 py-1.5">
             {lightboxIndex + 1} / {ad.images.length}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Denúncia de Anúncio */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                <AlertTriangle className="text-rose-500" size={20} /> Denunciar Anúncio
+              </h3>
+              <button onClick={() => setShowReportModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleReportAd} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Motivo da Denúncia</label>
+                <select
+                  value={reportReason}
+                  onChange={e => setReportReason(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none"
+                  required
+                >
+                  <option value="">Selecione o motivo...</option>
+                  <option value="Conteúdo Inadequado ou Ofensivo">Conteúdo Inadequado ou Ofensivo</option>
+                  <option value="Serviço Falso ou Golpe">Serviço Falso ou Suspeita de Golpe</option>
+                  <option value="Preço Enganoso ou Abusivo">Preço Enganoso ou Abusivo</option>
+                  <option value="Telefone / Contato Inválido">Telefone / Contato Inválido</option>
+                  <option value="Outro">Outro Motivo</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Detalhes Adicionais (opcional)</label>
+                <textarea
+                  value={reportDetails}
+                  onChange={e => setReportDetails(e.target.value)}
+                  placeholder="Descreva o problema para ajudar nossa equipe na moderação..."
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none h-24"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl transition shadow-md disabled:opacity-50"
+                >
+                  {isSubmittingReport ? 'Enviando...' : 'Enviar Denúncia'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
