@@ -1,31 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, PlusCircle, MessageSquare } from 'lucide-react';
+import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { store } from '../services/store';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) {
-        store.getGlobalUnreadCount(user.id).then(setUnreadCount);
+      store.getGlobalUnreadCount(user.id).then(setUnreadCount);
     }
-  }, [user, location.pathname]); // Refresh when navigating
+  }, [user, location.pathname]);
 
   // Scroll to top on route change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleLogout = async () => {
+    setDropdownOpen(false);
+    setIsOpen(false);
     navigate('/');
     await logout();
+  };
+
+  const handleNav = (path: string) => {
+    setDropdownOpen(false);
+    setIsOpen(false);
+    navigate(path);
   };
 
   const isActive = (path: string) => location.pathname === path ? 'text-brand-600 font-semibold' : 'text-gray-600 hover:text-brand-600';
@@ -73,25 +93,108 @@ export const Navbar: React.FC = () => {
             )}
 
             {user ? (
-              <div className="relative ml-3 flex items-center space-x-4">
+              <div className="relative ml-3 flex items-center space-x-3">
+                {/* Ícone de chat com badge */}
                 <Link to="/dashboard/chat" className={`${isChatActive ? 'text-brand-600' : 'text-gray-500 hover:text-brand-600'} relative`} title="Mensagens">
-                    <MessageSquare className="w-6 h-6" />
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                        </span>
-                    )}
+                  <MessageSquare className="w-6 h-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                  )}
                 </Link>
-                <Link to="/dashboard" className="flex items-center space-x-2 text-sm text-gray-700 hover:text-brand-600">
-                   <img loading="lazy" decoding="async" className="h-8 w-8 rounded-full object-cover border border-gray-200" src={user.avatar || "https://via.placeholder.com/100"} alt="" />
-                   <span className="font-medium">{user.name}</span>
-                </Link>
-                {user.role === 'ADMIN' && (
-                  <Link to="/owner" className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-brand-50 hover:text-brand-700 font-medium">
-                    Painel Admin
-                  </Link>
-                )}
+
+                {/* Avatar com Dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setDropdownOpen(prev => !prev)}
+                    className="flex items-center space-x-2 text-sm text-gray-700 hover:text-brand-600 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-all"
+                    title="Menu do usuário"
+                  >
+                    <img
+                      loading="lazy"
+                      decoding="async"
+                      className="h-9 w-9 rounded-full object-cover border-2 border-gray-200 hover:border-brand-400 transition-all"
+                      src={user.avatar || 'https://via.placeholder.com/100'}
+                      alt={user.name}
+                    />
+                    <span className="font-medium hidden md:block">{user.name.split(' ')[0]}</span>
+                    <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {dropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-fadeIn">
+                      {/* Cabeçalho do usuário */}
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={user.avatar || 'https://via.placeholder.com/100'}
+                            alt={user.name}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Links do menu */}
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleNav('/dashboard')}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors text-left"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-gray-400" />
+                          Meu Painel
+                        </button>
+                        <button
+                          onClick={() => handleNav('/profile/edit')}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors text-left"
+                        >
+                          <User className="w-4 h-4 text-gray-400" />
+                          Editar Perfil
+                        </button>
+                        <button
+                          onClick={() => handleNav('/dashboard/chat')}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors text-left"
+                        >
+                          <MessageSquare className="w-4 h-4 text-gray-400" />
+                          Mensagens
+                          {unreadCount > 0 && (
+                            <span className="ml-auto bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </button>
+                        {user.role === 'ADMIN' && (
+                          <button
+                            onClick={() => handleNav('/owner')}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-brand-700 hover:bg-brand-50 transition-colors text-left font-medium"
+                          >
+                            <ShieldCheck className="w-4 h-4 text-brand-500" />
+                            Painel Admin
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Separador + Sair */}
+                      <div className="border-t border-gray-100 py-1">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left font-semibold"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sair da conta
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <Link to="/login" className="text-brand-600 font-medium hover:text-brand-800">
@@ -115,41 +218,63 @@ export const Navbar: React.FC = () => {
       {isOpen && (
         <div className="sm:hidden bg-white border-t border-gray-200">
           <div className="pt-2 pb-3 space-y-1">
-            <Link to="/" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">Início</Link>
-            <Link to="/search" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">Buscar</Link>
+            <Link onClick={() => setIsOpen(false)} to="/" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">Início</Link>
+            <Link onClick={() => setIsOpen(false)} to="/search" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">Buscar</Link>
             {(!user || user.role !== 'CLIENT') && (
-              <Link to="/create-ad" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">Anunciar Serviço</Link>
+              <Link onClick={() => setIsOpen(false)} to="/create-ad" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">Anunciar Serviço</Link>
             )}
-             {user && (
-                 <Link to="/dashboard/chat" className="flex items-center justify-between pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300">
-                     Mensagens
-                     {unreadCount > 0 && (
-                         <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">{unreadCount}</span>
-                     )}
-                 </Link>
-             )}
-             {user?.role === 'ADMIN' && (
-                 <Link to="/owner" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">
-                     Painel Admin
-                 </Link>
-             )}
+            {user && (
+              <Link onClick={() => setIsOpen(false)} to="/dashboard/chat" className="flex items-center justify-between pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300">
+                Mensagens
+                {unreadCount > 0 && (
+                  <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">{unreadCount}</span>
+                )}
+              </Link>
+            )}
+            {user && (
+              <Link onClick={() => setIsOpen(false)} to="/dashboard" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">
+                Meu Painel
+              </Link>
+            )}
+            {user && (
+              <Link onClick={() => setIsOpen(false)} to="/profile/edit" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">
+                Editar Perfil
+              </Link>
+            )}
+            {user?.role === 'ADMIN' && (
+              <Link onClick={() => setIsOpen(false)} to="/owner" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">
+                Painel Admin
+              </Link>
+            )}
           </div>
           <div className="pt-4 pb-4 border-t border-gray-200">
             {user ? (
-              <div className="flex items-center px-4">
-                <div className="flex-shrink-0">
-                  <img loading="lazy" decoding="async" className="h-10 w-10 rounded-full" src={user.avatar} alt="" />
+              <div>
+                <div className="flex items-center px-4 mb-3">
+                  <div className="flex-shrink-0">
+                    <img loading="lazy" decoding="async" className="h-10 w-10 rounded-full object-cover" src={user.avatar || 'https://via.placeholder.com/100'} alt="" />
+                  </div>
+                  <div className="ml-3">
+                    <div className="text-base font-medium text-gray-800">{user.name}</div>
+                    <div className="text-sm font-medium text-gray-500">{user.email}</div>
+                  </div>
                 </div>
-                <div className="ml-3">
-                  <div className="text-base font-medium text-gray-800">{user.name}</div>
-                  <div className="text-sm font-medium text-gray-500">{user.email}</div>
+                {/* Botão Sair no mobile */}
+                <div className="px-4">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-rose-50 text-rose-600 font-semibold text-sm hover:bg-rose-100 transition-colors border border-rose-200"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sair da conta
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="px-4">
-                 <Link to="/login" className="block text-center w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-brand-600 hover:bg-brand-700">
-                    Entrar
-                 </Link>
+                <Link to="/login" onClick={() => setIsOpen(false)} className="block text-center w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-brand-600 hover:bg-brand-700">
+                  Entrar
+                </Link>
               </div>
             )}
           </div>
