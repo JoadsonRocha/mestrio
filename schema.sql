@@ -157,9 +157,7 @@ DROP POLICY IF EXISTS "Usuários autenticados podem inserir participantes" ON ch
 DROP POLICY IF EXISTS "Participante vê participante" ON chat_participants;
 DROP POLICY IF EXISTS "Participante entra na sessão" ON chat_participants;
 CREATE POLICY "Participante vê participante" ON chat_participants
-  FOR SELECT USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
-  );
+  FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Participante entra na sessão" ON chat_participants
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 

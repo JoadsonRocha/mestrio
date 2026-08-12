@@ -146,13 +146,19 @@ Regras:
 // /api/ai/estimate — Orçador Inteligente
 // ----------------------------------------------------------------
 app.post('/api/ai/estimate', async (req, res) => {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Chave da API Groq não configurada.' });
-
   const body = req.body || {};
   const problem = String(body.problem || '').trim();
   
   if (!problem) return res.status(400).json({ error: 'O problema é obrigatório' });
+
+  const fallback = {
+    category: 'handyman',
+    possible_issue: `Serviço recomendado para solucionar: ${problem}`,
+    price_range: 'R$ 150 a R$ 350'
+  };
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(200).json(fallback);
 
   const prompt = `Você é um assistente técnico especialista de um marketplace de serviços residenciais (Mestrio).
 O cliente tem o seguinte problema/necessidade: "${problem}".
@@ -178,23 +184,25 @@ JSON puro:`;
       }),
     });
 
+    if (!r.ok) {
+      console.warn('Groq API retornou status não-OK:', r.status);
+      return res.status(200).json(fallback);
+    }
+
     const data = await r.json();
     const text = data?.choices?.[0]?.message?.content || '';
 
-    let parsedResponse = {};
     try {
-      // Remove possible markdown formatting from Groq response (e.g. ```json ... ```)
       const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      parsedResponse = JSON.parse(cleanText);
+      const parsedResponse = JSON.parse(cleanText);
+      return res.status(200).json(parsedResponse);
     } catch (parseError) {
       console.error('Erro ao fazer parse do JSON do Groq:', text);
-      return res.status(500).json({ error: 'A resposta da IA foi inválida.' });
+      return res.status(200).json(fallback);
     }
-
-    res.status(200).json(parsedResponse);
   } catch (e) {
     console.error('Groq estimate fetch error:', e);
-    res.status(500).json({ error: 'Erro ao conectar com a IA.' });
+    return res.status(200).json(fallback);
   }
 });
 

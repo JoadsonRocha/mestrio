@@ -107,7 +107,7 @@ class Store {
   }
 
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
-    let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
+    let query = supabase.from('service_ads').select('*, profiles!provider_id(name, avatar, is_certified)');
 
     // Sem providerId = consulta pública: apenas anúncios aprovados e não expirados.
     const isPublic = !params?.providerId;
@@ -162,7 +162,7 @@ class Store {
   async getAdById(id: string): Promise<ServiceAd | null> {
     const { data, error } = await supabase
       .from('service_ads')
-      .select('*, profiles(name, avatar, is_certified), reviews(*)')
+      .select('*, profiles!provider_id(name, avatar, is_certified), reviews(*)')
       .eq('id', id)
       .single();
     
@@ -792,7 +792,7 @@ class Store {
 
   // --- Moderação de anúncios ---
   async getAllAds(params?: { status?: string; search?: string; limit?: number }): Promise<ServiceAd[]> {
-    let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
+    let query = supabase.from('service_ads').select('*, profiles!provider_id(name, avatar, is_certified)');
     if (params?.status && params.status !== 'all') query = query.eq('status', params.status);
     if (params?.search) {
       query = query.or(`title.ilike.%${params.search}%,location.ilike.%${params.search}%`);
@@ -1011,7 +1011,7 @@ class Store {
     // Top anúncios mais avaliados
     const { data: topRows } = await supabase
       .from('service_ads')
-      .select('id, title, category, rating, review_count, views, profiles(name)')
+      .select('id, title, category, rating, review_count, views, profiles!provider_id(name)')
       .eq('status', 'approved')
       .order('review_count', { ascending: false })
       .limit(5);
@@ -1444,7 +1444,7 @@ class Store {
     try {
       const { data, error } = await supabase
         .from('user_reports')
-        .select('*, profiles(name)')
+        .select('*, profiles!reporter_id(name)')
         .order('created_at', { ascending: false });
 
       if (!error && data) {
@@ -1537,7 +1537,7 @@ class Store {
     try {
       const { data, error } = await supabase
         .from('kyc_documents')
-        .select('*, profiles(name)')
+        .select('*, profiles!user_id(name)')
         .order('created_at', { ascending: false });
 
       if (!error && data) {
