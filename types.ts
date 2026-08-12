@@ -32,6 +32,8 @@ export type AdminPermission =
   | 'verify_providers'
   | 'manage_categories'
   | 'manage_settings'
+  | 'manage_reports'
+  | 'manage_kyc'
   | 'view_metrics';
 
 export type AdStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'suspended';
@@ -236,4 +238,37 @@ export interface SystemBroadcast {
   type: 'info' | 'warning' | 'success';
   createdAt: string;
   active: boolean;
-}
+}
+
+export type ReportStatus = 'pending' | 'reviewed' | 'dismissed' | 'resolved';
+
+export interface UserReport {
+  id: string;
+  reporterId: string;
+  reporterName?: string;
+  targetType: 'ad' | 'user' | 'review';
+  targetId: string;
+  targetTitle?: string;
+  reason: string;
+  details?: string;
+  status: ReportStatus;
+  createdAt: string;
+}
+
+export type KYCStatus = 'pending' | 'approved' | 'rejected';
+
+export interface KYCDocument {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  documentType: 'CPF' | 'CNH' | 'RG';
+  documentNumber: string;
+  documentFrontUrl: string;
+  selfieUrl?: string;
+  status: KYCStatus;
+  rejectionReason?: string;
+  createdAt: string;
+}
+
+export type EscrowPaymentStatus = 'pending' | 'in_escrow' | 'released_to_provider' | 'refunded';
