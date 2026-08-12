@@ -256,7 +256,7 @@ const OwnerDashboard: React.FC = () => {
   const [broadcasts, setBroadcasts] = useState<SystemBroadcast[]>([]);
   const [bcTitle, setBcTitle] = useState('');
   const [bcMessage, setBcMessage] = useState('');
-  const [bcTarget, setBcTarget] = useState<'all' | 'PROVIDER' | 'CLIENT'>('all');
+  const [bcTarget, setBcTarget] = useState<'ALL' | 'PROVIDER' | 'CLIENT'>('ALL');
   const [bcBusy, setBcBusy] = useState(false);
 
   // Denúncias e KYC State
@@ -1422,40 +1422,43 @@ const OwnerDashboard: React.FC = () => {
                   .map(doc => (
                     <div key={doc.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold border uppercase ${
-                            doc.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                            doc.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          }`}>{doc.status === 'pending' ? 'Pendente' : doc.status === 'approved' ? 'Aprovado' : 'Rejeitado'}</span>
-                          <span className="text-xs font-bold text-slate-300">{doc.documentType}</span>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold border uppercase ${
+                              doc.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                              doc.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            }`}>{doc.status === 'pending' ? 'Pendente' : doc.status === 'approved' ? 'Aprovado' : 'Rejeitado'}</span>
+                            <span className="text-xs font-bold text-slate-300">{doc.documentType}</span>
+                            <span className="text-xs font-mono text-slate-400">{doc.documentNumber}</span>
+                          </div>
+                          <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                            Usuário: {doc.userName} &bull; <span className="text-slate-400 font-normal">{doc.userEmail}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                            Enviado em: {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
+                          </p>
+                          {doc.rejectionReason && (
+                            <p className="text-xs text-rose-400 mt-0.5">Motivo de Rejeição: {doc.rejectionReason}</p>
+                          )}
+                          {doc.documentFrontUrl && (
+                            <a
+                              href={doc.documentFrontUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-[#F2C811] hover:underline mt-1 inline-flex items-center gap-1"
+                            >
+                              <Eye size={12} /> Ver Documento
+                            </a>
+                          )}
                         </div>
-                        <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                          Profissional: {doc.providerName || doc.providerId}
-                        </p>
-                        <p className="text-[11px] text-slate-500 mt-1 font-mono">
-                          Enviado em: {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
-                        </p>
-                        {doc.documentUrl && (
-                          <a
-                            href={doc.documentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-[#F2C811] hover:underline mt-1 inline-flex items-center gap-1"
-                          >
-                            <Eye size={12} /> Ver Documento
-                          </a>
-                        )}
-                      </div>
                       {doc.status === 'pending' && (
                         <div className="flex gap-2 shrink-0 text-xs">
                           <button
                             onClick={async () => {
                               try {
                                 await store.verifyKYCDocument(doc.id, 'approved');
-                                const u = users.find(u => u.id === doc.providerId);
-                                if (u) await store.setUserCertified(doc.providerId, true);
-                                setUsers(prev => prev.map(x => x.id === doc.providerId ? { ...x, isCertified: true } : x));
+                                await store.setUserCertified(doc.userId, true);
+                                setUsers(prev => prev.map(x => x.id === doc.userId ? { ...x, isCertified: true } : x));
                                 loadKYCDocs();
                                 toast('KYC aprovado — Selo de Verificado concedido!', 'success');
                               } catch { toast('Erro ao aprovar KYC.', 'error'); }
