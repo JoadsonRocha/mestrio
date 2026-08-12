@@ -211,7 +211,7 @@ export interface QuoteProposal {
 
 export interface ProfessionalSchedule {
   providerId: string;
-  workDays: ('mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun')[];
+  workDays: string[];
   startTime: string;
   endTime: string;
   breakStart?: string;

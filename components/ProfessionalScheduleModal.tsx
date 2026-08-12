@@ -10,14 +10,16 @@ interface Props {
   onClose: () => void;
 }
 
-const WEEKDAYS: { id: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'; label: string }[] = [
+const WEEKDAYS: { id: string; label: string }[] = [
   { id: 'mon', label: 'Seg' },
   { id: 'tue', label: 'Ter' },
   { id: 'wed', label: 'Qua' },
   { id: 'thu', label: 'Qui' },
   { id: 'fri', label: 'Sex' },
   { id: 'sat', label: 'Sáb' },
-  { id: 'sun', label: 'Dom' },
+  { id: 'dom', label: 'Dom' },
+  { id: 'emergency', label: 'Emergências' },
+  { id: '24h', label: '24h' },
 ];
 
 export const ProfessionalScheduleModal: React.FC<Props> = ({ isOpen, onClose }) => {
@@ -39,7 +41,7 @@ export const ProfessionalScheduleModal: React.FC<Props> = ({ isOpen, onClose }) 
 
   if (!isOpen || !schedule) return null;
 
-  const toggleDay = (dayId: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun') => {
+  const toggleDay = (dayId: string) => {
     if (!schedule) return;
     const exists = schedule.workDays.includes(dayId);
     const newDays = exists

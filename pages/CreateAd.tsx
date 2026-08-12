@@ -20,6 +20,8 @@ const DAYS_OF_WEEK = [
   { id: 'sex', label: 'Sex' },
   { id: 'sab', label: 'Sáb' },
   { id: 'dom', label: 'Dom' },
+  { id: 'emergency', label: 'Emergências' },
+  { id: '24h', label: '24h' },
 ];
 
 const CreateAd: React.FC = () => {
