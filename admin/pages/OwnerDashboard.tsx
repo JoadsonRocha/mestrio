@@ -1451,7 +1451,7 @@ const OwnerDashboard: React.FC = () => {
                           <button
                             onClick={async () => {
                               try {
-                                await store.updateKYCStatus(doc.id, 'approved');
+                                await store.verifyKYCDocument(doc.id, 'approved');
                                 const u = users.find(u => u.id === doc.providerId);
                                 if (u) await store.setUserCertified(doc.providerId, true);
                                 setUsers(prev => prev.map(x => x.id === doc.providerId ? { ...x, isCertified: true } : x));
@@ -1466,7 +1466,7 @@ const OwnerDashboard: React.FC = () => {
                           <button
                             onClick={async () => {
                               try {
-                                await store.updateKYCStatus(doc.id, 'rejected');
+                                await store.verifyKYCDocument(doc.id, 'rejected');
                                 loadKYCDocs();
                                 toast('Documento KYC rejeitado.', 'info');
                               } catch { toast('Erro ao rejeitar KYC.', 'error'); }
