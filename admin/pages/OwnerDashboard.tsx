@@ -10,9 +10,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { store } from '../../services/store';
-import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast } from '../../types';
+import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast, UserReport, KYCDocument, ReportStatus, KYCStatus } from '../../types';
 
-type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'settings' | 'audit' | 'broadcasts';
+type Tab = 'overview' | 'ads' | 'users' | 'reports' | 'kyc' | 'categories' | 'settings' | 'audit' | 'broadcasts';
 type DateRange = '7d' | '30d' | '90d' | 'all';
 
 const STATUS_LABEL: Record<AdStatus, string> = {
