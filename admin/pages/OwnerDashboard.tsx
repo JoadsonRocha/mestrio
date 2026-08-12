@@ -5,7 +5,7 @@ import {
   Trash2, Check, X, Ban, RefreshCw, Clock, Shield, Star,
   Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye,
   FileText, Download, Bell, Activity, Search, Filter, Layers, Sun, Moon,
-  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info, ShieldAlert, ShieldCheck
+  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info, ShieldAlert, ShieldCheck, LogOut
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -224,9 +224,14 @@ const MiniSparkline: React.FC<{ color?: string }> = ({ color = '#10B981' }) => (
 type UserRoleFilter = 'all' | 'PROVIDER' | 'CLIENT' | 'ADMIN' | 'pending_provider';
 
 const OwnerDashboard: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handleAdminLogout = async () => {
+    navigate('/');
+    await logout();
+  };
 
   const [isDark, setIsDark] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
@@ -750,12 +755,12 @@ const OwnerDashboard: React.FC = () => {
               {isDark ? <Sun size={17} className="text-[#F2C811]" /> : <Moon size={17} className="text-slate-200" />}
             </button>
 
-            <Link
-              to="/"
+            <button
+              onClick={handleAdminLogout}
               className="px-3.5 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 font-bold transition shadow-sm flex items-center gap-1.5"
             >
-              Sair do Painel →
-            </Link>
+              <LogOut size={14} /> Sair
+            </button>
           </div>
         </div>
       </header>
