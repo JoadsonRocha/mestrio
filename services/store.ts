@@ -184,14 +184,14 @@ class Store {
       .from('service_ads')
       .insert([{
         provider_id: ad.providerId,
-        title: ad.title,
-        description: ad.description,
+        title: sanitizeText(ad.title),
+        description: sanitizeHtmlLike(ad.description),
         category: ad.category,
         price: ad.price,
         price_unit: ad.priceUnit,
-        location: ad.location,
+        location: sanitizeText(ad.location),
         images: ad.images,
-        whatsapp: ad.whatsapp,
+        whatsapp: sanitizePhone(ad.whatsapp),
         availability: ad.availability,
         tags: ad.tags || [],
         is_premium: ad.isPremium || false,
@@ -207,8 +207,8 @@ class Store {
 
   async updateAd(id: string, ad: Partial<ServiceAd>): Promise<void> {
     const updateData: any = { updated_at: new Date().toISOString() };
-    if (ad.title !== undefined) updateData.title = ad.title;
-    if (ad.description !== undefined) updateData.description = ad.description;
+    if (ad.title !== undefined) updateData.title = sanitizeText(ad.title);
+    if (ad.description !== undefined) updateData.description = sanitizeHtmlLike(ad.description);
     if (ad.category !== undefined) updateData.category = ad.category;
     if (ad.price !== undefined) updateData.price = ad.price;
     if (ad.priceUnit !== undefined) updateData.price_unit = ad.priceUnit;
@@ -1157,6 +1157,8 @@ class Store {
     const list = await this.getJobRequests();
     const newReq: JobRequest = {
       ...req,
+      title: sanitizeText(req.title),
+      description: sanitizeHtmlLike(req.description),
       id: `jr-${Date.now()}`,
       status: 'open',
       proposalsCount: 0,
