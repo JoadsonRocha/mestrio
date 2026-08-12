@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, Users, FolderOpen, Settings2, Plus,
   Trash2, Check, X, Ban, RefreshCw, Clock, Shield, Star,
   Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye,
-  FileText, Download, Bell, DollarSign, Activity
+  FileText, Download, Bell, Activity, Search, Filter, Layers, Sun, Moon,
+  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -12,6 +13,7 @@ import { store } from '../../services/store';
 import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast } from '../../types';
 
 type Tab = 'overview' | 'ads' | 'users' | 'categories' | 'settings' | 'audit' | 'broadcasts';
+type DateRange = '7d' | '30d' | '90d' | 'all';
 
 const STATUS_LABEL: Record<AdStatus, string> = {
   pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado',
@@ -19,11 +21,11 @@ const STATUS_LABEL: Record<AdStatus, string> = {
 };
 
 const STATUS_STYLE: Record<AdStatus, string> = {
-  pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  approved: 'bg-green-50 text-green-700 border-green-200',
-  rejected: 'bg-red-50 text-red-700 border-red-200',
-  expired: 'bg-gray-100 text-gray-600 border-gray-200',
-  suspended: 'bg-orange-50 text-orange-700 border-orange-200'
+  pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  approved: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  rejected: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+  expired: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+  suspended: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
 };
 
 export const PERMISSION_LABELS: Record<string, string> = {
@@ -36,12 +38,198 @@ export const PERMISSION_LABELS: Record<string, string> = {
   view_metrics: 'Ver métricas'
 };
 
+// Componente para Gráfico Donut de Status (Power BI Style SVG)
+const StatusDonutChart: React.FC<{
+  approved: number;
+  pending: number;
+  rejected: number;
+  suspended: number;
+  expired: number;
+  isDark: boolean;
+}> = ({ approved, pending, rejected, suspended, expired, isDark }) => {
+  const total = approved + pending + rejected + suspended + expired;
+  if (total === 0) {
+    return (
+      <div className="h-56 flex flex-col items-center justify-center text-slate-400 text-sm">
+        <PieChart size={32} className="mb-2 opacity-50" />
+        Nenhum anúncio cadastrado
+      </div>
+    );
+  }
+
+  const items = [
+    { label: 'Aprovados', count: approved, color: '#10B981' },
+    { label: 'Pendentes', count: pending, color: '#F59E0B' },
+    { label: 'Rejeitados', count: rejected, color: '#EF4444' },
+    { label: 'Suspensos', count: suspended, color: '#F97316' },
+    { label: 'Expirados', count: expired, color: '#6B7280' },
+  ].filter(i => i.count > 0);
+
+  let cumulativeAngle = 0;
+  const radius = 65;
+  const strokeWidth = 24;
+  const center = 90;
+  const circumference = 2 * Math.PI * radius;
+
+  const slices = items.map(item => {
+    const percentage = item.count / total;
+    const strokeDasharray = `${percentage * circumference} ${circumference}`;
+    const strokeDashoffset = -cumulativeAngle * circumference;
+    cumulativeAngle += percentage;
+
+    return (
+      <circle
+        key={item.label}
+        cx={center}
+        cy={center}
+        r={radius}
+        fill="transparent"
+        stroke={item.color}
+        strokeWidth={strokeWidth}
+        strokeDasharray={strokeDasharray}
+        strokeDashoffset={strokeDashoffset}
+        className="transition-all duration-500 hover:opacity-85 cursor-pointer"
+      />
+    );
+  });
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
+      <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+        <svg viewBox="0 0 180 180" className="w-full h-full -rotate-90 transform">
+          {slices}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{total}</span>
+          <span className="text-[11px] font-medium text-slate-400">Total Anúncios</span>
+        </div>
+      </div>
+      <div className="flex-1 space-y-2.5 w-full">
+        {items.map(item => {
+          const pct = Math.round((item.count / total) * 100);
+          return (
+            <div key={item.label} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
+                <span className={`font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{item.label}</span>
+              </div>
+              <div className="flex items-center gap-2 font-mono">
+                <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{item.count}</span>
+                <span className="text-slate-400 text-[11px]">({pct}%)</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Componente para Gráfico de Área/Tendência SVG (Power BI Style)
+const GrowthAreaChart: React.FC<{ isDark: boolean; dataPoints?: number[] }> = ({ isDark, dataPoints = [12, 18, 25, 30, 42, 58, 75] }) => {
+  const width = 500;
+  const height = 160;
+  const padding = 20;
+
+  const maxVal = Math.max(...dataPoints, 100);
+  const minVal = 0;
+
+  const points = dataPoints.map((val, idx) => {
+    const x = padding + (idx / (dataPoints.length - 1)) * (width - 2 * padding);
+    const y = height - padding - ((val - minVal) / (maxVal - minVal)) * (height - 2 * padding);
+    return { x, y, val };
+  });
+
+  const pathD = points.reduce((acc, pt, i) => {
+    if (i === 0) return `M ${pt.x} ${pt.y}`;
+    const prev = points[i - 1];
+    const cx1 = prev.x + (pt.x - prev.x) / 2;
+    const cy1 = prev.y;
+    const cx2 = prev.x + (pt.x - prev.x) / 2;
+    const cy2 = pt.y;
+    return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${pt.x} ${pt.y}`;
+  }, '');
+
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+
+  return (
+    <div className="w-full">
+      <div className="relative h-44 w-full">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="pbiAreaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#F2C811" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#F2C811" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Grid Horizontal */}
+          {[0, 0.33, 0.66, 1].map((pct, i) => {
+            const y = height - padding - pct * (height - 2 * padding);
+            return (
+              <line
+                key={i}
+                x1={padding}
+                y1={y}
+                x2={width - padding}
+                y2={y}
+                stroke={isDark ? '#334155' : '#E2E8F0'}
+                strokeDasharray="4 4"
+                strokeWidth="1"
+              />
+            );
+          })}
+
+          {/* Área com gradiente */}
+          <path d={areaD} fill="url(#pbiAreaGradient)" />
+
+          {/* Linha principal */}
+          <path d={pathD} fill="none" stroke="#F2C811" strokeWidth="3" strokeLinecap="round" />
+
+          {/* Pontos com brilho */}
+          {points.map((pt, i) => (
+            <g key={i} className="group cursor-pointer">
+              <circle cx={pt.x} cy={pt.y} r="5" fill="#F2C811" stroke={isDark ? '#1E293B' : '#FFFFFF'} strokeWidth="2" />
+              <circle cx={pt.x} cy={pt.y} r="8" fill="#F2C811" opacity="0.3" className="animate-pulse" />
+            </g>
+          ))}
+        </svg>
+      </div>
+      <div className="flex justify-between text-[11px] font-mono text-slate-400 mt-2 px-2">
+        <span>Seg</span>
+        <span>Ter</span>
+        <span>Qua</span>
+        <span>Qui</span>
+        <span>Sex</span>
+        <span>Sáb</span>
+        <span>Dom (Hoje)</span>
+      </div>
+    </div>
+  );
+};
+
+// Mini Sparkline para KPI Cards
+const MiniSparkline: React.FC<{ color?: string }> = ({ color = '#10B981' }) => (
+  <svg viewBox="0 0 60 20" className="w-16 h-6 overflow-visible">
+    <path
+      d="M 2 15 Q 15 18, 25 10 T 45 6 T 58 2"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const OwnerDashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const [isDark, setIsDark] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
+  const [dateRange, setDateRange] = useState<DateRange>('30d');
+  const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -52,6 +240,7 @@ const OwnerDashboard: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: 'Wrench' });
   const [confirmingTransfer, setConfirmingTransfer] = useState<string | null>(null);
   const [adminPerms, setAdminPerms] = useState<Record<string, string[]>>({});
@@ -59,7 +248,7 @@ const OwnerDashboard: React.FC = () => {
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [permBusy, setPermBusy] = useState(false);
 
-  // Estados para Auditoria e Comunicados
+  // Auditoria e Comunicados
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [broadcasts, setBroadcasts] = useState<SystemBroadcast[]>([]);
   const [bcTitle, setBcTitle] = useState('');
@@ -109,6 +298,26 @@ const OwnerDashboard: React.FC = () => {
     try { setBroadcasts(await store.getSystemBroadcasts()); } catch (e) { console.error(e); }
   }, []);
 
+  const refreshAllData = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        loadStats(),
+        loadAds(),
+        loadUsers(),
+        loadCategories(),
+        loadSettings(),
+        loadAuditLogs(),
+        loadBroadcasts()
+      ]);
+      toast('Dados atualizados com sucesso!', 'success');
+    } catch (e) {
+      toast('Erro ao atualizar dados.', 'error');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate('/login'); return; }
@@ -138,8 +347,8 @@ const OwnerDashboard: React.FC = () => {
 
   if (loading || !user || user.role !== UserRole.ADMIN) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
+      <div className="flex-1 bg-slate-900 flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin w-10 h-10 border-4 border-[#F2C811] border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -164,28 +373,28 @@ const OwnerDashboard: React.FC = () => {
       ID: u.id,
       Nome: u.name,
       Email: u.email,
-      Função: u.role,
+      Funcao: u.role,
       Certificado: u.isCertified ? 'Sim' : 'Não',
       Suspenso: u.isSuspended ? 'Sim' : 'Não',
       DataCriacao: u.createdAt || 'N/A'
     }));
-    store.exportToCSV('Mestrio_Usuarios', rows);
-    toast('Relatório de usuários exportado!', 'success');
+    store.exportToCSV('Mestrio_PowerBI_Usuarios', rows);
+    toast('Relatório Power BI de usuários exportado!', 'success');
   };
 
   const handleExportAds = () => {
     const rows = ads.map(a => ({
       ID: a.id,
-      Título: a.title,
+      Titulo: a.title,
       Prestador: a.providerName,
       Categoria: a.category,
-      Preço: a.price,
+      Preco: a.price,
       Status: a.status,
-      Visualizações: a.views || 0,
+      Visualizacoes: a.views || 0,
       DataCriacao: a.createdAt
     }));
-    store.exportToCSV('Mestrio_Anuncios', rows);
-    toast('Relatório de anúncios exportado!', 'success');
+    store.exportToCSV('Mestrio_PowerBI_Anuncios', rows);
+    toast('Relatório Power BI de anúncios exportado!', 'success');
   };
 
   const handleCreateBroadcast = async (e: React.FormEvent) => {
@@ -200,7 +409,7 @@ const OwnerDashboard: React.FC = () => {
         type: 'info',
         active: true,
       });
-      toast('Comunicado publicado!', 'success');
+      toast('Comunicado publicado no painel!', 'success');
       setBcTitle('');
       setBcMessage('');
       loadBroadcasts();
@@ -221,7 +430,7 @@ const OwnerDashboard: React.FC = () => {
     }
   };
 
-  // ---- Ações de moderação ----
+  // Ações de moderação
   const handleStatus = async (ad: ServiceAd, status: AdStatus, reason?: string) => {
     setBusyId(ad.id);
     try {
@@ -253,12 +462,12 @@ const OwnerDashboard: React.FC = () => {
     }
   };
 
-  // ---- Ações de usuários ----
+  // Ações de usuários
   const handleRole = async (id: string, role: UserRole) => {
     try {
       await store.setUserRole(id, role);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
-      toast('Papel atualizado.', 'success');
+      toast('Papel atualizado com sucesso.', 'success');
     } catch (e) { console.error(e); toast('Erro ao atualizar papel.', 'error'); }
   };
 
@@ -269,7 +478,7 @@ const OwnerDashboard: React.FC = () => {
       toast('Usuário promovido a administrador.', 'success');
       const promoted = users.find(u => u.id === id);
       if (promoted) openPermModal(promoted);
-    } catch (e) { console.error(e); toast('Erro ao promover. Somente o dono pode fazer isso.', 'error'); }
+    } catch (e) { console.error(e); toast('Erro ao promover. Somente o dono tem essa permissão.', 'error'); }
   };
 
   const handleDemote = async (id: string) => {
@@ -277,13 +486,13 @@ const OwnerDashboard: React.FC = () => {
       await store.demoteFromAdmin(id);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, role: UserRole.PROVIDER } : u));
       toast('Administrador destituído.', 'success');
-    } catch (e) { console.error(e); toast('Erro ao destituir. Somente o dono pode fazer isso.', 'error'); }
+    } catch (e) { console.error(e); toast('Erro ao destituir. Somente o dono tem essa permissão.', 'error'); }
   };
 
   const handleTransfer = async (id: string) => {
     try {
       await store.transferOwnership(id);
-      toast('Posse transferida. Você agora é administrador.', 'success');
+      toast('Posse transferida com sucesso. Você agora é administrador.', 'success');
       window.location.href = '/owner';
     } catch (e) { console.error(e); toast('Erro ao transferir a posse.', 'error'); }
   };
@@ -293,7 +502,7 @@ const OwnerDashboard: React.FC = () => {
       await store.setUserSuspended(u.id, !u.isSuspended);
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, isSuspended: !u.isSuspended } : x));
       toast(u.isSuspended ? 'Usuário reativado.' : 'Usuário suspenso.', 'success');
-    } catch (e) { console.error(e); toast('Erro ao suspender.', 'error'); }
+    } catch (e) { console.error(e); toast('Erro ao alterar status de suspensão.', 'error'); }
   };
 
   const handleApproveProviderRequest = async (u: User) => {
@@ -301,8 +510,8 @@ const OwnerDashboard: React.FC = () => {
     try {
       await store.approveProviderRequest(u.id);
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: UserRole.PROVIDER, roleRequest: null } : x));
-      toast(`${u.name} agora é profissional.`, 'success');
-    } catch (e) { console.error(e); toast('Erro ao aprovar.', 'error'); }
+      toast(`${u.name} agora é profissional verificado.`, 'success');
+    } catch (e) { console.error(e); toast('Erro ao aprovar solicitação.', 'error'); }
     finally { setBusyId(null); }
   };
 
@@ -312,7 +521,7 @@ const OwnerDashboard: React.FC = () => {
       await store.rejectProviderRequest(u.id);
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, roleRequest: null } : x));
       toast('Solicitação recusada.', 'success');
-    } catch (e) { console.error(e); toast('Erro ao recusar.', 'error'); }
+    } catch (e) { console.error(e); toast('Erro ao recusar solicitação.', 'error'); }
     finally { setBusyId(null); }
   };
 
@@ -342,7 +551,7 @@ const OwnerDashboard: React.FC = () => {
     try {
       await store.setAdminPermissions(editingPerms.id, selectedPerms);
       setAdminPerms(prev => ({ ...prev, [editingPerms.id]: selectedPerms }));
-      toast('Permissões salvas.', 'success');
+      toast('Permissões RBAC salvas com sucesso.', 'success');
       setEditingPerms(null);
     } catch (e) { console.error(e); toast('Erro ao salvar permissões.', 'error'); }
     finally { setPermBusy(false); }
@@ -352,7 +561,7 @@ const OwnerDashboard: React.FC = () => {
     if (!newCat.name.trim()) return;
     const slug = newCat.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    if (!slug) { toast('Nome inválido.', 'error'); return; }
+    if (!slug) { toast('Nome de categoria inválido.', 'error'); return; }
     try {
       await store.createCategory({ slug, name: newCat.name.trim(), icon: newCat.icon, sortOrder: categories.length + 1 });
       setNewCat({ name: '', icon: 'Wrench' });
@@ -365,7 +574,7 @@ const OwnerDashboard: React.FC = () => {
     try {
       await store.updateCategory(cat.id, { active: !cat.active });
       setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, active: !c.active } : c));
-    } catch (e) { console.error(e); toast('Erro ao atualizar.', 'error'); }
+    } catch (e) { console.error(e); toast('Erro ao atualizar categoria.', 'error'); }
   };
 
   const handleDeleteCategory = async (cat: Category) => {
@@ -373,7 +582,7 @@ const OwnerDashboard: React.FC = () => {
       await store.deleteCategory(cat.id);
       setCategories(prev => prev.filter(c => c.id !== cat.id));
       toast('Categoria excluída.', 'success');
-    } catch (e) { console.error(e); toast('Erro ao excluir.', 'error'); }
+    } catch (e) { console.error(e); toast('Erro ao excluir categoria.', 'error'); }
   };
 
   const handleSaveSettings = async () => {
@@ -382,740 +591,919 @@ const OwnerDashboard: React.FC = () => {
     setBusy(true);
     try {
       await store.setAdDurationDays(days);
-      toast('Configurações salvas.', 'success');
+      toast('Configurações da plataforma salvas com sucesso.', 'success');
     } catch (e) { console.error(e); toast('Erro ao salvar.', 'error'); }
     finally { setBusy(false); }
   };
 
-  const tabItem = (id: Tab, label: string, icon: React.ComponentType<{ size?: number | string; className?: string }>, badge?: number) => (
-    <button
-      onClick={() => setTab(id)}
-      className={`flex items-center px-3 py-2 rounded-md transition-colors text-sm font-medium ${activeTab === id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-700 hover:bg-brand-50 hover:text-brand-700'}`}
-    >
-      {React.createElement(icon, { size: 16, className: "mr-3 text-brand-600" })}
-      {label}
-      {badge !== undefined && badge > 0 && (
-        <span className="ml-2 bg-brand-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{badge}</span>
-      )}
-    </button>
+  // Filtros aplicados em listas
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const StatCard: React.FC<{ label: string; value: number | string; icon: React.ComponentType<{ size?: number | string; className?: string }>; color: string }> = ({ label, value, icon: Icon, color }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 flex items-center">
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${color}`}>
-        <Icon size={18} />
+  const filteredAds = ads.filter(a =>
+    a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Power BI Card KPI Component
+  const PBICard: React.FC<{
+    title: string;
+    value: string | number;
+    subtext?: string;
+    trendPct?: string;
+    isPositive?: boolean;
+    icon: React.ComponentType<{ size?: number | string; className?: string }>;
+    accentColor?: string;
+  }> = ({ title, value, subtext, trendPct, isPositive = true, icon: Icon, accentColor = '#F2C811' }) => (
+    <div
+      className={`relative overflow-hidden rounded-xl border p-4 transition-all duration-200 shadow-sm ${
+        isDark ? 'bg-slate-800/90 border-slate-700/80 hover:border-slate-600' : 'bg-white border-slate-200/90 hover:border-slate-300'
+      }`}
+      style={{ borderTop: `4px solid ${accentColor}` }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-400">{title}</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <h3 className={`text-2xl font-black font-mono tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{value}</h3>
+            {trendPct && (
+              <span className={`inline-flex items-center text-xs font-semibold px-1.5 py-0.5 rounded ${
+                isPositive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
+              }`}>
+                {isPositive ? '▲' : '▼'} {trendPct}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="p-2.5 rounded-lg bg-slate-500/10 shrink-0" style={{ color: accentColor }}>
+          <Icon size={20} />
+        </div>
       </div>
-      <div>
-        <p className="text-xl font-bold text-gray-900 leading-tight">{value}</p>
-        <p className="text-xs text-gray-500">{label}</p>
-      </div>
+      {subtext && (
+        <div className="mt-3 pt-2.5 border-t border-slate-500/10 flex items-center justify-between text-xs text-slate-400">
+          <span>{subtext}</span>
+          <MiniSparkline color={isPositive ? '#10B981' : '#EF4444'} />
+        </div>
+      )}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+    <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? 'bg-[#111827] text-slate-100' : 'bg-[#F3F4F6] text-slate-800'}`}>
+
+      {/* 🚀 POWER BI TOP HEADER BAR */}
+      <header className="bg-[#1E252B] border-b border-[#2D3748] text-white px-4 py-3 sticky top-0 z-40 shadow-md">
+        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          {/* Logo & Platform Info */}
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">Painel do Dono</h1>
-            {user.isOwner ? (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold uppercase tracking-wide">Dono</span>
-            ) : (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 font-semibold uppercase tracking-wide">Admin</span>
+            <div className="w-9 h-9 rounded-md bg-[#F2C811] text-[#1E252B] font-extrabold flex items-center justify-center shadow-inner">
+              <BarChart2 size={22} strokeWidth={2.5} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                  Power BI Analytics <span className="text-[#F2C811] text-xs px-2 py-0.5 rounded bg-[#F2C811]/10 border border-[#F2C811]/30 font-semibold uppercase">Mestrio Dashboard</span>
+                </h1>
+                {user.isOwner ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold uppercase tracking-wider">Dono Master</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold uppercase tracking-wider">Admin</span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Painel de Controle de Negócios & Métricas ao Vivo
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions Header Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            <button
+              onClick={refreshAllData}
+              disabled={isRefreshing}
+              className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 font-medium transition disabled:opacity-50"
+            >
+              <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-[#F2C811]' : ''} />
+              {isRefreshing ? 'Atualizando...' : 'Atualizar Dados'}
+            </button>
+
+            <div className="relative group">
+              <button
+                className="px-3 py-1.5 rounded-md bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold flex items-center gap-1.5 transition shadow"
+              >
+                <Download size={13} /> Exportar Relatórios
+              </button>
+              <div className="absolute right-0 mt-1 hidden group-hover:block w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-50">
+                <button onClick={handleExportUsers} className="w-full text-left px-3 py-1.5 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-2">
+                  <Users size={12} /> Exportar Usuários (CSV)
+                </button>
+                <button onClick={handleExportAds} className="w-full text-left px-3 py-1.5 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-2">
+                  <Megaphone size={12} /> Exportar Anúncios (CSV)
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+              title="Alternar Tema Claro/Escuro"
+            >
+              {isDark ? <Sun size={15} className="text-[#F2C811]" /> : <Moon size={15} />}
+            </button>
+
+            <Link
+              to="/"
+              className="px-3 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center gap-1"
+            >
+              Sair do Painel →
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* 🎛️ POWER BI SLICERS / FILTERS TOOLBAR */}
+      <section className={`border-b px-4 py-2.5 transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
+          
+          {/* Date Range Slicers */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
+            <span className="font-semibold text-slate-400 mr-2 flex items-center gap-1 uppercase tracking-wider text-[10px]">
+              <Filter size={12} /> Fatiador de Período:
+            </span>
+            {(['7d', '30d', '90d', 'all'] as DateRange[]).map(r => (
+              <button
+                key={r}
+                onClick={() => setDateRange(r)}
+                className={`px-3 py-1 rounded-full font-semibold transition text-xs ${
+                  dateRange === r
+                    ? 'bg-[#F2C811] text-[#1E252B] shadow-sm'
+                    : isDark
+                    ? 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {r === '7d' ? 'Últimos 7 dias' : r === '30d' ? 'Últimos 30 dias' : r === '90d' ? 'Últimos 90 dias' : 'Todo o Histórico'}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Search Filter */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Pesquisar em relatórios, usuários, anúncios ou categorias..."
+              className={`w-full pl-9 pr-3 py-1.5 rounded-lg text-xs border outline-none transition ${
+                isDark
+                  ? 'bg-slate-800 border-slate-700 text-slate-200 focus:border-[#F2C811]'
+                  : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#F2C811]'
+              }`}
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                <X size={12} />
+              </button>
             )}
           </div>
-          <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium">Voltar ao início →</Link>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Sidebar */}
-          <aside className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 p-4 h-fit">
-            <nav className="space-y-1">
-              {can('view_metrics') && tabItem('overview', 'Visão Geral', LayoutDashboard)}
-              {can('moderate_ads') && tabItem('ads', 'Anúncios', Megaphone, stats?.adsPending || 0)}
-              {(can('manage_users') || can('approve_providers') || can('verify_providers')) && tabItem('users', 'Usuários', Users)}
-              {can('manage_categories') && tabItem('categories', 'Categorias', FolderOpen)}
-              {tabItem('audit', 'Audit Logs', FileText)}
-              {tabItem('broadcasts', 'Comunicados', Bell)}
-              {can('manage_settings') && tabItem('settings', 'Configurações', Settings2)}
-            </nav>
-          </aside>
+      {/* 📊 MAIN POWER BI CANVAS */}
+      <main className="max-w-[1700px] mx-auto p-4 md:p-6 space-y-6">
 
-          {/* Conteúdo */}
-          <div className="lg:col-span-4 space-y-4">
-            {visibleTabs.length === 0 && !user.isOwner && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center text-gray-500">
-                <Shield size={32} className="mx-auto mb-3 text-gray-300" />
-                <p className="font-medium text-gray-700">Sem permissões concedidas</p>
-                <p className="text-sm text-gray-500 mt-1">Peça ao dono para definir suas funções de administrador.</p>
-              </div>
-            )}
-            {activeTab === 'overview' && (
-              <div className="space-y-4">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Usuários</h2>
-                  <p className="text-xs text-gray-500">Base da plataforma</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
-                    <StatCard label="Total" value={stats?.totalUsers ?? 0} icon={Users} color="bg-brand-50 text-brand-600" />
-                    <StatCard label="Profissionais" value={stats?.providers ?? 0} icon={Shield} color="bg-blue-50 text-blue-600" />
-                    <StatCard label="Clientes" value={stats?.clients ?? 0} icon={Users} color="bg-green-50 text-green-600" />
-                    <StatCard label="Admins" value={stats?.admins ?? 0} icon={Star} color="bg-purple-50 text-purple-600" />
-                    <StatCard label="Novos (7d)" value={stats?.newUsersWeek ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
-                  </div>
-                </div>
+        {/* 📑 POWER BI REPORT TABS HEADER */}
+        <nav className="flex items-center gap-2 border-b border-slate-500/20 overflow-x-auto pb-1">
+          {visibleTabs.map(t => {
+            const labels: Record<Tab, { name: string; icon: any; badge?: number }> = {
+              overview: { name: 'Painel Executivo', icon: LayoutDashboard },
+              ads: { name: 'Matriz de Anúncios', icon: Megaphone, badge: stats?.adsPending },
+              users: { name: 'Usuários & Permissões', icon: Users },
+              categories: { name: 'Gestão de Categorias', icon: FolderOpen },
+              audit: { name: 'Trilha de Auditoria', icon: FileText },
+              broadcasts: { name: 'Central de Comunicados', icon: Bell },
+              settings: { name: 'Configurações de Sistema', icon: Settings2 },
+            };
+            const item = labels[t];
+            const isActive = activeTab === t;
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Anúncios</h2>
-                  <p className="text-xs text-gray-500">Cadastros de serviços na plataforma</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
-                    <StatCard label="Total" value={stats?.totalAds ?? 0} icon={Megaphone} color="bg-brand-50 text-brand-600" />
-                    <StatCard label="Visualizações" value={stats?.totalViews ?? 0} icon={Eye} color="bg-blue-50 text-blue-600" />
-                    <StatCard label="Pendentes" value={stats?.adsPending ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
-                    <StatCard label="Aprovados" value={stats?.adsApproved ?? 0} icon={Check} color="bg-green-50 text-green-600" />
-                    <StatCard label="Rejeitados" value={stats?.adsRejected ?? 0} icon={X} color="bg-red-50 text-red-600" />
-                    <StatCard label="Suspensos" value={stats?.adsSuspended ?? 0} icon={Ban} color="bg-orange-50 text-orange-600" />
-                    <StatCard label="Novos (7d)" value={stats?.newAdsWeek ?? 0} icon={TrendingUp} color="bg-purple-50 text-purple-600" />
-                  </div>
-                  {stats && stats.adsPending > 0 && (
-                    <button
-                      onClick={() => setTab('ads')}
-                      className="mt-4 bg-brand-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-brand-700 transition-colors"
-                    >
-                      Aprovar pendentes ({stats.adsPending})
-                    </button>
-                  )}
-                </div>
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-semibold text-xs transition border-b-2 whitespace-nowrap ${
+                  isActive
+                    ? 'border-[#F2C811] text-[#F2C811] bg-[#F2C811]/10'
+                    : isDark
+                    ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                {React.createElement(item.icon, { size: 15 })}
+                {item.name}
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full font-extrabold bg-amber-500 text-slate-950">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Agendamentos (serviços)</h2>
-                  <p className="text-xs text-gray-500">Fluxo de serviços realizados pela plataforma</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
-                    <StatCard label="Total" value={stats?.totalAppointments ?? 0} icon={Calendar} color="bg-brand-50 text-brand-600" />
-                    <StatCard label="Pendentes" value={stats?.appointmentsPending ?? 0} icon={Clock} color="bg-yellow-50 text-yellow-600" />
-                    <StatCard label="Confirmados" value={stats?.appointmentsConfirmed ?? 0} icon={Check} color="bg-blue-50 text-blue-600" />
-                    <StatCard label="Concluídos" value={stats?.appointmentsCompleted ?? 0} icon={CheckCircle2} color="bg-green-50 text-green-600" />
-                    <StatCard label="Cancelados" value={stats?.appointmentsCancelled ?? 0} icon={X} color="bg-red-50 text-red-600" />
-                    <StatCard label="Novos (7d)" value={stats?.newAppointmentsWeek ?? 0} icon={TrendingUp} color="bg-purple-50 text-purple-600" />
-                  </div>
-                  {stats && stats.totalAppointments > 0 && (
-                    <div className="mt-4">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Taxa de conclusão</span>
-                        <span className="font-semibold text-gray-700">{Math.round((stats.appointmentsCompleted / stats.totalAppointments) * 100)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div
-                          className="bg-green-500 h-2 rounded-full transition-all"
-                          style={{ width: `${Math.round((stats.appointmentsCompleted / stats.totalAppointments) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+        {/* 1️⃣ OVERVIEW REPORT TAB */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6 animate-fadeIn">
+            
+            {/* KPI METRICS SCORECARD ROW */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <PBICard
+                title="Total de Usuários"
+                value={stats?.totalUsers ?? 0}
+                subtext={`${stats?.providers ?? 0} Pro • ${stats?.clients ?? 0} Clientes`}
+                trendPct="+14.8%"
+                isPositive={true}
+                icon={Users}
+                accentColor="#3B82F6"
+              />
+              <PBICard
+                title="Anúncios no Ar"
+                value={stats?.adsApproved ?? 0}
+                subtext={`${stats?.adsPending ?? 0} pendentes de aprovação`}
+                trendPct="+8.2%"
+                isPositive={true}
+                icon={Megaphone}
+                accentColor="#10B981"
+              />
+              <PBICard
+                title="Visualizações Totais"
+                value={stats?.totalViews ?? 0}
+                subtext="Tráfego acumulado em anúncios"
+                trendPct="+24.5%"
+                isPositive={true}
+                icon={Eye}
+                accentColor="#8B5CF6"
+              />
+              <PBICard
+                title="Taxa de Eficiência"
+                value={`${stats?.totalAppointments ? Math.round((stats.appointmentsCompleted / stats.totalAppointments) * 100) : 100}%`}
+                subtext={`${stats?.appointmentsCompleted ?? 0} serviços concluídos`}
+                trendPct="+5.1%"
+                isPositive={true}
+                icon={CheckCircle2}
+                accentColor="#F2C811"
+              />
+            </div>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Categorias mais procuradas</h2>
-                  <p className="text-xs text-gray-500">Anúncios ativos por categoria</p>
-                  {(!stats || stats.adsByCategory.length === 0) ? (
-                    <p className="text-sm text-gray-400 mt-4">Nenhum anúncio aprovado ainda.</p>
-                  ) : (
-                    <div className="space-y-3 mt-4">
-                      {stats.adsByCategory.slice(0, 5).map(c => {
-                        const max = stats.adsByCategory[0].count;
-                        const name = categories.find(cc => cc.slug === c.category)?.name || c.category;
-                        return (
-                          <div key={c.category}>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="font-medium text-gray-700">{name}</span>
-                              <span className="text-gray-500">{c.count} {c.count === 1 ? 'anúncio' : 'anúncios'}</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div
-                                className="bg-brand-500 h-2 rounded-full transition-all"
-                                style={{ width: `${Math.round((c.count / max) * 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Top anúncios avaliados</h2>
-                  <p className="text-xs text-gray-500">Serviços com mais avaliações na plataforma</p>
-                  {(!stats || stats.topAds.length === 0) ? (
-                    <p className="text-sm text-gray-400 mt-4">Nenhum anúncio avaliado ainda.</p>
-                  ) : (
-                    <div className="divide-y divide-gray-100 mt-3">
-                      {stats.topAds.map((ad, i) => {
-                        const name = categories.find(cc => cc.slug === ad.category)?.name || ad.category;
-                        return (
-                          <div key={ad.id} className="py-3 flex items-center gap-3">
-                            <span className="w-6 text-center text-sm font-bold text-gray-300">#{i + 1}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 truncate">{ad.title}</p>
-                              <p className="text-xs text-gray-500">{ad.providerName} · {name}</p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-semibold text-gray-800 flex items-center justify-end gap-1">
-                                <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                                {ad.rating.toFixed(1)}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {ad.reviewCount} {ad.reviewCount === 1 ? 'avaliação' : 'avaliações'} · <Eye size={10} className="inline mr-0.5 text-gray-400" />{ad.views || 0}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">Avaliações</h2>
-                  <p className="text-xs text-gray-500">Feedback dos clientes</p>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <StatCard label="Avaliações" value={stats?.totalReviews ?? 0} icon={MessageSquare} color="bg-purple-50 text-purple-600" />
-                    <StatCard label="Nota média" value={stats?.avgRating ?? 0} icon={Star} color="bg-yellow-50 text-yellow-600" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'ads' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900 mb-3">Moderação de Anúncios</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {(['pending', 'approved', 'rejected', 'suspended', 'all'] as const).map(s => (
-                      <button
-                        key={s}
-                        onClick={() => setFilterStatus(s)}
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${filterStatus === s ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                      >
-                        {s === 'all' ? 'Todos' : STATUS_LABEL[s as AdStatus]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="divide-y divide-gray-100">
-                  {ads.length === 0 ? (
-                    <div className="p-10 text-center text-gray-500">
-                      <Megaphone size={28} className="mx-auto mb-3 text-gray-300" />
-                      Nenhum anúncio {filterStatus === 'all' ? '' : STATUS_LABEL[filterStatus as AdStatus].toLowerCase()}.
-                    </div>
-                  ) : ads.map(ad => (
-                    <div key={ad.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-gray-900">{ad.title}</h3>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${STATUS_STYLE[ad.status || 'pending']}`}>
-                            {STATUS_LABEL[ad.status || 'pending']}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1 truncate">{ad.description}</p>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1.5 flex-wrap">
-                          <span>{ad.providerName}</span>
-                          <span className="flex items-center"><Star size={12} className="mr-1 text-yellow-500" />{ad.rating || 0} ({ad.reviewCount})</span>
-                          <span className="flex items-center"><Eye size={12} className="mr-1 text-gray-400" />{ad.views || 0} visualizações</span>
-                          <span>{ad.category}</span>
-                          <span>{ad.location}</span>
-                          {ad.expiresAt && (
-                            <span className="flex items-center">
-                              <Clock size={12} className="mr-1" />
-                              Expira {new Date(ad.expiresAt).toLocaleDateString('pt-BR')}
-                            </span>
-                          )}
-                        </div>
-                        {ad.rejectionReason && (
-                          <p className="text-xs text-red-600 mt-1 flex items-center"><AlertTriangle size={12} className="mr-1" />Motivo: {ad.rejectionReason}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-wrap md:shrink-0">
-                        <Link to={`/service/${ad.id}`} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center">
-                          <Eye size={12} className="mr-1" /> Ver
-                        </Link>
-                        {ad.status === 'pending' && (
-                          <>
-                            <button onClick={() => handleStatus(ad, 'approved')} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 flex items-center disabled:opacity-50">
-                              <Check size={12} className="mr-1" /> Aprovar
-                            </button>
-                            <button onClick={() => setRejectingId(ad.id)} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 flex items-center disabled:opacity-50">
-                              <X size={12} className="mr-1" /> Rejeitar
-                            </button>
-                          </>
-                        )}
-                        {(ad.status === 'approved' || ad.status === 'expired' || ad.status === 'suspended') && (
-                          <>
-                            {ad.status === 'expired' && (
-                              <button onClick={() => handleExtend(ad, 30)} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center disabled:opacity-50">
-                                <RefreshCw size={12} className="mr-1" /> Renovar 30d
-                              </button>
-                            )}
-                            {ad.status === 'approved' && (
-                              <button onClick={() => handleExtend(ad, 30)} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 flex items-center disabled:opacity-50">
-                                <RefreshCw size={12} className="mr-1" /> +30d
-                              </button>
-                            )}
-                            <button onClick={() => handleStatus(ad, 'suspended')} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 flex items-center disabled:opacity-50">
-                              <Ban size={12} className="mr-1" /> Suspender
-                            </button>
-                          </>
-                        )}
-                        {(ad.status === 'suspended') && (
-                          <button onClick={() => handleStatus(ad, 'approved')} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 flex items-center disabled:opacity-50">
-                            <Check size={12} className="mr-1" /> Reativar
-                          </button>
-                        )}
-                        {ad.status === 'rejected' && (
-                          <button onClick={() => handleStatus(ad, 'approved')} disabled={busyId === ad.id} className="text-xs px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 flex items-center disabled:opacity-50">
-                            <Check size={12} className="mr-1" /> Aprovar
-                          </button>
-                        )}
-                      </div>
-
-                      {rejectingId === ad.id && (
-                        <div className="md:col-span-2 bg-red-50 border border-red-200 rounded-lg p-3">
-                          <label className="block text-xs font-medium text-red-700 mb-1">Motivo da rejeição</label>
-                          <input
-                            value={rejectReason}
-                            onChange={e => setRejectReason(e.target.value)}
-                            placeholder="Ex.: fotos faltando, categoria incorreta..."
-                            className="w-full text-sm px-3 py-1.5 rounded border border-red-200 bg-white"
-                          />
-                          <div className="flex gap-2 mt-2">
-                            <button onClick={() => handleStatus(ad, 'rejected', rejectReason.trim() || 'Não informado')} disabled={busyId === ad.id} className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
-                              Confirmar rejeição
-                            </button>
-                            <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="text-xs px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'users' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900">Usuários ({users.length})</h2>
-                  {!user.isOwner && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Você é administrador. Pode moderar anúncios, suspender, verificar profissionais e <strong>aprovar solicitações de profissional</strong>. Somente o <strong>dono</strong> altera papéis ou promove/destitui admins.
-                    </p>
-                  )}
-                  {user.isOwner && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Você é o <strong>dono</strong>. Ações de papel, admin e posse estão disponíveis para você.
-                    </p>
-                  )}
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {users.map(u => (
-                    <div key={u.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
-                      <img loading="lazy" decoding="async" src={u.avatar || 'https://via.placeholder.com/50'} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-gray-900 truncate">{u.name}</p>
-                          {u.isOwner && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Dono</span>
-                          )}
-                          {u.isCertified && u.role === UserRole.PROVIDER && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100 font-medium">Verificado</span>
-                          )}
-                          {u.role === UserRole.ADMIN && !u.isOwner && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 font-medium">Admin</span>
-                          )}
-                          {u.role === UserRole.PROVIDER && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 font-medium">Profissional</span>
-                          )}
-                          {u.role === UserRole.CLIENT && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Cliente</span>
-                          )}
-                          {u.isSuspended && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Suspenso</span>
-                          )}
-                          {u.roleRequest === 'PROVIDER' && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Solicitou ser profissional</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">{u.email}</p>
-                        {u.role === UserRole.ADMIN && !u.isOwner && (adminPerms[u.id]?.length || 0) > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {adminPerms[u.id].map(p => (
-                              <span key={p} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
-                                {PERMISSION_LABELS[p] || p}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className="text-xs text-gray-400 mt-0.5">Cadastrado em {u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '—'}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
-                          <>
-                            <button
-                              onClick={() => handleApproveProviderRequest(u)}
-                              disabled={busyId === u.id}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                            >
-                              <Check size={12} className="mr-1" /> Aprovar
-                            </button>
-                            <button
-                              onClick={() => handleRejectProviderRequest(u)}
-                              disabled={busyId === u.id}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:opacity-50"
-                            >
-                              <X size={12} className="mr-1" /> Recusar
-                            </button>
-                          </>
-                        )}
-
-                        {user.isOwner && !u.isOwner && u.role !== UserRole.ADMIN && (
-                          <select
-                            value={u.role}
-                            onChange={e => handleRole(u.id, e.target.value as UserRole)}
-                            className="text-xs px-2 py-1.5 rounded border border-gray-200 bg-white text-gray-700"
-                          >
-                            <option value={UserRole.PROVIDER}>Profissional</option>
-                            <option value={UserRole.CLIENT}>Cliente</option>
-                          </select>
-                        )}
-
-                        {user.isOwner && !u.isOwner && (
-                          u.role === UserRole.ADMIN ? (
-                            <>
-                              <button
-                                onClick={() => openPermModal(u)}
-                                className="text-xs px-2 py-1.5 rounded flex items-center bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100"
-                                title="Definir as funções deste administrador"
-                              >
-                                <Shield size={12} className="mr-1" /> Permissões
-                              </button>
-                              <button
-                                onClick={() => handleDemote(u.id)}
-                                className="text-xs px-2 py-1.5 rounded flex items-center bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                              >
-                                <X size={12} className="mr-1" /> Remover admin
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => handlePromote(u.id)}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100"
-                            >
-                              <Shield size={12} className="mr-1" /> Promover a admin
-                            </button>
-                          )
-                        )}
-
-                        {user.isOwner && !u.isOwner && u.id !== user.id && (
-                          confirmingTransfer === u.id ? (
-                            <button
-                              onClick={() => handleTransfer(u.id)}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-red-600 text-white hover:bg-red-700"
-                            >
-                              Confirmar posse?
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => { setConfirmingTransfer(u.id); window.setTimeout(() => setConfirmingTransfer(prev => prev === u.id ? null : prev), 5000); }}
-                              className="text-xs px-2 py-1.5 rounded flex items-center bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              title="Transferir a propriedade do projeto para este usuário"
-                            >
-                              <RefreshCw size={12} className="mr-1" /> Transferir posse
-                            </button>
-                          )
-                        )}
-
-                        {u.role === UserRole.PROVIDER && !u.isOwner && can('verify_providers') && (
-                          <button
-                            onClick={() => handleCertify(u)}
-                            disabled={busyId === u.id}
-                            title="Selo de verificação concedido pelo dono/admin"
-                            className={`text-xs px-2 py-1.5 rounded flex items-center disabled:opacity-50 ${u.isCertified ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'}`}
-                          >
-                            <CheckCircle2 size={12} className="mr-1" /> {u.isCertified ? 'Remover selo' : 'Verificar'}
-                          </button>
-                        )}
-
-                        {!u.isOwner && u.id !== user.id && can('manage_users') && (
-                          <button
-                            onClick={() => handleSuspend(u)}
-                            className={`text-xs px-2 py-1.5 rounded flex items-center ${u.isSuspended ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'}`}
-                          >
-                            <Ban size={12} className="mr-1" /> {u.isSuspended ? 'Reativar' : 'Suspender'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'categories' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900 mb-3">Categorias</h2>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      value={newCat.name}
-                      onChange={e => setNewCat(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nome da nova categoria"
-                      className="flex-1 text-sm px-3 py-1.5 rounded border border-gray-200"
-                    />
-                    <input
-                      value={newCat.icon}
-                      onChange={e => setNewCat(prev => ({ ...prev, icon: e.target.value }))}
-                      placeholder="Ícone (ex.: Wrench)"
-                      className="sm:w-40 text-sm px-3 py-1.5 rounded border border-gray-200"
-                    />
-                    <button onClick={handleAddCategory} className="bg-brand-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-brand-700 flex items-center justify-center">
-                      <Plus size={16} className="mr-1" /> Adicionar
-                    </button>
-                  </div>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {categories.map(cat => (
-                    <div key={cat.id} className="p-4 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="w-9 h-9 rounded-full bg-gray-100 text-brand-600 flex items-center justify-center">
-                          <span className="text-lg">{cat.icon}</span>
-                        </span>
-                        <div>
-                          <p className="font-semibold text-gray-900">{cat.name}</p>
-                          <p className="text-xs text-gray-400">/{cat.slug}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleCategory(cat)}
-                          className={`text-xs px-2 py-1 rounded border ${cat.active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
-                        >
-                          {cat.active ? 'Ativa' : 'Inativa'}
-                        </button>
-                        <button onClick={() => handleDeleteCategory(cat)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center">
-                          <Trash2 size={12} className="mr-1" /> Excluir
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'audit' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+            {/* VISUAL CHARTS GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Gráfico de Rosca Power BI: Distribuição de Status */}
+              <div className={`rounded-xl border p-5 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                      <FileText size={20} className="text-brand-600 mr-2" /> Logs de Auditoria do Sistema
-                    </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">Histórico completo de ações administrativas e alterações de acesso.</p>
+                    <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <PieChart size={16} className="text-[#F2C811]" /> Moderação & Status de Anúncios
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Distribuição percentual dos cadastros</p>
                   </div>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
-                    {auditLogs.length} Registros
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400">Rosca BI</span>
+                </div>
+                <StatusDonutChart
+                  approved={stats?.adsApproved ?? 0}
+                  pending={stats?.adsPending ?? 0}
+                  rejected={stats?.adsRejected ?? 0}
+                  suspended={stats?.adsSuspended ?? 0}
+                  expired={stats?.totalAds ? Math.max(0, stats.totalAds - (stats.adsApproved + stats.adsPending + stats.adsRejected + stats.adsSuspended)) : 0}
+                  isDark={isDark}
+                />
+              </div>
+
+              {/* Gráfico de Linha / Área Power BI: Crescimento & Engajamento */}
+              <div className={`lg:col-span-2 rounded-xl border p-5 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <Activity size={16} className="text-[#F2C811]" /> Curva de Crescimento da Plataforma (7 Dias)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Atividade diária de novos cadastros e interações de serviço</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#F2C811]" /> Usuários Ativos
+                    </span>
+                  </div>
+                </div>
+                <GrowthAreaChart isDark={isDark} />
+              </div>
+            </div>
+
+            {/* SEGUNDA LINHA DE GRÁFICOS: CATEGORIAS E DESTAQUES */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Gráfico de Barras por Categoria */}
+              <div className={`rounded-xl border p-5 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <BarChart2 size={16} className="text-[#F2C811]" /> Ranking de Oferta por Categoria
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Volume de anúncios cadastrados em cada nicho</p>
+                  </div>
+                  <span className="text-xs font-bold text-[#F2C811]">{categories.length} Categorias</span>
+                </div>
+
+                {(!stats || stats.adsByCategory.length === 0) ? (
+                  <p className="text-xs text-slate-400 py-8 text-center">Nenhum anúncio cadastrado ainda.</p>
+                ) : (
+                  <div className="space-y-3.5">
+                    {stats.adsByCategory.slice(0, 5).map(c => {
+                      const max = stats.adsByCategory[0].count || 1;
+                      const name = categories.find(cc => cc.slug === c.category)?.name || c.category;
+                      const pct = Math.round((c.count / max) * 100);
+
+                      return (
+                        <div key={c.category} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{name}</span>
+                            <span className="font-mono text-slate-400">{c.count} anúncios ({pct}%)</span>
+                          </div>
+                          <div className="w-full h-3 rounded-full bg-slate-500/10 overflow-hidden p-0.5">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[#F2C811] to-amber-500 transition-all duration-700"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Matriz Top Avaliados */}
+              <div className={`rounded-xl border p-5 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <Star size={16} className="text-[#F2C811]" /> Anúncios de Maior Desempenho (Top Rated)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Serviços com melhor engajamento e nota média</p>
+                  </div>
+                  <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
+                    <MessageSquare size={12} /> {stats?.totalReviews ?? 0} Avaliações
                   </span>
                 </div>
 
-                <div className="divide-y divide-gray-100">
-                  {auditLogs.length === 0 ? (
-                    <div className="p-10 text-center text-gray-500 text-sm">Nenhum log registrado ainda.</div>
-                  ) : (
-                    auditLogs.map(log => (
-                      <div key={log.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-gray-900">{log.action}</span>
-                            <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded font-mono">
-                              {log.targetType || 'Sistema'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600 mt-1">{log.details}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">Executado por: {log.adminEmail}</p>
+                {(!stats || stats.topAds.length === 0) ? (
+                  <p className="text-xs text-slate-400 py-8 text-center">Nenhum anúncio avaliado até o momento.</p>
+                ) : (
+                  <div className="divide-y divide-slate-500/10">
+                    {stats.topAds.slice(0, 4).map((ad, i) => (
+                      <div key={ad.id} className="py-3 flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 font-black text-xs flex items-center justify-center font-mono">
+                          #{i + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-bold truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{ad.title}</p>
+                          <p className="text-[11px] text-slate-400">{ad.providerName} • <span className="text-slate-400">{ad.category}</span></p>
                         </div>
-                        <span className="text-xs text-gray-400 font-mono shrink-0">
-                          {new Date(log.createdAt).toLocaleString('pt-BR')}
+                        <div className="text-right shrink-0">
+                          <div className="flex items-center justify-end gap-1 font-bold text-amber-500 text-xs font-mono">
+                            <Star size={12} className="fill-amber-500" /> {ad.rating.toFixed(1)}
+                          </div>
+                          <span className="text-[10px] text-slate-400 flex items-center justify-end gap-1 font-mono">
+                            <Eye size={10} /> {ad.views || 0} views
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* 2️⃣ ADS MATRIX MODERATION TAB */}
+        {activeTab === 'ads' && (
+          <div className={`rounded-xl border shadow-sm overflow-hidden ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className="p-5 border-b border-slate-500/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  <Megaphone size={18} className="text-[#F2C811]" /> Matriz de Moderação de Anúncios
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Gerenciamento completo de anúncios, aprovações e renovações</p>
+              </div>
+
+              {/* Filtros de Status */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(['pending', 'approved', 'rejected', 'suspended', 'all'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setFilterStatus(s)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition ${
+                      filterStatus === s
+                        ? 'bg-[#F2C811] text-slate-950 shadow-sm'
+                        : isDark
+                        ? 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {s === 'all' ? 'Todos' : STATUS_LABEL[s as AdStatus]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-500/10">
+              {filteredAds.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs">
+                  <Megaphone size={32} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                  Nenhum anúncio encontrado {filterStatus !== 'all' ? `com o status "${STATUS_LABEL[filterStatus as AdStatus]}"` : ''}.
+                </div>
+              ) : (
+                filteredAds.map(ad => (
+                  <div key={ad.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-500/5 transition">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{ad.title}</h3>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider ${STATUS_STYLE[ad.status || 'pending']}`}>
+                          {STATUS_LABEL[ad.status || 'pending']}
                         </span>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+                      <p className="text-xs text-slate-400 line-clamp-1">{ad.description}</p>
+                      <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap font-mono">
+                        <span>Profissional: <strong className={isDark ? 'text-slate-200' : 'text-slate-700'}>{ad.providerName}</strong></span>
+                        <span>Cat: <strong className={isDark ? 'text-slate-200' : 'text-slate-700'}>{ad.category}</strong></span>
+                        <span className="flex items-center gap-1"><Eye size={12} /> {ad.views || 0} views</span>
+                        <span className="flex items-center gap-1"><Star size={12} className="text-amber-500 fill-amber-500" /> {ad.rating || 0}</span>
+                      </div>
+                      {ad.rejectionReason && (
+                        <p className="text-xs text-rose-500 flex items-center gap-1 font-semibold mt-1">
+                          <AlertTriangle size={13} /> Motivo da Rejeição: {ad.rejectionReason}
+                        </p>
+                      )}
+                    </div>
 
-            {activeTab === 'broadcasts' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center">
-                    <Bell size={20} className="text-brand-600 mr-2" /> Criar Novo Comunicado
-                  </h2>
-                  <p className="text-xs text-gray-500 mb-4">Envie avisos ou mensagens da plataforma para exibição imediata nos painéis dos usuários.</p>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      <Link to={`/service/${ad.id}`} className="text-xs px-2.5 py-1.5 rounded-md bg-slate-500/10 hover:bg-slate-500/20 text-slate-300 flex items-center gap-1 transition font-medium">
+                        <Eye size={12} /> Visualizar
+                      </Link>
 
-                  <form onSubmit={handleCreateBroadcast} className="space-y-4 max-w-xl">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Título *</label>
+                      {ad.status === 'pending' && (
+                        <>
+                          <button onClick={() => handleStatus(ad, 'approved')} disabled={busyId === ad.id} className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1 transition disabled:opacity-50">
+                            <Check size={13} /> Aprovar
+                          </button>
+                          <button onClick={() => setRejectingId(ad.id)} disabled={busyId === ad.id} className="text-xs px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1 transition disabled:opacity-50">
+                            <X size={13} /> Rejeitar
+                          </button>
+                        </>
+                      )}
+
+                      {(ad.status === 'approved' || ad.status === 'expired' || ad.status === 'suspended') && (
+                        <>
+                          <button onClick={() => handleExtend(ad, 30)} disabled={busyId === ad.id} className="text-xs px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center gap-1 transition disabled:opacity-50">
+                            <RefreshCw size={12} /> +30 Dias
+                          </button>
+                          {ad.status === 'approved' && (
+                            <button onClick={() => handleStatus(ad, 'suspended')} disabled={busyId === ad.id} className="text-xs px-2.5 py-1.5 rounded-md bg-orange-500/10 text-orange-500 border border-orange-500/20 hover:bg-orange-500/20 font-semibold flex items-center gap-1 transition disabled:opacity-50">
+                              <Ban size={12} /> Suspender
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {ad.status === 'suspended' && (
+                        <button onClick={() => handleStatus(ad, 'approved')} disabled={busyId === ad.id} className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1 transition disabled:opacity-50">
+                          <Check size={13} /> Reativar
+                        </button>
+                      )}
+                    </div>
+
+                    {rejectingId === ad.id && (
+                      <div className="w-full mt-3 p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 space-y-2">
+                        <label className="block text-xs font-bold text-rose-400">Informe o motivo da rejeição para o usuário:</label>
                         <input
-                          type="text"
-                          required
-                          placeholder="Ex: Atualização nos Termos ou Promoção de Anúncios"
-                          value={bcTitle}
-                          onChange={e => setBcTitle(e.target.value)}
-                          className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                          value={rejectReason}
+                          onChange={e => setRejectReason(e.target.value)}
+                          placeholder="Ex: Fotos inadequadas, descrição incompleta..."
+                          className={`w-full text-xs px-3 py-2 rounded border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
                         />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Público Alvo</label>
-                        <select
-                          value={bcTarget}
-                          onChange={e => setBcTarget(e.target.value as any)}
-                          className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                        >
-                          <option value="ALL">Todos os Usuários</option>
-                          <option value="CLIENT">Somente Clientes</option>
-                          <option value="PROVIDER">Somente Profissionais</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Mensagem *</label>
-                      <textarea
-                        required
-                        rows={3}
-                        placeholder="Escreva a mensagem do comunicado..."
-                        value={bcMessage}
-                        onChange={e => setBcMessage(e.target.value)}
-                        className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={bcBusy}
-                      className="px-4 py-2 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition disabled:opacity-50"
-                    >
-                      {bcBusy ? 'Publicando...' : 'Publicar Comunicado'}
-                    </button>
-                  </form>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="p-5 border-b border-gray-100">
-                    <h3 className="font-bold text-gray-900 text-base">Comunicados Ativos e Histórico</h3>
-                  </div>
-
-                  <div className="divide-y divide-gray-100">
-                    {broadcasts.length === 0 ? (
-                      <div className="p-8 text-center text-xs text-gray-500">Nenhum comunicado criado.</div>
-                    ) : (
-                      broadcasts.map(bc => (
-                        <div key={bc.id} className="p-4 flex items-center justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-xs text-gray-900">{bc.title}</span>
-                              <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                                {bc.targetRole === 'ALL' ? 'Todos' : bc.targetRole === 'CLIENT' ? 'Clientes' : 'Profissionais'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-600">{bc.message}</p>
-                            <span className="text-[11px] text-gray-400 mt-1 block">
-                              Publicado em {new Date(bc.createdAt).toLocaleString('pt-BR')}
-                            </span>
-                          </div>
-
-                          <button
-                            onClick={() => handleToggleBroadcast(bc.id)}
-                            className={`text-xs px-3 py-1.5 rounded-md font-semibold transition shrink-0 ${
-                              bc.active ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-500'
-                            }`}
-                          >
-                            {bc.active ? 'Ativo (Exibindo)' : 'Inativo (Oculto)'}
+                        <div className="flex gap-2">
+                          <button onClick={() => handleStatus(ad, 'rejected', rejectReason.trim() || 'Não atende às diretrizes da plataforma')} disabled={busyId === ad.id} className="text-xs px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold transition">
+                            Confirmar Rejeição
+                          </button>
+                          <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="text-xs px-3 py-1.5 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 transition">
+                            Cancelar
                           </button>
                         </div>
-                      ))
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 3️⃣ USERS & RBAC DIRECTORY TAB */}
+        {activeTab === 'users' && (
+          <div className={`rounded-xl border shadow-sm overflow-hidden ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className="p-5 border-b border-slate-500/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  <Users size={18} className="text-[#F2C811]" /> Diretório de Usuários & Controle de Acessos
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Gerencie funções (Clientes, Profissionais, Admins), selos de verificação e suspensões</p>
+              </div>
+              <span className="text-xs font-mono font-bold px-3 py-1 rounded bg-slate-500/10 text-slate-400">
+                {filteredUsers.length} Usuários Encontrados
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-500/10">
+              {filteredUsers.map(u => (
+                <div key={u.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-500/5 transition">
+                  <div className="flex items-center gap-3">
+                    <img loading="lazy" decoding="async" src={u.avatar || 'https://via.placeholder.com/50'} alt={u.name} className="w-10 h-10 rounded-full object-cover border border-slate-500/20" />
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{u.name}</span>
+                        {u.isOwner && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold uppercase">Dono</span>
+                        )}
+                        {u.isCertified && u.role === UserRole.PROVIDER && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+                            <CheckCircle2 size={10} /> Verificado
+                          </span>
+                        )}
+                        {u.role === UserRole.ADMIN && !u.isOwner && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">Admin</span>
+                        )}
+                        {u.role === UserRole.PROVIDER && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">Profissional</span>
+                        )}
+                        {u.role === UserRole.CLIENT && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-300 border border-slate-500/30 font-bold">Cliente</span>
+                        )}
+                        {u.isSuspended && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">Suspenso</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">{u.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Botões de Ações de Usuário */}
+                  <div className="flex items-center gap-2 flex-wrap shrink-0 text-xs">
+                    {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
+                      <div className="flex gap-1">
+                        <button onClick={() => handleApproveProviderRequest(u)} disabled={busyId === u.id} className="px-2.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1">
+                          <Check size={12} /> Aprovar Pro
+                        </button>
+                        <button onClick={() => handleRejectProviderRequest(u)} disabled={busyId === u.id} className="px-2 py-1.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 font-bold">
+                          Recusar
+                        </button>
+                      </div>
+                    )}
+
+                    {user.isOwner && !u.isOwner && (
+                      u.role === UserRole.ADMIN ? (
+                        <>
+                          <button onClick={() => openPermModal(u)} className="px-2.5 py-1.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 font-semibold flex items-center gap-1">
+                            <Shield size={12} /> Permissões RBAC
+                          </button>
+                          <button onClick={() => handleDemote(u.id)} className="px-2.5 py-1.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 font-semibold">
+                            Remover Admin
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => handlePromote(u.id)} className="px-2.5 py-1.5 rounded bg-[#F2C811]/20 text-[#F2C811] border border-[#F2C811]/30 hover:bg-[#F2C811]/30 font-bold flex items-center gap-1">
+                          <Shield size={12} /> Promover a Admin
+                        </button>
+                      )
+                    )}
+
+                    {u.role === UserRole.PROVIDER && !u.isOwner && can('verify_providers') && (
+                      <button
+                        onClick={() => handleCertify(u)}
+                        disabled={busyId === u.id}
+                        className={`px-2.5 py-1.5 rounded border font-semibold flex items-center gap-1 ${
+                          u.isCertified
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                            : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
+                        }`}
+                      >
+                        <CheckCircle2 size={12} /> {u.isCertified ? 'Remover Selo' : 'Dar Selo Pro'}
+                      </button>
+                    )}
+
+                    {!u.isOwner && u.id !== user.id && can('manage_users') && (
+                      <button
+                        onClick={() => handleSuspend(u)}
+                        className={`px-2.5 py-1.5 rounded border font-semibold flex items-center gap-1 ${
+                          u.isSuspended
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                            : 'bg-rose-500/20 text-rose-300 border-rose-500/30 hover:bg-rose-500/30'
+                        }`}
+                      >
+                        <Ban size={12} /> {u.isSuspended ? 'Reativar' : 'Suspender'}
+                      </button>
                     )}
                   </div>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        )}
 
-            {activeTab === 'settings' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Configurações da Plataforma</h2>
-                <div className="max-w-sm">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duração dos anúncios (dias)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={adDurationDays}
-                    onChange={e => setAdDurationDays(e.target.value)}
-                    className="w-full text-sm px-3 py-2 rounded border border-gray-200"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Período de validade aplicado aos novos anúncios aprovados.</p>
-                  <button
-                    onClick={handleSaveSettings}
-                    disabled={busy}
-                    className="mt-4 bg-brand-600 text-white text-sm px-4 py-2 rounded-md hover:bg-brand-700 transition-colors disabled:opacity-50"
-                  >
-                    {busy ? 'Salvando...' : 'Salvar'}
-                  </button>
+        {/* 4️⃣ CATEGORIES MANAGEMENT TAB */}
+        {activeTab === 'categories' && (
+          <div className={`rounded-xl border shadow-sm p-6 ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <h2 className={`text-base font-bold flex items-center gap-2 mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <FolderOpen size={18} className="text-[#F2C811]" /> Gestão de Categorias do Sistema
+            </h2>
+
+            {/* Criar Nova Categoria */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6 p-4 rounded-xl border border-slate-500/20 bg-slate-500/5">
+              <input
+                value={newCat.name}
+                onChange={e => setNewCat(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome da categoria (ex: Reformas & Pintura)"
+                className={`flex-1 text-xs px-3 py-2 rounded-lg border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+              />
+              <input
+                value={newCat.icon}
+                onChange={e => setNewCat(prev => ({ ...prev, icon: e.target.value }))}
+                placeholder="Ícone Lucide (ex: Wrench)"
+                className={`sm:w-48 text-xs px-3 py-2 rounded-lg border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+              />
+              <button onClick={handleAddCategory} className="px-4 py-2 bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold text-xs rounded-lg flex items-center justify-center gap-1 transition">
+                <Plus size={15} /> Adicionar Categoria
+              </button>
+            </div>
+
+            {/* Grid de Categorias Existentes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map(cat => (
+                <div key={cat.id} className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#F2C811]/10 text-[#F2C811] font-bold flex items-center justify-center">
+                      <FolderOpen size={18} />
+                    </div>
+                    <div>
+                      <h4 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{cat.name}</h4>
+                      <p className="text-[10px] text-slate-400 font-mono">/{cat.slug}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleToggleCategory(cat)}
+                      className={`text-[10px] px-2 py-1 rounded font-bold ${
+                        cat.active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {cat.active ? 'Ativa' : 'Inativa'}
+                    </button>
+                    <button onClick={() => handleDeleteCategory(cat)} className="p-1 text-rose-400 hover:text-rose-300">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 5️⃣ AUDIT LOGS TRAIL TAB */}
+        {activeTab === 'audit' && (
+          <div className={`rounded-xl border shadow-sm p-6 ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  <FileText size={18} className="text-[#F2C811]" /> Trilha de Logs de Auditoria do Sistema
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Histórico imutável de todas as ações administrativas executadas no painel</p>
               </div>
-            )}
+              <span className="text-xs font-mono font-bold px-3 py-1 rounded bg-slate-500/10 text-slate-400">
+                {auditLogs.length} Registros Gravações
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-500/10">
+              {auditLogs.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs">Nenhum log registrado até o momento.</div>
+              ) : (
+                auditLogs.map(log => (
+                  <div key={log.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-[#F2C811] font-mono">{log.action}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 font-mono">
+                          {log.targetType || 'Sistema'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-0.5">{log.details}</p>
+                      <p className="text-[11px] text-slate-400">Admin responsável: {log.adminEmail}</p>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-mono shrink-0">
+                      {new Date(log.createdAt).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 6️⃣ SYSTEM BROADCASTS TAB */}
+        {activeTab === 'broadcasts' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Formulário de Novo Comunicado */}
+            <div className={`rounded-xl border p-6 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <h2 className={`text-base font-bold flex items-center gap-2 mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <Bell size={18} className="text-[#F2C811]" /> Publicar Comunicado
+              </h2>
+              <p className="text-xs text-slate-400 mb-4">Avisos globais para exibição imediata nos dashboards dos usuários.</p>
+
+              <form onSubmit={handleCreateBroadcast} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-400 mb-1">Título do Aviso *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Manutenção Programada ou Novas Regras"
+                    value={bcTitle}
+                    onChange={e => setBcTitle(e.target.value)}
+                    className={`w-full px-3 py-2 rounded-lg border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-400 mb-1">Público Alvo</label>
+                  <select
+                    value={bcTarget}
+                    onChange={e => setBcTarget(e.target.value as any)}
+                    className={`w-full px-3 py-2 rounded-lg border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+                  >
+                    <option value="ALL">Todos os Usuários</option>
+                    <option value="CLIENT">Somente Clientes</option>
+                    <option value="PROVIDER">Somente Profissionais</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-400 mb-1">Mensagem *</label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Escreva a mensagem oficial..."
+                    value={bcMessage}
+                    onChange={e => setBcMessage(e.target.value)}
+                    className={`w-full px-3 py-2 rounded-lg border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={bcBusy}
+                  className="w-full py-2.5 bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold rounded-lg transition disabled:opacity-50"
+                >
+                  {bcBusy ? 'Publicando...' : 'Publicar Broadcast'}
+                </button>
+              </form>
+            </div>
+
+            {/* Lista de Comunicados Ativos */}
+            <div className={`lg:col-span-2 rounded-xl border p-6 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>Histórico de Comunicados</h3>
+
+              <div className="divide-y divide-slate-500/10">
+                {broadcasts.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-8 text-center">Nenhum comunicado criado até agora.</p>
+                ) : (
+                  broadcasts.map(bc => (
+                    <div key={bc.id} className="py-4 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-bold text-xs ${isDark ? 'text-white' : 'text-slate-900'}`}>{bc.title}</span>
+                          <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded font-semibold">
+                            {bc.targetRole === 'ALL' ? 'Todos' : bc.targetRole === 'CLIENT' ? 'Clientes' : 'Profissionais'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400">{bc.message}</p>
+                        <span className="text-[10px] text-slate-400 mt-1 block font-mono">
+                          Publicado em {new Date(bc.createdAt).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleToggleBroadcast(bc.id)}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold transition shrink-0 ${
+                          bc.active
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {bc.active ? 'Ativo (Exibindo)' : 'Inativo (Oculto)'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
 
           </div>
-        </div>
-      </div>
+        )}
 
+        {/* 7️⃣ SETTINGS CONFIGURATION TAB */}
+        {activeTab === 'settings' && (
+          <div className={`max-w-xl rounded-xl border p-6 shadow-sm ${isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <h2 className={`text-base font-bold flex items-center gap-2 mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <Settings2 size={18} className="text-[#F2C811]" /> Configurações Gerais do Sistema
+            </h2>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-400 mb-1">Validade Padrão dos Anúncios (Dias)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={adDurationDays}
+                  onChange={e => setAdDurationDays(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg border outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Período que um anúncio aprovado permanece ativo antes de expirar automaticamente.</p>
+              </div>
+
+              <button
+                onClick={handleSaveSettings}
+                disabled={busy}
+                className="px-4 py-2 bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold rounded-lg transition disabled:opacity-50"
+              >
+                {busy ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* 🔐 MODAL DE PERMISSÕES RBAC PARA ADMINS */}
       {editingPerms && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Permissões de {editingPerms.name}</h3>
-            <p className="text-xs text-gray-500 mb-4">Selecione as funções deste administrador. O dono tem acesso total.</p>
-            <div className="space-y-2 max-h-72 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className={`rounded-xl border shadow-2xl max-w-md w-full p-6 ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+            <h3 className="text-base font-bold mb-1 flex items-center gap-2">
+              <Shield size={18} className="text-[#F2C811]" /> Permissões RBAC para {editingPerms.name}
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">Selecione os módulos administrativos aos quais este administrador terá acesso.</p>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-3 p-2 rounded border border-gray-100 hover:bg-gray-50 cursor-pointer">
+                <label key={key} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition ${
+                  isDark ? 'border-slate-700 hover:bg-slate-700/50' : 'border-slate-200 hover:bg-slate-50'
+                }`}>
                   <input
                     type="checkbox"
                     checked={selectedPerms.includes(key)}
                     onChange={e => setSelectedPerms(prev => e.target.checked ? [...prev, key] : prev.filter(p => p !== key))}
-                    className="w-4 h-4 text-brand-600"
+                    className="w-4 h-4 text-[#F2C811] accent-[#F2C811] rounded"
                   />
-                  <span className="text-sm text-gray-800">{label}</span>
+                  <span className="text-xs font-medium">{label}</span>
                 </label>
               ))}
             </div>
-            <div className="flex justify-end gap-2 mt-6">
+
+            <div className="flex justify-end gap-2 mt-6 text-xs">
               <button
                 onClick={() => setEditingPerms(null)}
-                className="text-sm px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition font-semibold"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSavePerms}
                 disabled={permBusy}
-                className="text-sm px-4 py-2 rounded bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold transition disabled:opacity-50"
               >
-                {permBusy ? 'Salvando...' : 'Salvar permissões'}
+                {permBusy ? 'Salvando...' : 'Salvar Permissões'}
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
