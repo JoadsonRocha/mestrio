@@ -121,7 +121,7 @@ class Store {
   }
 
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
-    let query = supabase.from('service_ads').select('*, profiles!provider_id(name, avatar, is_certified)');
+    let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
 
     // Sem providerId = consulta pública: apenas anúncios aprovados e não expirados.
     const isPublic = !params?.providerId;
@@ -167,9 +167,25 @@ class Store {
 
     query = query.range(from, to).order('created_at', { ascending: false });
 
-    const { data, error } = await query;
+    let { data, error } = await query;
     
-    if (error) { console.error("Store Error [getAds]:", error); throw error; }
+    if (error) { 
+      console.warn("Store Warning [getAds join failed, falling back]:", error.message); 
+      let fallbackQuery = supabase.from('service_ads').select('*');
+      if (params?.category && params.category !== 'all') fallbackQuery = fallbackQuery.eq('category', params.category);
+      if (params?.providerId) fallbackQuery = fallbackQuery.eq('provider_id', params.providerId);
+      else fallbackQuery = fallbackQuery.eq('status', 'approved');
+      if (params?.location) fallbackQuery = fallbackQuery.ilike('location', `%${params.location}%`);
+      fallbackQuery = fallbackQuery.range(from, to).order('created_at', { ascending: false });
+
+      const fallbackRes = await fallbackQuery;
+      if (!fallbackRes.error) {
+        data = fallbackRes.data;
+      } else {
+        console.error("Store Error [getAds fallback]:", fallbackRes.error);
+        return [];
+      }
+    }
     return (data || []).map(ad => this.mapAd(ad));
   }
 
