@@ -243,6 +243,8 @@ const OwnerDashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [adDurationDays, setAdDurationDays] = useState('30');
+  const [inspectAd, setInspectAd] = useState<ServiceAd | null>(null);
+  const [inspectUser, setInspectUser] = useState<User | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
