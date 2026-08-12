@@ -170,17 +170,17 @@ DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 DROP POLICY IF EXISTS "Participante marca como lida" ON messages;
 CREATE POLICY "Participante lê mensagens" ON messages
   FOR SELECT USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+    auth.uid() IN (SELECT cp.user_id FROM chat_participants cp WHERE cp.session_id = messages.session_id)
   );
 DROP POLICY IF EXISTS "Participante envia mensagem" ON messages;
 CREATE POLICY "Participante envia mensagem" ON messages
   FOR INSERT WITH CHECK (
     auth.uid() = sender_id
-    AND auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = messages.session_id)
+    AND auth.uid() IN (SELECT cp.user_id FROM chat_participants cp WHERE cp.session_id = messages.session_id)
   );
 CREATE POLICY "Participante marca como lida" ON messages
   FOR UPDATE USING (
-    auth.uid() IN (SELECT user_id FROM chat_participants WHERE session_id = session_id)
+    auth.uid() IN (SELECT cp.user_id FROM chat_participants cp WHERE cp.session_id = messages.session_id)
   );
 
 -- Tabela de Agendamentos (Appointments)
