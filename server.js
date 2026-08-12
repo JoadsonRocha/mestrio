@@ -127,8 +127,9 @@ Regras:
     const text = data?.choices?.[0]?.message?.content;
 
     if (!r.ok || text === undefined) {
-      console.error('Groq API error:', r.status, data?.error || data);
-      res.status(r.ok ? 500 : 502).json({ error: 'Erro ao gerar conteúdo com IA.' });
+      const errMsg = data?.error?.message || data?.error || 'Erro ao gerar conteúdo com a IA do Groq.';
+      console.error('Groq API error:', r.status, errMsg);
+      res.status(r.ok ? 500 : 502).json({ error: errMsg });
       return;
     }
 

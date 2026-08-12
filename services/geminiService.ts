@@ -27,7 +27,7 @@ export const generateServiceDescription = async (title: string, category: string
     const data = await request({ task: 'describe', title, category, keywords });
     return data.text || 'Não foi possível gerar a descrição.';
   } catch (error) {
-    console.error("Gemini Error:", error);
+    console.error("Groq AI Error:", error);
     return "Erro ao gerar descrição. Tente escrever manualmente.";
   }
 };
