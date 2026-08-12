@@ -1117,37 +1117,7 @@ class Store {
     try {
       const stored = localStorage.getItem(this.JOB_REQUESTS_KEY);
       if (stored) return JSON.parse(stored);
-      // Mock initial seed if empty
-      const initial: JobRequest[] = [
-        {
-          id: 'jr-1',
-          clientId: 'u-client-1',
-          clientName: 'Ana Souza',
-          title: 'Reparo elétrico e instalação de disjuntor',
-          description: 'Preciso de eletricista para trocar caixa de disjuntores e revisar tomada da cozinha.',
-          category: 'Eletricista',
-          location: 'São Paulo, SP',
-          budget: 350,
-          status: 'open',
-          proposalsCount: 2,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'jr-2',
-          clientId: 'u-client-2',
-          clientName: 'Carlos Eduardo',
-          title: 'Pintura de sala 30m²',
-          description: 'Pintura de paredes internas com tinta acrílica lavável branca.',
-          category: 'Pintor',
-          location: 'Campinas, SP',
-          budget: 600,
-          status: 'open',
-          proposalsCount: 1,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-        }
-      ];
-      localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(initial));
-      return initial;
+      return [];
     } catch (e) {
       return [];
     }
@@ -1282,13 +1252,7 @@ class Store {
       // Fallback em localStorage
       const stored = localStorage.getItem(this.AUDIT_KEY);
       if (stored) return JSON.parse(stored);
-      const mockAudit: AuditLogItem[] = [
-        { id: 'aud-1', adminId: 'admin-1', adminEmail: 'admin@mestrio.com', action: 'Moderação de Anúncio', targetId: 'ad-101', targetType: 'ServiceAd', details: 'Aprovou anúncio de Pintura Residencial', createdAt: new Date().toISOString() },
-        { id: 'aud-2', adminId: 'admin-1', adminEmail: 'admin@mestrio.com', action: 'Aprovação de Profissional', targetId: 'u-202', targetType: 'User', details: 'Aprovou perfil profissional de Marcos Lima', createdAt: new Date(Date.now() - 3600000).toISOString() },
-        { id: 'aud-3', adminId: 'admin-1', adminEmail: 'admin@mestrio.com', action: 'Concessão de Selo', targetId: 'u-303', targetType: 'User', details: 'Atribuiu selo de verificação a Roberto Silva', createdAt: new Date(Date.now() - 7200000).toISOString() },
-      ];
-      localStorage.setItem(this.AUDIT_KEY, JSON.stringify(mockAudit));
-      return mockAudit;
+      return [];
     } catch (e) {
       return [];
     }
@@ -1321,19 +1285,7 @@ class Store {
       // Fallback em localStorage
       const stored = localStorage.getItem(this.BROADCAST_KEY);
       if (stored) return JSON.parse(stored);
-      const initial: SystemBroadcast[] = [
-        {
-          id: 'bc-1',
-          title: 'Bem-vindo ao Novo Mestrio 2.0',
-          message: 'Explore o novo mural de orçamentos e facilidades de agendamento em nossa plataforma!',
-          targetRole: 'ALL',
-          type: 'info',
-          createdAt: new Date().toISOString(),
-          active: true
-        }
-      ];
-      localStorage.setItem(this.BROADCAST_KEY, JSON.stringify(initial));
-      return initial;
+      return [];
     } catch (e) {
       return [];
     }
