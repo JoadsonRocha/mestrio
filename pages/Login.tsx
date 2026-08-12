@@ -59,8 +59,13 @@ const Login: React.FC = () => {
       if (isRegistering) {
         await register(email, password, name, role);
         logSecurityEvent('auth.register', 'Nova conta criada', { email, role }, undefined);
-        toast('Cadastro realizado com sucesso! Verifique seu e-mail se necessário.', 'success');
-        navigate('/dashboard');
+        toast('Cadastro realizado com sucesso!', 'success');
+        if (role === UserRole.PROVIDER) {
+          toast('Complete as informações do seu perfil para anunciar seus serviços.', 'info');
+          navigate('/profile/edit');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         await login(email, password);
         logSecurityEvent('auth.login', 'Login realizado com sucesso', { email }, undefined);
