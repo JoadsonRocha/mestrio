@@ -55,6 +55,7 @@ const CreateAd: React.FC = () => {
   const [generationError, setGenerationError] = useState('');
   const [loadingAd, setLoadingAd] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // Tags State
   const [tags, setTags] = useState<string[]>([]);
@@ -206,6 +207,7 @@ const CreateAd: React.FC = () => {
       return;
     }
 
+    setIsCompressing(true);
     for (const file of files) {
       const validation = await validateUploadFileContent(file);
       if (!validation.valid) {
@@ -222,18 +224,22 @@ const CreateAd: React.FC = () => {
         };
         const compressedFile = await imageCompression(file, options);
         const reader = new FileReader();
-        reader.onloadend = () => {
-          if (reader.result) {
-            setImages(prev => [...prev, reader.result as string]);
-            setImageFiles(prev => [...prev, compressedFile]);
-          }
-        };
-        reader.readAsDataURL(compressedFile);
+        await new Promise<void>((resolve) => {
+          reader.onloadend = () => {
+            if (reader.result) {
+              setImages(prev => [...prev, reader.result as string]);
+              setImageFiles(prev => [...prev, compressedFile]);
+            }
+            resolve();
+          };
+          reader.readAsDataURL(compressedFile);
+        });
       } catch (error) {
         console.error('Erro na compressão da imagem:', error);
         toast('Erro ao processar a imagem.', 'error');
       }
     }
+    setIsCompressing(false);
   };
 
   const removeImage = (index: number) => {
@@ -416,11 +422,15 @@ const CreateAd: React.FC = () => {
                 
                 {/* Basic Info */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Título do Serviço</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-medium text-gray-700">Título do Serviço</label>
+                        <span className="text-xs text-gray-400">{formData.title.length}/100</span>
+                    </div>
                     <input 
                         type="text" 
                         name="title"
                         required
+                        maxLength={100}
                         className="w-full border border-gray-300 rounded-md p-2 focus:ring-brand-500 focus:border-brand-500"
                         placeholder="Ex: Troca de torneira, Instalação elétrica, Pintura de parede..."
                         value={formData.title}
@@ -481,11 +491,21 @@ const CreateAd: React.FC = () => {
                             accept="image/*"
                             className="hidden" 
                             onChange={handleImageUpload}
+                            disabled={isCompressing}
                         />
                         <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center justify-center">
-                            <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                            <span className="text-sm text-gray-600 font-medium">Clique para adicionar fotos</span>
-                            <span className="text-xs text-gray-400 mt-1">PNG, JPG (Máx 5MB)</span>
+                            {isCompressing ? (
+                                <>
+                                    <Loader2 className="w-10 h-10 text-brand-600 animate-spin mb-2" />
+                                    <span className="text-sm text-brand-600 font-medium">Otimizando e comprimindo imagens...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                                    <span className="text-sm text-gray-600 font-medium">Clique para adicionar fotos</span>
+                                    <span className="text-xs text-gray-400 mt-1">PNG, JPG (Compressão automática inteligente)</span>
+                                </>
+                            )}
                         </label>
                     </div>
                     
@@ -566,7 +586,10 @@ const CreateAd: React.FC = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descrição Detalhada</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-medium text-gray-700">Descrição Detalhada</label>
+                        <span className="text-xs text-gray-400">{formData.description.length} caracteres</span>
+                    </div>
                     <textarea 
                         name="description"
                         required
@@ -660,7 +683,7 @@ const CreateAd: React.FC = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp (apenas números)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp para Contato</label>
                         <input 
                             type="text" 
                             name="whatsapp"
@@ -670,6 +693,7 @@ const CreateAd: React.FC = () => {
                             value={formData.whatsapp}
                             onChange={handleInputChange}
                         />
+                        <p className="text-xs text-gray-500 mt-1">Com DDI e DDD (ex: 5511999999999).</p>
                     </div>
                 </div>
 
