@@ -106,7 +106,7 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
                     </div>
                     <span className="text-[11px] text-gray-600 group-hover/profile:text-brand-600 truncate max-w-[100px] flex items-center transition-colors">
                         {ad.providerName}
-                        {ad.isCertified && <CheckCircle size={12} className="ml-1 text-brand-500" title="Profissional Verificado" />}
+                        {ad.isCertified && <span title="Profissional Verificado"><CheckCircle size={12} className="ml-1 text-brand-500" /></span>}
                     </span>
                 </button>
                 <div className="text-right">
