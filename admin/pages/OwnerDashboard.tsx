@@ -1093,9 +1093,9 @@ const OwnerDashboard: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                      <Link to={`/service/${ad.id}`} className="text-xs px-2.5 py-1.5 rounded-md bg-slate-500/10 hover:bg-slate-500/20 text-slate-300 flex items-center gap-1 transition font-medium">
-                        <Eye size={12} /> Visualizar
-                      </Link>
+                      <button onClick={() => setInspectAd(ad)} className="text-xs px-2.5 py-1.5 rounded-md bg-[#F2C811] text-[#1E252B] hover:bg-[#d4af0e] font-bold flex items-center gap-1 transition shadow-sm">
+                        <Eye size={12} /> Detalhes & Moderação
+                      </button>
 
                       {ad.status === 'pending' && (
                         <>
@@ -1242,6 +1242,9 @@ const OwnerDashboard: React.FC = () => {
 
                   {/* Botões de Ações de Usuário */}
                   <div className="flex items-center gap-2 flex-wrap shrink-0 text-xs">
+                    <button onClick={() => setInspectUser(u)} className="px-2.5 py-1.5 rounded bg-slate-500/10 hover:bg-slate-500/20 text-slate-300 font-semibold flex items-center gap-1 transition">
+                      <Eye size={12} /> Detalhes do Usuário
+                    </button>
                     {u.roleRequest === 'PROVIDER' && can('approve_providers') && (
                       <div className="flex gap-1">
                         <button onClick={() => handleApproveProviderRequest(u)} disabled={busyId === u.id} className="px-2.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1">
@@ -1766,6 +1769,241 @@ const OwnerDashboard: React.FC = () => {
                 className="px-4 py-2 rounded-lg bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold transition disabled:opacity-50"
               >
                 {permBusy ? 'Salvando...' : 'Salvar Permissões'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔍 MODAL DE INSPEÇÃO COMPLETA DE ANÚNCIO & PROFISSIONAL */}
+      {inspectAd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn overflow-y-auto">
+          <div className={`rounded-2xl border shadow-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-6 ${
+            isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            {/* Header Modal */}
+            <div className="flex items-start justify-between border-b pb-4 border-slate-500/20">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold uppercase tracking-wider ${STATUS_STYLE[inspectAd.status || 'pending']}`}>
+                    {STATUS_LABEL[inspectAd.status || 'pending']}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">ID: {inspectAd.id}</span>
+                </div>
+                <h2 className="text-xl font-extrabold">{inspectAd.title}</h2>
+              </div>
+              <button onClick={() => setInspectAd(null)} className="p-1 rounded-lg hover:bg-slate-500/20 text-slate-400 hover:text-white transition">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Grid: Dados do Anúncio + Dados do Profissional */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Seção Anúncio */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-xs text-[#F2C811] uppercase tracking-wider flex items-center gap-1.5">
+                  <Megaphone size={16} /> Detalhes do Anúncio
+                </h3>
+
+                {/* Fotos */}
+                {inspectAd.images && inspectAd.images.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 mb-2">Fotos Anexadas ({inspectAd.images.length}):</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {inspectAd.images.map((img, i) => (
+                        <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="group relative aspect-square rounded-lg overflow-hidden border border-slate-500/20 block">
+                          <img src={img} alt="Foto Anúncio" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Nenhuma imagem anexada.</p>
+                )}
+
+                <div className="space-y-2 text-xs">
+                  <p><strong>Categoria:</strong> <span className="font-semibold text-[#F2C811]">{inspectAd.category}</span></p>
+                  <p><strong>Preço:</strong> <span className="font-bold">R$ {inspectAd.price?.toLocaleString('pt-BR')}</span> ({inspectAd.priceUnit === 'job' ? 'Por Serviço' : inspectAd.priceUnit === 'hour' ? 'Por Hora' : 'Orçamento'})</p>
+                  <p><strong>Localização:</strong> {inspectAd.location || 'Não informada'}</p>
+                  <p>
+                    <strong>WhatsApp:</strong>{' '}
+                    <a href={`https://wa.me/${inspectAd.whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-emerald-500 underline font-mono hover:text-emerald-400">
+                      {inspectAd.whatsapp}
+                    </a>
+                  </p>
+                  <p><strong>Disponibilidade:</strong> {inspectAd.availability || 'Não especificada'}</p>
+                  {inspectAd.tags && inspectAd.tags.length > 0 && (
+                    <div>
+                      <strong>Tags:</strong>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {inspectAd.tags.map(t => (
+                          <span key={t} className="px-2 py-0.5 rounded bg-slate-500/20 text-slate-300 text-[11px] font-medium">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 mb-1">Descrição Completa:</p>
+                  <div className={`p-3 rounded-lg border text-xs whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto ${
+                    isDark ? 'bg-slate-900/60 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
+                  }`}>
+                    {inspectAd.description}
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção Profissional */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-xs text-[#F2C811] uppercase tracking-wider flex items-center gap-1.5">
+                  <Users size={16} /> Perfil do Profissional
+                </h3>
+
+                {(() => {
+                  const providerUser = users.find(u => u.id === inspectAd.providerId);
+                  return (
+                    <div className={`p-4 rounded-xl border space-y-3 ${
+                      isDark ? 'bg-slate-900/40 border-slate-700' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <img src={providerUser?.avatar || 'https://via.placeholder.com/60'} alt={inspectAd.providerName} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#F2C811]/30" />
+                        <div>
+                          <h4 className="font-bold text-sm flex items-center gap-1.5">
+                            {inspectAd.providerName}
+                            {providerUser?.isCertified && <span title="Verificado"><CheckCircle2 size={14} className="text-emerald-500" /></span>}
+                          </h4>
+                          <p className="text-xs text-slate-400 font-mono">{providerUser?.email || 'E-mail do perfil'}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-xs space-y-1.5 pt-2 border-t border-slate-500/10">
+                        <p><strong>ID do Usuário:</strong> <span className="font-mono text-[11px] text-slate-400">{inspectAd.providerId}</span></p>
+                        <p><strong>Tipo de Conta:</strong> <span className="font-semibold text-emerald-400">{providerUser?.role || 'PROVIDER'}</span></p>
+                        <p><strong>Selo de Verificação:</strong> {providerUser?.isCertified ? '✅ Selo Concedido' : '❌ Não Verificado'}</p>
+                        <p><strong>Total de Anúncios no Perfil:</strong> {ads.filter(a => a.providerId === inspectAd.providerId).length}</p>
+                      </div>
+
+                      {providerUser && (
+                        <button
+                          onClick={() => {
+                            setInspectUser(providerUser);
+                            setInspectAd(null);
+                          }}
+                          className="w-full py-1.5 text-xs rounded bg-slate-500/20 hover:bg-slate-500/30 text-slate-200 font-semibold transition"
+                        >
+                          Ver Perfil Completo do Usuário →
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+            </div>
+
+            {/* Ações de Moderação no próprio Modal */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-500/20 gap-3 flex-wrap">
+              <button onClick={() => setInspectAd(null)} className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 font-semibold text-xs transition">
+                Fechar
+              </button>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {inspectAd.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        await handleStatus(inspectAd, 'approved');
+                        setInspectAd(null);
+                      }}
+                      disabled={busyId === inspectAd.id}
+                      className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition disabled:opacity-50"
+                    >
+                      <Check size={14} /> Aprovar Anúncio
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRejectingId(inspectAd.id);
+                        setInspectAd(null);
+                      }}
+                      disabled={busyId === inspectAd.id}
+                      className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition disabled:opacity-50"
+                    >
+                      <X size={14} /> Rejeitar Anúncio
+                    </button>
+                  </>
+                )}
+
+                {inspectAd.status === 'approved' && (
+                  <button
+                    onClick={async () => {
+                      await handleExtend(inspectAd, 30);
+                      setInspectAd(null);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition"
+                  >
+                    <RefreshCw size={14} /> +30 Dias de Validade
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔍 MODAL DE INSPEÇÃO COMPLETA DE USUÁRIO */}
+      {inspectUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn overflow-y-auto">
+          <div className={`rounded-2xl border shadow-2xl max-w-lg w-full p-6 space-y-6 ${
+            isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-start justify-between border-b pb-4 border-slate-500/20">
+              <div className="flex items-center gap-3">
+                <img src={inspectUser.avatar || 'https://via.placeholder.com/60'} alt={inspectUser.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#F2C811]/40" />
+                <div>
+                  <h3 className="text-lg font-bold flex items-center gap-1.5">
+                    {inspectUser.name}
+                    {inspectUser.isCertified && <CheckCircle2 size={16} className="text-emerald-500" />}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">{inspectUser.email}</p>
+                </div>
+              </div>
+              <button onClick={() => setInspectUser(null)} className="p-1 rounded-lg hover:bg-slate-500/20 text-slate-400 hover:text-white transition">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p><strong>ID:</strong> <span className="font-mono text-slate-400">{inspectUser.id}</span></p>
+              <p><strong>Papel (Role):</strong> <span className="font-bold text-[#F2C811]">{inspectUser.role}</span> {inspectUser.isOwner && '(Dono Master)'}</p>
+              <p><strong>Selo de Verificação:</strong> {inspectUser.isCertified ? '✅ Verificado' : '❌ Não Verificado'}</p>
+              <p><strong>Status de Suspensão:</strong> {inspectUser.isSuspended ? '⚠️ Suspenso' : '🟢 Ativo'}</p>
+              <p><strong>Solicitação de Função:</strong> {inspectUser.roleRequest === 'PROVIDER' ? '🟡 Solicitou conta de Profissional' : 'Nenhuma'}</p>
+            </div>
+
+            {/* Lista de Anúncios deste Usuário */}
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-2">Anúncios do Usuário ({ads.filter(a => a.providerId === inspectUser.id).length}):</p>
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {ads.filter(a => a.providerId === inspectUser.id).length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Nenhum anúncio publicado.</p>
+                ) : (
+                  ads.filter(a => a.providerId === inspectUser.id).map(a => (
+                    <div key={a.id} className="p-2.5 rounded-lg border border-slate-500/20 flex items-center justify-between text-xs">
+                      <span className="font-semibold truncate max-w-[200px]">{a.title}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_STYLE[a.status || 'pending']}`}>
+                        {STATUS_LABEL[a.status || 'pending']}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-500/20">
+              <button onClick={() => setInspectUser(null)} className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 font-semibold text-xs transition">
+                Fechar
               </button>
             </div>
           </div>
