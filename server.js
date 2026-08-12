@@ -291,7 +291,34 @@ app.use((req, res, next) => {
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
+async function ensureStorageBuckets() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+  if (!serviceKey || !url) return;
+
+  try {
+    const supabase = createClient(url, serviceKey);
+    const buckets = ['ad-images', 'avatars'];
+    for (const b of buckets) {
+      const { data: bucket, error } = await supabase.storage.getBucket(b);
+      if (error || !bucket) {
+        console.log(`[Storage] Bucket '${b}' não encontrado. Criando bucket público automaticamente...`);
+        const { error: createErr } = await supabase.storage.createBucket(b, {
+          public: true,
+          fileSizeLimit: 5242880,
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
+        });
+        if (createErr) console.error(`[Storage] Erro ao criar bucket '${b}':`, createErr.message);
+        else console.log(`[Storage] Bucket '${b}' criado com sucesso e tornado público!`);
+      }
+    }
+  } catch (e) {
+    console.warn('[Storage] Erro na verificação automática de buckets:', e.message);
+  }
+}
+
 const port = process.env.PORT || 3000;
 app.listen(port, '0.0.0.0', () => {
   console.log(`Mestrio server rodando na porta ${port}`);
+  ensureStorageBuckets();
 });

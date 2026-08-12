@@ -966,24 +966,38 @@ GRANT EXECUTE ON FUNCTION increment_ad_view(uuid) TO anon;
 -- ==========================================
 -- 7. STORAGE (imagens de anúncios e avatares)
 -- ==========================================
--- Opcional: crie os buckets 'ad-images' e 'avatars' no dashboard
--- (Storage → New bucket → name: ad-images / avatars, Public bucket: sim),
--- e então rode:
--- create policy "Público lê imagens de anúncios" on storage.objects
---   for select using (bucket_id = 'ad-images');
--- create policy "Autenticado envia imagens de anúncios" on storage.objects
---   for insert with check (
---     bucket_id = 'ad-images' and auth.role() = 'authenticated'
---     -- Evita SVG (stored XSS): SÓ aceite image/jpeg, image/png, image/webp, image/gif
---     and (metadata->>'contentType' in ('image/jpeg','image/png','image/webp','image/gif'))
---   );
--- create policy "Público lê avatares" on storage.objects
---   for select using (bucket_id = 'avatars');
--- create policy "Autenticado envia avatares" on storage.objects
---   for insert with check (
---     bucket_id = 'avatars' and auth.role() = 'authenticated'
---     and (metadata->>'contentType' in ('image/jpeg','image/png','image/webp','image/gif'))
---   );
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+  ('ad-images', 'ad-images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']),
+  ('avatars', 'avatars', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Público lê imagens de anúncios') THEN
+    CREATE POLICY "Público lê imagens de anúncios" ON storage.objects
+      FOR SELECT USING (bucket_id = 'ad-images');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Autenticado envia imagens de anúncios') THEN
+    CREATE POLICY "Autenticado envia imagens de anúncios" ON storage.objects
+      FOR INSERT WITH CHECK (
+        bucket_id = 'ad-images' AND auth.role() = 'authenticated'
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Público lê avatares') THEN
+    CREATE POLICY "Público lê avatares" ON storage.objects
+      FOR SELECT USING (bucket_id = 'avatars');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Autenticado envia avatares') THEN
+    CREATE POLICY "Autenticado envia avatares" ON storage.objects
+      FOR INSERT WITH CHECK (
+        bucket_id = 'avatars' AND auth.role() = 'authenticated'
+      );
+  END IF;
+END $$;
 
 -- ==========================================
 -- 8. AUDITORIA, COMUNICADOS DO SISTEMA E FAVORITOS
