@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, ProfessionalSchedule, AuditLogItem, SystemBroadcast, Appointment, AppointmentStatus } from '../types';
+import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, ProfessionalSchedule, AuditLogItem, SystemBroadcast, Appointment, AppointmentStatus, UserReport, KYCDocument, ReportStatus, KYCStatus } from '../types';
 
 import { DEFAULT_CATEGORIES } from '../constants';
 import { sanitizeText, sanitizeHtmlLike, sanitizePhone } from '../utils/sanitization';
@@ -1392,6 +1392,203 @@ class Store {
         console.error(e);
       }
     }
+  }
+
+  // --- MARKET STANDARD FEATURES: REPORTS & TRUST & SAFETY ---
+  private REPORTS_KEY = 'mestrio_user_reports';
+
+  async createReport(report: Omit<UserReport, 'id' | 'createdAt' | 'status'>): Promise<UserReport> {
+    try {
+      const { data, error } = await supabase
+        .from('user_reports')
+        .insert([{
+          reporter_id: report.reporterId,
+          target_type: report.targetType,
+          target_id: report.targetId,
+          reason: report.reason,
+          details: report.details || '',
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          reporterId: data.reporter_id,
+          targetType: data.target_type,
+          targetId: data.target_id,
+          reason: data.reason,
+          details: data.details,
+          status: data.status,
+          createdAt: data.created_at,
+        };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const stored = localStorage.getItem(this.REPORTS_KEY);
+    const list: UserReport[] = stored ? JSON.parse(stored) : [];
+    const newReport: UserReport = {
+      ...report,
+      id: `rep-${Date.now()}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    list.unshift(newReport);
+    localStorage.setItem(this.REPORTS_KEY, JSON.stringify(list));
+    return newReport;
+  }
+
+  async getReports(): Promise<UserReport[]> {
+    try {
+      const { data, error } = await supabase
+        .from('user_reports')
+        .select('*, profiles(name)')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          reporterId: d.reporter_id,
+          reporterName: d.profiles?.name || 'Usuário',
+          targetType: d.target_type,
+          targetId: d.target_id,
+          reason: d.reason,
+          details: d.details,
+          status: d.status,
+          createdAt: d.created_at,
+        }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const stored = localStorage.getItem(this.REPORTS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  async updateReportStatus(id: string, status: ReportStatus): Promise<void> {
+    try {
+      await supabase.from('user_reports').update({ status }).eq('id', id);
+    } catch (e) {
+      console.error(e);
+    }
+    const stored = localStorage.getItem(this.REPORTS_KEY);
+    if (stored) {
+      const list: UserReport[] = JSON.parse(stored);
+      const item = list.find(r => r.id === id);
+      if (item) {
+        item.status = status;
+        localStorage.setItem(this.REPORTS_KEY, JSON.stringify(list));
+      }
+    }
+  }
+
+  // --- MARKET STANDARD FEATURES: KYC VERIFICATION ---
+  private KYC_KEY = 'mestrio_kyc_docs';
+
+  async submitKYCDocument(doc: Omit<KYCDocument, 'id' | 'createdAt' | 'status'>): Promise<KYCDocument> {
+    try {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .insert([{
+          user_id: doc.userId,
+          document_type: doc.documentType,
+          document_number: doc.documentNumber,
+          document_front_url: doc.documentFrontUrl,
+          selfie_url: doc.selfieUrl || '',
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          userId: data.user_id,
+          userName: doc.userName,
+          userEmail: doc.userEmail,
+          documentType: data.document_type,
+          documentNumber: data.document_number,
+          documentFrontUrl: data.document_front_url,
+          selfieUrl: data.selfie_url,
+          status: data.status,
+          createdAt: data.created_at,
+        };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const stored = localStorage.getItem(this.KYC_KEY);
+    const list: KYCDocument[] = stored ? JSON.parse(stored) : [];
+    const newDoc: KYCDocument = {
+      ...doc,
+      id: `kyc-${Date.now()}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    list.unshift(newDoc);
+    localStorage.setItem(this.KYC_KEY, JSON.stringify(list));
+    return newDoc;
+  }
+
+  async getKYCDocuments(): Promise<KYCDocument[]> {
+    try {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*, profiles(name)')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          userId: d.user_id,
+          userName: d.profiles?.name || 'Profissional',
+          userEmail: 'doc@mestrio.com',
+          documentType: d.document_type,
+          documentNumber: d.document_number,
+          documentFrontUrl: d.document_front_url,
+          selfieUrl: d.selfie_url,
+          status: d.status,
+          rejectionReason: d.rejection_reason,
+          createdAt: d.created_at,
+        }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const stored = localStorage.getItem(this.KYC_KEY);
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  async verifyKYCDocument(id: string, status: KYCStatus, rejectionReason?: string): Promise<void> {
+    try {
+      await supabase.from('kyc_documents').update({ status, rejection_reason: rejectionReason }).eq('id', id);
+    } catch (e) {
+      console.error(e);
+    }
+    const stored = localStorage.getItem(this.KYC_KEY);
+    if (stored) {
+      const list: KYCDocument[] = JSON.parse(stored);
+      const item = list.find(k => k.id === id);
+      if (item) {
+        item.status = status;
+        item.rejectionReason = rejectionReason;
+        localStorage.setItem(this.KYC_KEY, JSON.stringify(list));
+      }
+    }
+  }
+
+  // --- MARKET STANDARD FEATURES: DYNAMIC REPUTATION SCORE ---
+  calculateAdScore(ad: ServiceAd): number {
+    const ratingScore = (ad.rating || 0) * 20; // 0 a 100
+    const reviewScore = Math.min((ad.reviewCount || 0) * 5, 50); // máx 50
+    const certScore = ad.isCertified ? 30 : 0;
+    const viewScore = Math.min((ad.views || 0) * 0.1, 20); // máx 20
+    const premiumScore = ad.isPremium ? 50 : 0;
+    return ratingScore + reviewScore + certScore + viewScore + premiumScore;
   }
 
   // --- MARKET STANDARD FEATURES: CSV EXPORT ---
