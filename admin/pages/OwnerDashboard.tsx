@@ -254,6 +254,10 @@ const OwnerDashboard: React.FC = () => {
   // Audit logs & Broadcasts State
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [broadcasts, setBroadcasts] = useState<SystemBroadcast[]>([]);
+  const [bcTitle, setBcTitle] = useState('');
+  const [bcMessage, setBcMessage] = useState('');
+  const [bcTarget, setBcTarget] = useState<'all' | 'PROVIDER' | 'CLIENT'>('all');
+  const [bcBusy, setBcBusy] = useState(false);
 
   // Denúncias e KYC State
   const [reports, setReports] = useState<UserReport[]>([]);
