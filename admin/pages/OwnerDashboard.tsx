@@ -5,7 +5,7 @@ import {
   Trash2, Check, X, Ban, RefreshCw, Clock, Shield, Star,
   Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye,
   FileText, Download, Bell, Activity, Search, Filter, Layers, Sun, Moon,
-  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info
+  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info, ShieldAlert, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -317,7 +317,9 @@ const OwnerDashboard: React.FC = () => {
         loadCategories(),
         loadSettings(),
         loadAuditLogs(),
-        loadBroadcasts()
+        loadBroadcasts(),
+        loadReports(),
+        loadKYCDocs()
       ]);
       toast('Dados atualizados com sucesso!', 'success');
     } catch (e) {
@@ -338,11 +340,16 @@ const OwnerDashboard: React.FC = () => {
       loadSettings();
       loadAuditLogs();
       loadBroadcasts();
+      loadReports();
+      loadKYCDocs();
     }).catch(() => {
       loadStats();
       loadUsers();
       loadCategories();
       loadSettings();
+      loadReports();
+      loadKYCDocs();
+    });
       loadAuditLogs();
       loadBroadcasts();
     });
@@ -793,18 +800,20 @@ const OwnerDashboard: React.FC = () => {
 
         {/* 📑 POWER BI REPORT TABS HEADER */}
         <nav className="flex items-center gap-2 border-b border-slate-500/20 overflow-x-auto pb-1">
-          {visibleTabs.map(t => {
+          {(['overview', 'ads', 'users', 'reports', 'kyc', 'categories', 'audit', 'broadcasts', 'settings'] as Tab[]).map(t => {
             const labels: Record<Tab, { name: string; icon: any; badge?: number }> = {
               overview: { name: 'Painel Executivo', icon: LayoutDashboard },
               ads: { name: 'Matriz de Anúncios', icon: Megaphone, badge: stats?.adsPending },
               users: { name: 'Usuários & Permissões', icon: Users },
+              reports: { name: 'Denúncias & Disputas', icon: ShieldAlert, badge: reports.filter(r => r.status === 'pending').length },
+              kyc: { name: 'Validação KYC', icon: ShieldCheck, badge: kycDocs.filter(k => k.status === 'pending').length },
               categories: { name: 'Gestão de Categorias', icon: FolderOpen },
               audit: { name: 'Trilha de Auditoria', icon: FileText },
               broadcasts: { name: 'Central de Comunicados', icon: Bell },
               settings: { name: 'Configurações de Sistema', icon: Settings2 },
             };
             const item = labels[t];
-            const isActive = activeTab === t;
+            const isActive = tab === t;
 
             return (
               <button
