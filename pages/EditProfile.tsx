@@ -21,6 +21,41 @@ const EditProfile: React.FC = () => {
     avatar: ''
   });
 
+  // KYC Verification State
+  const [kycData, setKycData] = useState({
+    documentType: 'CPF' as 'CPF' | 'CNH' | 'RG',
+    documentNumber: '',
+    documentFrontUrl: '',
+    selfieUrl: ''
+  });
+  const [submittingKYC, setSubmittingKYC] = useState(false);
+
+  const handleSubmitKYC = async () => {
+    if (!user) return;
+    if (!kycData.documentNumber.trim() || !kycData.documentFrontUrl.trim()) {
+      toast('Preencha o número do documento e o link da foto da frente.', 'error');
+      return;
+    }
+    setSubmittingKYC(true);
+    try {
+      await store.submitKYCDocument({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        documentType: kycData.documentType,
+        documentNumber: kycData.documentNumber.trim(),
+        documentFrontUrl: kycData.documentFrontUrl.trim(),
+        selfieUrl: kycData.selfieUrl.trim(),
+      });
+      toast('Documento enviado para análise da equipe de segurança!', 'success');
+      setKycData({ documentType: 'CPF', documentNumber: '', documentFrontUrl: '', selfieUrl: '' });
+    } catch (e) {
+      toast('Erro ao enviar documento.', 'error');
+    } finally {
+      setSubmittingKYC(false);
+    }
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
