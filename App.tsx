@@ -64,7 +64,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className={`flex flex-col bg-gray-50 ${isFixedLayout ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
-      <Navbar />
+      {!isOwnerRoute && <Navbar />}
       <main id="main-content" className={`flex-grow flex flex-col ${isFixedLayout ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <Suspense fallback={
           <div className="flex-1 flex flex-col items-center justify-center p-8 w-full max-w-4xl mx-auto space-y-4 animate-pulse">
