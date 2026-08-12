@@ -652,73 +652,73 @@ const OwnerDashboard: React.FC = () => {
   );
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? 'bg-[#111827] text-slate-100' : 'bg-[#F3F4F6] text-slate-800'}`}>
+    <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? 'bg-[#0B0F17] text-slate-100' : 'bg-[#F1F5F9] text-slate-900'}`}>
 
-      {/* 🚀 POWER BI TOP HEADER BAR */}
-      <header className="bg-[#1E252B] border-b border-[#2D3748] text-white px-4 py-3 sticky top-0 z-40 shadow-md">
-        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* 🚀 POWER BI TOP HEADER BAR (ALTO CONTRASTE EXECUTIVO) */}
+      <header className="bg-[#0F172A] border-b border-slate-700 border-t-4 border-t-[#F2C811] text-white px-4 py-3.5 sticky top-0 z-40 shadow-xl">
+        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Logo & Platform Info */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-[#F2C811] text-[#1E252B] font-extrabold flex items-center justify-center shadow-inner">
-              <BarChart2 size={22} strokeWidth={2.5} />
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-[#F2C811] text-[#0F172A] font-black flex items-center justify-center shadow-md shrink-0">
+              <BarChart2 size={24} strokeWidth={2.8} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-                  Power BI Analytics <span className="text-[#F2C811] text-xs px-2 py-0.5 rounded bg-[#F2C811]/10 border border-[#F2C811]/30 font-semibold uppercase">Mestrio Dashboard</span>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                  Power BI Analytics <span className="text-[#F2C811] text-xs px-2.5 py-0.5 rounded-md bg-[#F2C811]/15 border border-[#F2C811]/40 font-bold uppercase tracking-wider">Mestrio Dashboard</span>
                 </h1>
                 {user.isOwner ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold uppercase tracking-wider">Dono Master</span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/25 text-purple-200 border border-purple-400/40 font-extrabold uppercase tracking-wider shadow-sm">Dono Master</span>
                 ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold uppercase tracking-wider">Admin</span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/25 text-blue-200 border border-blue-400/40 font-extrabold uppercase tracking-wider shadow-sm">Admin</span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-xs text-slate-300 font-medium flex items-center gap-2 mt-0.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
                 Painel de Controle de Negócios & Métricas ao Vivo
               </p>
             </div>
           </div>
 
           {/* Quick Actions Header Toolbar */}
-          <div className="flex items-center gap-2 flex-wrap text-xs">
+          <div className="flex items-center gap-2.5 flex-wrap text-xs">
             <button
               onClick={refreshAllData}
               disabled={isRefreshing}
-              className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 font-medium transition disabled:opacity-50"
+              className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 flex items-center gap-2 font-bold transition shadow-sm disabled:opacity-50"
             >
-              <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-[#F2C811]' : ''} />
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-[#F2C811]' : ''} />
               {isRefreshing ? 'Atualizando...' : 'Atualizar Dados'}
             </button>
 
             <div className="relative group">
               <button
-                className="px-3 py-1.5 rounded-md bg-[#F2C811] hover:bg-[#d4af0e] text-[#1E252B] font-bold flex items-center gap-1.5 transition shadow"
+                className="px-4 py-2 rounded-lg bg-[#F2C811] hover:bg-[#d4af0e] text-[#0F172A] font-black flex items-center gap-2 transition shadow-md"
               >
-                <Download size={13} /> Exportar Relatórios
+                <Download size={14} strokeWidth={2.5} /> Exportar Relatórios
               </button>
-              <div className="absolute right-0 mt-1 hidden group-hover:block w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-50">
-                <button onClick={handleExportUsers} className="w-full text-left px-3 py-1.5 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-2">
-                  <Users size={12} /> Exportar Usuários (CSV)
+              <div className="absolute right-0 mt-1 hidden group-hover:block w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50">
+                <button onClick={handleExportUsers} className="w-full text-left px-3.5 py-2 hover:bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-2">
+                  <Users size={14} className="text-[#F2C811]" /> Exportar Usuários (CSV)
                 </button>
-                <button onClick={handleExportAds} className="w-full text-left px-3 py-1.5 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-2">
-                  <Megaphone size={12} /> Exportar Anúncios (CSV)
+                <button onClick={handleExportAds} className="w-full text-left px-3.5 py-2 hover:bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-2">
+                  <Megaphone size={14} className="text-[#F2C811]" /> Exportar Anúncios (CSV)
                 </button>
               </div>
             </div>
 
             <button
               onClick={() => setIsDark(!isDark)}
-              className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#F2C811] border border-slate-600 transition shadow-sm"
               title="Alternar Tema Claro/Escuro"
             >
-              {isDark ? <Sun size={15} className="text-[#F2C811]" /> : <Moon size={15} />}
+              {isDark ? <Sun size={17} className="text-[#F2C811]" /> : <Moon size={17} className="text-slate-200" />}
             </button>
 
             <Link
               to="/"
-              className="px-3 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center gap-1"
+              className="px-3.5 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 font-bold transition shadow-sm flex items-center gap-1.5"
             >
               Sair do Painel →
             </Link>
@@ -726,18 +726,48 @@ const OwnerDashboard: React.FC = () => {
         </div>
       </header>
 
-      {/* 🎛️ POWER BI SLICERS / FILTERS TOOLBAR */}
-      <section className={`border-b px-4 py-2.5 transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+      {/* 🎛️ POWER BI SLICERS / FILTERS TOOLBAR (FUNDO SLATE ESCURO E CONTRASTE) */}
+      <section className="bg-[#1E293B] border-b border-slate-700 text-white px-4 py-3 shadow-inner">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
           
           {/* Date Range Slicers */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
-            <span className="font-semibold text-slate-400 mr-2 flex items-center gap-1 uppercase tracking-wider text-[10px]">
-              <Filter size={12} /> Fatiador de Período:
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            <span className="font-extrabold text-slate-300 mr-2 flex items-center gap-1 uppercase tracking-wider text-[11px]">
+              <Filter size={13} className="text-[#F2C811]" /> Fatiador de Período:
             </span>
             {(['7d', '30d', '90d', 'all'] as DateRange[]).map(r => (
               <button
                 key={r}
+                onClick={() => setDateRange(r)}
+                className={`px-3.5 py-1.5 rounded-lg font-extrabold transition text-xs ${
+                  dateRange === r
+                    ? 'bg-[#F2C811] text-[#0F172A] shadow-md'
+                    : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700'
+                }`}
+              >
+                {r === '7d' ? 'Últimos 7 dias' : r === '30d' ? 'Últimos 30 dias' : r === '90d' ? 'Últimos 90 dias' : 'Todo o Histórico'}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Search Filter */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Pesquisar em relatórios, usuários, anúncios ou categorias..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg text-xs border border-slate-600 bg-slate-900 text-white placeholder-slate-400 outline-none transition focus:border-[#F2C811] font-medium"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
                 onClick={() => setDateRange(r)}
                 className={`px-3 py-1 rounded-full font-semibold transition text-xs ${
                   dateRange === r

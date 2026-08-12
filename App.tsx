@@ -48,7 +48,7 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
-  const isDashboardRoute = location.pathname.startsWith('/dashboard');
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/owner');
 
   useEffect(() => {
     const found = PAGE_TITLES.find(p => p.match.test(location.pathname));
