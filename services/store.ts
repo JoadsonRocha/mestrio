@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, ProfessionalSchedule, AuditLogItem, SystemBroadcast } from '../types';
+import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, ProfessionalSchedule, AuditLogItem, SystemBroadcast, Appointment, AppointmentStatus } from '../types';
 
 import { DEFAULT_CATEGORIES } from '../constants';
 import { sanitizeText, sanitizeHtmlLike, sanitizePhone } from '../utils/sanitization';
