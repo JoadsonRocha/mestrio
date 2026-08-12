@@ -2,7 +2,7 @@
 // Add React import to resolve namespace errors for FC and FormEvent
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
+import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye } from 'lucide-react';
 import { store } from '../services/store';
 import { ServiceAd, Review } from '../types';
 import { RatingStars, Badge } from '../components/UI';
@@ -95,16 +95,33 @@ const ServiceDetail: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [isFav, setIsFav] = useState(false);
+
   useEffect(() => {
     const loadAd = async () => {
       if (id) {
           const found = await store.getAdById(id);
           setAd(found || undefined);
+          if (user && found) {
+            const fav = await store.isFavorite(user.id, found.id);
+            setIsFav(fav);
+          }
       }
       setLoading(false);
     };
     loadAd();
-  }, [id]);
+  }, [id, user]);
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!ad) return;
+    const added = await store.toggleFavorite(user.id, ad.id);
+    setIsFav(added);
+    toast(added ? 'Anúncio adicionado aos seus favoritos! ❤️' : 'Anúncio removido dos favoritos.', added ? 'success' : 'info');
+  };
 
   // Conta a visualização uma única vez por montagem da página
   const viewCountedRef = React.useRef(false);
@@ -326,16 +343,33 @@ const ServiceDetail: React.FC = () => {
         </button>
         <div className="absolute inset-x-0 bottom-0 left-0 w-full p-4 md:p-8 pointer-events-none">
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Badge variant="primary">{ad.category}</Badge>
-                    {ad.isPremium && <Badge variant="secondary">Destaque</Badge>}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="primary">{ad.category}</Badge>
+                      {ad.isPremium && <Badge variant="secondary">Destaque</Badge>}
+                    </div>
+                    <button
+                      onClick={handleToggleFavorite}
+                      className={`pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow ${
+                        isFav
+                          ? 'bg-rose-600 text-white shadow-rose-600/30'
+                          : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border border-white/20'
+                      }`}
+                    >
+                      <Heart size={15} className={isFav ? 'fill-white' : ''} />
+                      {isFav ? 'Salvo nos Favoritos' : 'Favoritar Anúncio'}
+                    </button>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{ad.title}</h1>
-                <div className="flex items-center text-gray-300 text-sm mb-4">
-                    <MapPin size={16} className="mr-1" /> {ad.location}
-                    <span className="mx-2">•</span>
+                <div className="flex items-center text-gray-300 text-sm mb-4 flex-wrap gap-2">
+                    <span className="flex items-center"><MapPin size={16} className="mr-1" /> {ad.location}</span>
+                    <span>•</span>
                     <RatingStars rating={ad.rating} />
-                    <span className="ml-1">({ad.reviewCount} avaliações)</span>
+                    <span>({ad.reviewCount} avaliações)</span>
+                    <span>•</span>
+                    <span className="flex items-center text-gray-200 font-mono text-xs bg-white/10 px-2 py-0.5 rounded backdrop-blur-sm">
+                      <Eye size={13} className="mr-1 text-slate-300" /> {ad.views || 0} visualizações
+                    </span>
                 </div>
                 
                 {ad.tags && ad.tags.length > 0 && (
