@@ -768,42 +768,7 @@ const OwnerDashboard: React.FC = () => {
           </div>
         </div>
       </section>
-                onClick={() => setDateRange(r)}
-                className={`px-3 py-1 rounded-full font-semibold transition text-xs ${
-                  dateRange === r
-                    ? 'bg-[#F2C811] text-[#1E252B] shadow-sm'
-                    : isDark
-                    ? 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {r === '7d' ? 'Últimos 7 dias' : r === '30d' ? 'Últimos 30 dias' : r === '90d' ? 'Últimos 90 dias' : 'Todo o Histórico'}
-              </button>
-            ))}
-          </div>
 
-          {/* Quick Search Filter */}
-          <div className="relative flex-1 max-w-md">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Pesquisar em relatórios, usuários, anúncios ou categorias..."
-              className={`w-full pl-9 pr-3 py-1.5 rounded-lg text-xs border outline-none transition ${
-                isDark
-                  ? 'bg-slate-800 border-slate-700 text-slate-200 focus:border-[#F2C811]'
-                  : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#F2C811]'
-              }`}
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
-                <X size={12} />
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* 📊 MAIN POWER BI CANVAS */}
       <main className="max-w-[1700px] mx-auto p-4 md:p-6 space-y-6">
