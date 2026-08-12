@@ -1331,25 +1331,26 @@ const OwnerDashboard: React.FC = () => {
                   .filter(r => reportFilter === 'all' || r.status === reportFilter)
                   .map(report => (
                     <div key={report.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold border uppercase ${
-                            report.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                            report.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                          }`}>{report.status === 'pending' ? 'Pendente' : report.status === 'resolved' ? 'Resolvida' : 'Arquivada'}</span>
-                          <span className="text-xs font-bold text-[#F2C811]">{report.reason}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold border uppercase ${
+                              report.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                              report.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                            }`}>{report.status === 'pending' ? 'Pendente' : report.status === 'resolved' ? 'Resolvida' : 'Arquivada'}</span>
+                            <span className="text-xs font-bold text-[#F2C811]">{report.reason}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 font-mono`}>{report.targetType}</span>
+                          </div>
+                          <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                            Alvo: {report.targetTitle || report.targetId}
+                          </p>
+                          {report.details && (
+                            <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{report.details}</p>
+                          )}
+                          <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                            Por: {report.reporterName || report.reporterId} • {new Date(report.createdAt).toLocaleDateString('pt-BR')}
+                          </p>
                         </div>
-                        <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                          Denunciado: {report.reportedName || report.reportedId}
-                        </p>
-                        {report.description && (
-                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{report.description}</p>
-                        )}
-                        <p className="text-[11px] text-slate-500 mt-1 font-mono">
-                          Por: {report.reporterName || report.reporterId} • {new Date(report.createdAt).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
                       {report.status === 'pending' && (
                         <div className="flex gap-2 shrink-0 text-xs">
                           <button
