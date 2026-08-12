@@ -689,7 +689,7 @@ const OwnerDashboard: React.FC = () => {
     <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? 'bg-[#0B0F17] text-slate-100' : 'bg-[#F1F5F9] text-slate-900'}`}>
 
       {/* 🚀 POWER BI TOP HEADER BAR (ALTO CONTRASTE EXECUTIVO) */}
-      <header className="bg-[#0F172A] border-b border-slate-700 border-t-4 border-t-[#F2C811] text-white px-4 py-3.5 sticky top-0 z-40 shadow-xl">
+      <header className="bg-[#0F172A] border-b border-slate-700 border-t-4 border-t-[#F2C811] text-white px-4 py-3.5 sticky top-0 z-30 shadow-xl">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Logo & Platform Info */}
