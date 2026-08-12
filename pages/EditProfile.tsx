@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, User as UserIcon, MapPin, Phone, FileText, Save, ArrowLeft, Loader2, LocateFixed } from 'lucide-react';
+import { Camera, User as UserIcon, MapPin, Phone, FileText, Save, ArrowLeft, Loader2, LocateFixed, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { store, uploadImage, AVATARS_BUCKET } from '../services/store';
 import { useToast } from '../context/ToastContext';
@@ -269,6 +269,74 @@ const EditProfile: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Seção de Verificação de Identidade (KYC - Selo Ouro) para Profissionais */}
+              {user?.role === 'PROVIDER' && (
+                <div className="pt-6 border-t border-gray-100 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <Shield className="text-emerald-500" size={18} /> Verificação de Identidade KYC (Selo Ouro)
+                      </h3>
+                      <p className="text-xs text-gray-500">Envie seu documento oficial para receber o Selo de Profissional Verificado no seu perfil</p>
+                    </div>
+                    {user.isCertified ? (
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✓ Certificado</span>
+                    ) : (
+                      <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Pendente / Não Enviado</span>
+                    )}
+                  </div>
+
+                  {!user.isCertified && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Documento</label>
+                          <select
+                            value={kycData.documentType}
+                            onChange={e => setKycData(prev => ({ ...prev, documentType: e.target.value as any }))}
+                            className="w-full text-xs p-2.5 rounded-lg border border-gray-300 bg-white"
+                          >
+                            <option value="CPF">CPF</option>
+                            <option value="CNH">CNH</option>
+                            <option value="RG">RG</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Número do Documento</label>
+                          <input
+                            type="text"
+                            value={kycData.documentNumber}
+                            onChange={e => setKycData(prev => ({ ...prev, documentNumber: e.target.value }))}
+                            placeholder="000.000.000-00"
+                            className="w-full text-xs p-2.5 rounded-lg border border-gray-300 bg-white outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Link/Foto da Frente do Documento</label>
+                        <input
+                          type="text"
+                          value={kycData.documentFrontUrl}
+                          onChange={e => setKycData(prev => ({ ...prev, documentFrontUrl: e.target.value }))}
+                          placeholder="https://sua-imagem.com/documento.jpg"
+                          className="w-full text-xs p-2.5 rounded-lg border border-gray-300 bg-white outline-none"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSubmitKYC}
+                        disabled={submittingKYC}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition disabled:opacity-50"
+                      >
+                        {submittingKYC ? 'Enviando Documento...' : 'Enviar Documento para Validação'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="pt-6 border-t border-gray-100 flex gap-4">
                 <button

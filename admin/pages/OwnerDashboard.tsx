@@ -349,11 +349,10 @@ const OwnerDashboard: React.FC = () => {
       loadSettings();
       loadReports();
       loadKYCDocs();
-    });
       loadAuditLogs();
       loadBroadcasts();
     });
-  }, [loading, user, navigate, loadStats, loadUsers, loadCategories, loadSettings, loadAuditLogs, loadBroadcasts]);
+  }, [loading, user, navigate, loadStats, loadUsers, loadCategories, loadSettings, loadAuditLogs, loadBroadcasts, loadReports, loadKYCDocs]);
 
   useEffect(() => {
     if (tab === 'ads') loadAds();

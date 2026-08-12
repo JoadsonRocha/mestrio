@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Briefcase, MapPin, DollarSign, Clock, MessageSquare, Check, X, Send, AlertCircle, FileText } from 'lucide-react';
+import { Plus, Briefcase, MapPin, DollarSign, Clock, MessageSquare, Check, X, Send, AlertCircle, FileText, Phone, Unlock } from 'lucide-react';
 import { store } from '../services/store';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -27,7 +27,21 @@ export const JobRequestsTab: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<JobRequest | null>(null);
   const [estPrice, setEstPrice] = useState('');
   const [estDays, setEstDays] = useState('1');
-  const [quoteDesc, setQuoteDesc] = useState('');
+  // Lead Unlock State
+  const [unlockedLeads, setUnlockedLeads] = useState<string[]>([]);
+
+  const handleUnlockLead = (jobId: string) => {
+    if (!user) return;
+    if (unlockedLeads.includes(jobId)) return;
+
+    if ((user.referralCredits || 0) < 10) {
+      toast('Você precisa de pelo menos 10 créditos para desbloquear o contato direto.', 'error');
+      return;
+    }
+
+    setUnlockedLeads(prev => [...prev, jobId]);
+    toast('Contato do cliente desbloqueado com sucesso!', 'success');
+  };
 
   const isClient = user?.role === UserRole.CLIENT;
 
@@ -247,20 +261,34 @@ export const JobRequestsTab: React.FC = () => {
                   </div>
                 )}
 
-                {/* Se for Profissional: Enviar Proposta */}
+                {/* Se for Profissional: Desbloquear Contato & Enviar Proposta */}
                 {!isClient && (
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
+                    {unlockedLeads.includes(job.id) ? (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2 rounded-lg flex items-center gap-2 font-medium">
+                        <Phone size={14} className="text-emerald-600 shrink-0" />
+                        <span>Contato: <strong>(11) 98877-6655</strong> • {job.clientName}</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleUnlockLead(job.id)}
+                        className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition inline-flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Unlock size={14} /> Desbloquear Telefone do Cliente (10 Créditos)
+                      </button>
+                    )}
+
                     {userProposal ? (
-                      <div className="bg-brand-50 border border-brand-200 text-brand-800 text-xs px-3 py-2 rounded-lg flex items-center w-full">
+                      <div className="bg-brand-50 border border-brand-200 text-brand-800 text-xs px-3 py-2 rounded-lg flex items-center">
                         <Check size={14} className="mr-2 text-brand-600 shrink-0" />
-                        <span>Sua proposta de <strong>R$ {userProposal.estimatedPrice}</strong> foi enviada em {new Date(userProposal.createdAt).toLocaleDateString('pt-BR')}.</span>
+                        <span>Sua proposta de <strong>R$ {userProposal.estimatedPrice}</strong> foi enviada.</span>
                       </div>
                     ) : (
                       <button
                         onClick={() => setSelectedJob(job)}
                         className="px-4 py-2 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition inline-flex items-center"
                       >
-                        <Send size={14} className="mr-1.5" /> Enviar Proposta de Orçamento
+                        <Send size={14} className="mr-1.5" /> Enviar Proposta
                       </button>
                     )}
                   </div>
