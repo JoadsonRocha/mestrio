@@ -221,6 +221,8 @@ const MiniSparkline: React.FC<{ color?: string }> = ({ color = '#10B981' }) => (
   </svg>
 );
 
+type UserRoleFilter = 'all' | 'PROVIDER' | 'CLIENT' | 'ADMIN' | 'pending_provider';
+
 const OwnerDashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const { toast } = useToast();
@@ -230,6 +232,7 @@ const OwnerDashboard: React.FC = () => {
   const [tab, setTab] = useState<Tab>('overview');
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [searchTerm, setSearchTerm] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<UserRoleFilter>('all');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -597,10 +600,19 @@ const OwnerDashboard: React.FC = () => {
   };
 
   // Filtros aplicados em listas
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (userRoleFilter === 'PROVIDER') return u.role === UserRole.PROVIDER;
+    if (userRoleFilter === 'CLIENT') return u.role === UserRole.CLIENT;
+    if (userRoleFilter === 'ADMIN') return u.role === UserRole.ADMIN || u.isOwner;
+    if (userRoleFilter === 'pending_provider') return u.roleRequest === 'PROVIDER';
+
+    return true;
+  });
 
   const filteredAds = ads.filter(a =>
     a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
