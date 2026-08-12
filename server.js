@@ -258,11 +258,34 @@ app.post('/api/expire-ads', async (req, res) => {
 // ----------------------------------------------------------------
 // SPA: serve os arquivos do dist/ e cai no index.html para rotas do React
 // ----------------------------------------------------------------
-app.use(express.static(distDir));
 
+// Assets com hash no nome (js, css, woff2, etc.) → cache imutável 1 ano
+app.use('/assets', express.static(path.join(distDir, 'assets'), {
+  maxAge: '1y',
+  immutable: true,
+  fallthrough: false, // Retorna 404 para assets não encontrados (nunca retorna HTML)
+}));
+
+// Arquivos raiz (favicon, manifest, etc.) → sem cache
+app.use(express.static(distDir, { maxAge: 0 }));
+
+// SPA fallback: apenas para rotas GET que NÃO são arquivos estáticos
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api/')) return next();
+
+  // Se o caminho tem extensão de arquivo estático, retorna 404 (não devolve HTML)
+  const ext = path.extname(req.path);
+  if (ext && ['.js', '.css', '.map', '.woff', '.woff2', '.ttf', '.png', '.jpg', '.svg', '.ico'].includes(ext)) {
+    res.status(404).json({ error: 'Asset não encontrado. Faça um hard reload (Ctrl+Shift+R).' });
+    return;
+  }
+
+  // Para todas as outras rotas: servir o index.html SEM cache (garante que o browser
+  // sempre pegue o index.html mais recente com os hashes corretos dos chunks)
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
