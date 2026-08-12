@@ -1052,3 +1052,52 @@ CREATE POLICY "Usuário gerencia seus favoritos" ON user_favorites
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- Tabela de Denúncias e Disputas (Trust & Safety)
+CREATE TABLE IF NOT EXISTS user_reports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  reporter_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  target_type TEXT NOT NULL CHECK (target_type IN ('ad', 'user', 'review')),
+  target_id TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  details TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'dismissed', 'resolved')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE user_reports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuário envia denúncias" ON user_reports;
+CREATE POLICY "Usuário envia denúncias" ON user_reports
+  FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+
+DROP POLICY IF EXISTS "Admin gerencia denúncias" ON user_reports;
+CREATE POLICY "Admin gerencia denúncias" ON user_reports
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- Tabela de Validação KYC de Identidade
+CREATE TABLE IF NOT EXISTS kyc_documents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  document_type TEXT NOT NULL CHECK (document_type IN ('CPF', 'CNH', 'RG')),
+  document_number TEXT NOT NULL,
+  document_front_url TEXT NOT NULL,
+  selfie_url TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  rejection_reason TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE kyc_documents ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuário envia seus documentos KYC" ON kyc_documents;
+CREATE POLICY "Usuário envia seus documentos KYC" ON kyc_documents
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Usuário lê seus documentos KYC" ON kyc_documents;
+CREATE POLICY "Usuário lê seus documentos KYC" ON kyc_documents
+  FOR SELECT USING (auth.uid() = user_id OR auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Admin valida documentos KYC" ON kyc_documents;
+CREATE POLICY "Admin valida documentos KYC" ON kyc_documents
+  FOR ALL USING (auth.role() = 'authenticated');
+
