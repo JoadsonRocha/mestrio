@@ -304,7 +304,7 @@ export const JobRequestsTab: React.FC = () => {
                     className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   >
                     {DEFAULT_CATEGORIES.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                      <option key={c.slug} value={c.name}>{c.name}</option>
                     ))}
                   </select>
                 </div>

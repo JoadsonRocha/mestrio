@@ -196,7 +196,7 @@ const CreateAd: React.FC = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
-    const files = Array.from(e.target.files);
+    const files: File[] = Array.from(e.target.files);
     const limitCheck = validateUploadCount(images.length, files);
     if (!limitCheck.valid) {
       toast(limitCheck.message || 'Não foi possível anexar as imagens.', 'error');
