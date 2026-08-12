@@ -783,7 +783,7 @@ const OwnerDashboard: React.FC = () => {
 
                         {user.isOwner && !u.isOwner && u.role !== UserRole.ADMIN && (
                           <select
-                            value={u.role === UserRole.ADMIN ? UserRole.PROVIDER : u.role}
+                            value={u.role}
                             onChange={e => handleRole(u.id, e.target.value as UserRole)}
                             className="text-xs px-2 py-1.5 rounded border border-gray-200 bg-white text-gray-700"
                           >
