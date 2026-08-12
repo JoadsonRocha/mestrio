@@ -695,27 +695,27 @@ const OwnerDashboard: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? 'bg-[#0B0F17] text-slate-100' : 'bg-[#F1F5F9] text-slate-900'}`}>
 
-      {/* 🚀 POWER BI TOP HEADER BAR (ALTO CONTRASTE EXECUTIVO) */}
-      <header className="bg-[#0F172A] border-b border-slate-700 border-t-4 border-t-[#F2C811] text-white px-4 py-3.5 sticky top-0 z-30 shadow-xl">
+      {/* 🚀 POWER BI TOP HEADER BAR (ALTO CONTRASTE EXECUTIVO ESCURO) */}
+      <header className="bg-[#020617] border-b border-slate-800 border-t-4 border-t-[#F2C811] text-white px-4 py-3.5 sticky top-0 z-30 shadow-2xl">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Logo & Platform Info */}
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-lg bg-[#F2C811] text-[#0F172A] font-black flex items-center justify-center shadow-md shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[#F2C811] text-[#020617] font-black flex items-center justify-center shadow-lg shrink-0 ring-2 ring-[#F2C811]/20">
               <BarChart2 size={24} strokeWidth={2.8} />
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                  Power BI Analytics <span className="text-[#F2C811] text-xs px-2.5 py-0.5 rounded-md bg-[#F2C811]/15 border border-[#F2C811]/40 font-bold uppercase tracking-wider">Mestrio Dashboard</span>
+                  Power BI Analytics <span className="text-[#F2C811] text-xs px-2.5 py-0.5 rounded-md bg-[#F2C811]/10 border border-[#F2C811]/30 font-bold uppercase tracking-wider">Mestrio Dashboard</span>
                 </h1>
                 {user.isOwner ? (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/25 text-purple-200 border border-purple-400/40 font-extrabold uppercase tracking-wider shadow-sm">Dono Master</span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold uppercase tracking-wider shadow-sm">Dono Master</span>
                 ) : (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/25 text-blue-200 border border-blue-400/40 font-extrabold uppercase tracking-wider shadow-sm">Admin</span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-extrabold uppercase tracking-wider shadow-sm">Admin</span>
                 )}
               </div>
-              <p className="text-xs text-slate-300 font-medium flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-slate-400 font-medium flex items-center gap-2 mt-0.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
                 Painel de Controle de Negócios & Métricas ao Vivo
               </p>
@@ -727,7 +727,7 @@ const OwnerDashboard: React.FC = () => {
             <button
               onClick={refreshAllData}
               disabled={isRefreshing}
-              className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 flex items-center gap-2 font-bold transition shadow-sm disabled:opacity-50"
+              className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 flex items-center gap-2 font-bold transition shadow-sm disabled:opacity-50"
             >
               <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-[#F2C811]' : ''} />
               {isRefreshing ? 'Atualizando...' : 'Atualizar Dados'}
@@ -735,11 +735,11 @@ const OwnerDashboard: React.FC = () => {
 
             <div className="relative group">
               <button
-                className="px-4 py-2 rounded-lg bg-[#F2C811] hover:bg-[#d4af0e] text-[#0F172A] font-black flex items-center gap-2 transition shadow-md"
+                className="px-4 py-2 rounded-lg bg-[#F2C811] hover:bg-[#d4af0e] text-[#020617] font-black flex items-center gap-2 transition shadow-lg"
               >
                 <Download size={14} strokeWidth={2.5} /> Exportar Relatórios
               </button>
-              <div className="absolute right-0 mt-1 hidden group-hover:block w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50">
+              <div className="absolute right-0 mt-1 hidden group-hover:block w-52 bg-[#090D16] border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50">
                 <button onClick={handleExportUsers} className="w-full text-left px-3.5 py-2 hover:bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-2">
                   <Users size={14} className="text-[#F2C811]" /> Exportar Usuários (CSV)
                 </button>
@@ -751,15 +751,15 @@ const OwnerDashboard: React.FC = () => {
 
             <button
               onClick={() => setIsDark(!isDark)}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#F2C811] border border-slate-600 transition shadow-sm"
+              className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-[#F2C811] border border-slate-700/80 transition shadow-sm"
               title="Alternar Tema Claro/Escuro"
             >
-              {isDark ? <Sun size={17} className="text-[#F2C811]" /> : <Moon size={17} className="text-slate-200" />}
+              {isDark ? <Sun size={17} className="text-[#F2C811]" /> : <Moon size={17} className="text-slate-300" />}
             </button>
 
             <button
               onClick={handleAdminLogout}
-              className="px-3.5 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 font-bold transition shadow-sm flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition shadow-sm flex items-center gap-1.5"
             >
               <LogOut size={14} /> Sair
             </button>
@@ -768,7 +768,7 @@ const OwnerDashboard: React.FC = () => {
       </header>
 
       {/* 🎛️ POWER BI SLICERS / FILTERS TOOLBAR (FUNDO SLATE ESCURO E CONTRASTE) */}
-      <section className="bg-[#1E293B] border-b border-slate-700 text-white px-4 py-3 shadow-inner">
+      <section className="bg-[#0B0F17] border-b border-slate-800 text-white px-4 py-3 shadow-inner">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
           
           {/* Date Range Slicers */}
