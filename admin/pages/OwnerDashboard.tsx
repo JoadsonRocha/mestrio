@@ -251,13 +251,19 @@ const OwnerDashboard: React.FC = () => {
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [permBusy, setPermBusy] = useState(false);
 
-  // Auditoria e Comunicados
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
-  const [broadcasts, setBroadcasts] = useState<SystemBroadcast[]>([]);
-  const [bcTitle, setBcTitle] = useState('');
-  const [bcMessage, setBcMessage] = useState('');
-  const [bcTarget, setBcTarget] = useState<'ALL' | 'CLIENT' | 'PROVIDER'>('ALL');
-  const [bcBusy, setBcBusy] = useState(false);
+  // Denúncias e KYC State
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [kycDocs, setKycDocs] = useState<KYCDocument[]>([]);
+  const [reportFilter, setReportFilter] = useState<string>('pending');
+  const [kycFilter, setKycFilter] = useState<string>('pending');
+
+  const loadReports = useCallback(async () => {
+    try { setReports(await store.getReports()); } catch (e) { console.error(e); }
+  }, []);
+
+  const loadKYCDocs = useCallback(async () => {
+    try { setKycDocs(await store.getKYCDocuments()); } catch (e) { console.error(e); }
+  }, []);
 
   const loadStats = useCallback(async () => {
     try { setStats(await store.getAdminStats()); } catch (e) { console.error(e); }
