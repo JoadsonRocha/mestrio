@@ -60,7 +60,7 @@ const Home: React.FC = () => {
                                                 sizes="100vw"
                                                 className="w-full h-full object-cover" 
                                                 alt="Prestador de serviços em atendimento domiciliar"
-                                                fetchpriority="high"
+                                                fetchPriority="high"
                     />
                 </div>
         
