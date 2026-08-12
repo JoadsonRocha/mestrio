@@ -251,6 +251,10 @@ const OwnerDashboard: React.FC = () => {
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [permBusy, setPermBusy] = useState(false);
 
+  // Audit logs & Broadcasts State
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [broadcasts, setBroadcasts] = useState<SystemBroadcast[]>([]);
+
   // Denúncias e KYC State
   const [reports, setReports] = useState<UserReport[]>([]);
   const [kycDocs, setKycDocs] = useState<KYCDocument[]>([]);
