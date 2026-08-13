@@ -319,6 +319,7 @@ class Store {
       isSuspended: false,
       isOwner: data.is_owner || false,
       roleRequest: data.role_request || null,
+      hasCompletedOnboarding: data.has_completed_onboarding || false,
       permissions,
       createdAt: data.created_at
     };
@@ -355,6 +356,7 @@ class Store {
     if (updates.bio !== undefined) profileData.bio = sanitizeHtmlLike(updates.bio);
     if (updates.location !== undefined) profileData.location = this.normalizeUserInput(updates.location);
     if (updates.avatar !== undefined) profileData.avatar = updates.avatar;
+    if (updates.hasCompletedOnboarding !== undefined) profileData.has_completed_onboarding = updates.hasCompletedOnboarding;
 
     const { error } = await supabase.from('profiles').update(profileData).eq('id', userId);
     if (error) { console.error("Store Error [updateProfile]:", error); throw error; }
