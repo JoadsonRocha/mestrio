@@ -41,16 +41,40 @@ export const ProfessionalOnboardingModal: React.FC<Props> = ({
   const [docFrontPreview, setDocFrontUrlPreview] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  const getDraftKey = (userId: string) => `mestrio_onboarding_draft_${userId}`;
 
   useEffect(() => {
     if (user) {
-      setPhone(user.phone || '');
-      setLocation(user.location || '');
-      setBio(user.bio || '');
-      setDocumentNumber(user.documentNumber || '');
-      setAvatar(user.avatar || '');
+      // Se existir rascunho, restaura o que o usuário digitou antes de sair da página.
+      let draft: any = null;
+      try {
+        draft = JSON.parse(localStorage.getItem(getDraftKey(user.id)) || 'null');
+      } catch { /* rascunho corrompido: ignora */ }
+
+      setPhone(draft?.phone ?? user.phone ?? '');
+      setLocation(draft?.location ?? user.location ?? '');
+      setBio(draft?.bio ?? user.bio ?? '');
+      setDocumentNumber(draft?.documentNumber ?? user.documentNumber ?? '');
+      setAvatar(draft?.avatar ?? user.avatar ?? '');
+      setHydrated(true);
     }
   }, [user, isOpen]);
+
+  // Salva o rascunho a cada alteração para não perder o que foi digitado.
+  useEffect(() => {
+    if (!user || !isOpen || !hydrated) return;
+    try {
+      localStorage.setItem(getDraftKey(user.id), JSON.stringify({
+        phone,
+        location,
+        bio,
+        documentNumber,
+        avatar,
+      }));
+    } catch { /* sem espaço no localStorage: segue sem persistir */ }
+  }, [user, isOpen, hydrated, phone, location, bio, documentNumber, avatar]);
 
   if (!isOpen || !user) return null;
 
@@ -138,6 +162,7 @@ export const ProfessionalOnboardingModal: React.FC<Props> = ({
       }
 
       await refreshUser();
+      try { localStorage.removeItem(getDraftKey(user.id)); } catch { /* ok */ }
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
