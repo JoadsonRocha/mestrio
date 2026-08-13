@@ -468,6 +468,7 @@ const DashboardHome: React.FC = () => {
         isOpen={onboardingModalOpen}
         onClose={() => setOnboardingModalOpen(false)}
         mode={onboardingMode}
+        closable={onboardingMode !== 'onboarding'}
         onSuccess={() => refreshUser()}
       />
     </div>

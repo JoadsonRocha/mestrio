@@ -11,6 +11,7 @@ interface Props {
   subtitle?: string;
   submitButtonText?: string;
   mode?: 'onboarding' | 'request_provider' | 'request_verification';
+  closable?: boolean;
   onSuccess?: () => void;
 }
 
@@ -21,6 +22,7 @@ export const ProfessionalOnboardingModal: React.FC<Props> = ({
   subtitle,
   submitButtonText,
   mode = 'onboarding',
+  closable = true,
   onSuccess
 }) => {
   const { user, refreshUser } = useAuth();
@@ -175,9 +177,11 @@ export const ProfessionalOnboardingModal: React.FC<Props> = ({
             <h2 className="text-xl font-extrabold text-gray-900 leading-tight">{modalTitle}</h2>
             <p className="text-xs text-gray-500 mt-1">{modalSubtitle}</p>
           </div>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
-            <X size={20} />
-          </button>
+          {closable && (
+            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -287,13 +291,15 @@ export const ProfessionalOnboardingModal: React.FC<Props> = ({
 
           {/* Submit Button */}
           <div className="pt-3 border-t flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition"
-            >
-              Cancelar
-            </button>
+            {closable && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition"
+              >
+                Cancelar
+              </button>
+            )}
             <button
               type="submit"
               disabled={submitting}

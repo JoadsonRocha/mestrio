@@ -320,6 +320,7 @@ class Store {
       isOwner: data.is_owner || false,
       roleRequest: data.role_request || null,
       hasCompletedOnboarding: data.has_completed_onboarding || false,
+      documentNumber: data.document_number || '',
       permissions,
       createdAt: data.created_at
     };
@@ -357,6 +358,7 @@ class Store {
     if (updates.location !== undefined) profileData.location = this.normalizeUserInput(updates.location);
     if (updates.avatar !== undefined) profileData.avatar = updates.avatar;
     if (updates.hasCompletedOnboarding !== undefined) profileData.has_completed_onboarding = updates.hasCompletedOnboarding;
+    if (updates.documentNumber !== undefined) profileData.document_number = updates.documentNumber;
 
     const { error } = await supabase.from('profiles').update(profileData).eq('id', userId);
     if (error) { console.error("Store Error [updateProfile]:", error); throw error; }
@@ -904,6 +906,7 @@ class Store {
       isOwner: u.is_owner || false,
       isCertified: u.is_certified || false,
       roleRequest: u.role_request || null,
+      documentNumber: u.document_number || '',
       createdAt: u.created_at
     }));
   }

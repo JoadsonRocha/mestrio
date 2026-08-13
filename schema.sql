@@ -252,6 +252,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFA
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_certified BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role_request TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS has_completed_onboarding BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS document_number TEXT;
 
 CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -770,7 +771,7 @@ RETURNS TABLE (
   id uuid, name text, email text, role user_role, avatar text,
   location text, phone text, bio text,
   is_suspended boolean, is_owner boolean, is_certified boolean,
-  role_request text, created_at timestamptz
+  role_request text, document_number text, created_at timestamptz
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -784,7 +785,7 @@ BEGIN
   RETURN QUERY
   SELECT p.id, p.name, u.email::text, p.role, p.avatar, p.location,
          pr.phone, p.bio, p.is_suspended, p.is_owner, p.is_certified,
-         p.role_request, p.created_at
+         p.role_request, p.document_number, p.created_at
   FROM profiles p
   JOIN auth.users u ON u.id = p.id
   LEFT JOIN user_private pr ON pr.user_id = p.id
