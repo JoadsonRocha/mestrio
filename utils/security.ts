@@ -1,8 +1,13 @@
-const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_FILES_PER_UPLOAD = 5;
+// Constantes que definem limites rígidos de envio de arquivos e formatos válidos
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // Limite de 5 MB por arquivo
+const MAX_FILES_PER_UPLOAD = 5; // Máximo de 5 imagens permitidas
 const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']);
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 
+/**
+ * Valida a força da senha do usuário antes do registro ou alteração.
+ * Exige requisitos rígidos para evitar contas vulneráveis.
+ */
 export function validatePassword(password: string): { valid: boolean; message?: string } {
   const value = password.trim();
 
@@ -28,6 +33,9 @@ export function validatePassword(password: string): { valid: boolean; message?: 
   return { valid: true };
 }
 
+/**
+ * Valida o formato estrutural do endereço de e-mail utilizando expressão regular padrão.
+ */
 export function validateEmail(email: string): { valid: boolean; message?: string } {
   const trimmed = email.trim().toLowerCase();
   if (!trimmed) {
@@ -39,6 +47,9 @@ export function validateEmail(email: string): { valid: boolean; message?: string
   return { valid: true };
 }
 
+/**
+ * Garante que o usuário não ultrapasse o limite de arquivos enviados em lote.
+ */
 export function validateUploadCount(currentCount: number, incomingFiles: File[]): { valid: boolean; message?: string } {
   if (currentCount + incomingFiles.length > MAX_FILES_PER_UPLOAD) {
     return { valid: false, message: `Você pode enviar até ${MAX_FILES_PER_UPLOAD} imagens por anúncio.` };
@@ -46,39 +57,55 @@ export function validateUploadCount(currentCount: number, incomingFiles: File[])
   return { valid: true };
 }
 
+/**
+ * Realiza uma verificação robusta de segurança em uploads de imagem.
+ * Valida tamanho, extensão declarada, tipo MIME e, criticamente, analisa o
+ * buffer binário do arquivo para confirmar sua assinatura real (Magic Bytes)
+ * e bloquear injeções de script ou código HTML disfarçado (Stored XSS).
+ */
 export async function validateUploadFileContent(file: File): Promise<{ valid: boolean; message?: string }> {
   if (!file) {
     return { valid: false, message: 'Arquivo inválido.' };
   }
 
+  // 1. Validação de tamanho físico do arquivo
   if (file.size > MAX_UPLOAD_SIZE_BYTES) {
     return { valid: false, message: 'O arquivo excede o limite de 5 MB.' };
   }
 
+  // 2. Validação da extensão declarada no nome
   const extension = (file.name.split('.').pop() || '').toLowerCase();
   if (!ALLOWED_EXTENSIONS.has(extension)) {
     return { valid: false, message: 'Formato de imagem não suportado.' };
   }
 
+  // 3. Validação do Content-Type declarado
   if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
     return { valid: false, message: 'Tipo de arquivo não permitido.' };
   }
 
+  // 4. Leitura do buffer binário para análise de integridade e conteúdo
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer.slice(0, 512));
+  
+  // Converte os primeiros 512 bytes em hexadecimal para analisar os cabeçalhos de assinatura do arquivo
   const header = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('').toLowerCase();
+  
+  // Decodifica os bytes iniciais em formato de texto para identificar scripts HTML inline maliciosos embutidos
   const textChunk = new TextDecoder('utf-8', { fatal: false }).decode(bytes).toLowerCase();
 
+  // Padrões suspeitos que indicam tentativa de injeção de HTML/JS ou exploits
   const suspiciousPatterns = ['<script', 'javascript:', 'onerror=', '<svg', 'data:text/html', '<!doctype html'];
   if (suspiciousPatterns.some((pattern) => textChunk.includes(pattern))) {
     return { valid: false, message: 'Arquivo suspeito ou malicioso.' };
   }
 
-  const isPng = header.startsWith('89504e470d0a1a0a');
-  const isJpeg = header.startsWith('ffd8ff');
-  const isGif = header.startsWith('47494638');
-  const isWebp = header.startsWith('52494646') && header.includes('57454250');
-  const isAvif = header.includes('66747970617669');
+  // 5. Verificação de Magic Bytes específicos de cada formato de imagem suportado
+  const isPng = header.startsWith('89504e470d0a1a0a'); // Assinatura PNG padrão
+  const isJpeg = header.startsWith('ffd8ff'); // Assinatura JPEG/JPG padrão
+  const isGif = header.startsWith('47494638'); // Assinatura GIF padrão
+  const isWebp = header.startsWith('52494646') && header.includes('57454250'); // Assinatura WebP padrão
+  const isAvif = header.includes('66747970617669'); // Identificação de container AVIF ftypavif
 
   const isKnownImage = isPng || isJpeg || isGif || isWebp || isAvif;
   if (!isKnownImage) {
@@ -87,3 +114,4 @@ export async function validateUploadFileContent(file: File): Promise<{ valid: bo
 
   return { valid: true };
 }
+

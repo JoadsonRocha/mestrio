@@ -31,7 +31,7 @@ export const CategoriesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const data = await store.getCategories();
       setCategories(data.filter(c => c.active !== false));
     } catch (e) {
-      console.error('Erro ao carregar categorias:', e);
+      console.warn('Erro ao carregar categorias (usando fallback offline):', e);
     } finally {
       setLoading(false);
     }

@@ -19,6 +19,11 @@ const Chat: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
 
+  const activeChatRef = useRef<ChatSession | null>(null);
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
   // Initial load
   useEffect(() => {
     if (loading) return;
@@ -91,14 +96,14 @@ const Chat: React.FC = () => {
         schema: 'public',
         table: 'messages'
       }, async () => {
-        if (activeChat) return;
+        if (activeChatRef.current) return;
         const userChats = await store.getChats(user.id);
         setChats(userChats);
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, activeChat]);
+  }, [user]);
 
   // Scroll to bottom when messages change
   useEffect(() => {

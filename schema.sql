@@ -1117,3 +1117,24 @@ DROP POLICY IF EXISTS "Admin valida documentos KYC" ON kyc_documents;
 CREATE POLICY "Admin valida documentos KYC" ON kyc_documents
   FOR ALL USING (auth.role() = 'authenticated');
 
+
+-- ==========================================
+-- ⚡ HIGH-PERFORMANCE OPTIMIZATION INDICES ⚡
+-- ==========================================
+
+-- Extensão necessária para buscas de texto difusas rápidas (ex: geolocalização / CEP / Nomes)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Otimiza filtros de busca combinados de anúncios por categoria e status ativo
+CREATE INDEX IF NOT EXISTS idx_service_ads_category_status ON service_ads (category, status);
+
+-- Otimiza buscas de localização em texto por trigrama (LIKE '%texto%')
+CREATE INDEX IF NOT EXISTS idx_service_ads_location_trgm ON service_ads USING gin (location gin_trgm_ops);
+
+-- Otimiza busca de agendamentos por prestador de serviço e status (filtros frequentes de agenda)
+CREATE INDEX IF NOT EXISTS idx_appointments_provider_status ON appointments (provider_id, status);
+
+-- Otimiza consultas do chat indexando sessões de mensagens ordenadas por data de envio
+CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages (session_id, created_at DESC);
+
+

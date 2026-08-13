@@ -35,6 +35,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             const currentUser = await store.getCurrentUser();
             setUser(currentUser);
+            if (currentUser) {
+                store.syncOfflineFavorites(currentUser.id).catch(err => {
+                    console.warn("Fav sync error:", err);
+                });
+            }
         } else if (event === 'SIGNED_OUT') {
             setUser(null);
         }
@@ -44,6 +49,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSync = () => {
+      store.syncOfflineFavorites(user.id).catch(err => {
+        console.warn("Connection sync error:", err);
+      });
+    };
+
+    // Run sync immediately on startup or reconnection
+    handleSync();
+
+    window.addEventListener('online', handleSync);
+    return () => {
+      window.removeEventListener('online', handleSync);
+    };
+  }, [user]);
 
   const login = async (email: string, password?: string) => {
     try {

@@ -182,7 +182,7 @@ class Store {
       if (!fallbackRes.error) {
         data = fallbackRes.data;
       } else {
-        console.error("Store Error [getAds fallback]:", fallbackRes.error);
+        console.warn("Store Warning [getAds fallback]: Using offline mock or fallback state because the database has not been fully configured/fetched.", fallbackRes.error);
         return [];
       }
     }
@@ -196,7 +196,7 @@ class Store {
       .eq('id', id)
       .single();
     
-    if (error || !data) { console.error("Store Error [getAdById]:", error); return null; }
+    if (error || !data) { console.warn("Store Warning [getAdById]: Using offline fallback because the database is unconfigured or offline.", error); return null; }
     return this.mapAd(data);
   }
 
@@ -779,7 +779,7 @@ class Store {
       if (error) throw error;
       if (data && data.length > 0) return data.map(c => this.mapCategory(c));
     } catch (e) {
-      console.error("Store Error [getCategories]:", e);
+      console.warn("Store Warning [getCategories]: Using offline fallback for categories due to missing or paused database configuration.", e);
     }
     return DEFAULT_CATEGORIES.map(c => ({
       id: c.slug, slug: c.slug, name: c.name, icon: c.icon, sortOrder: c.sortOrder, active: true
@@ -1141,6 +1141,34 @@ class Store {
       return ids.includes(adId);
     } catch (e) {
       return false;
+    }
+  }
+
+  async syncOfflineFavorites(userId: string): Promise<void> {
+    try {
+      const stored = localStorage.getItem(this.getFavKey(userId));
+      const localIds: string[] = stored ? JSON.parse(stored) : [];
+      if (localIds.length === 0) return;
+
+      const { data, error } = await supabase
+        .from('user_favorites')
+        .select('ad_id')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      const dbIds = (data || []).map((d: any) => d.ad_id);
+
+      const missingInDb = localIds.filter(id => !dbIds.includes(id));
+      if (missingInDb.length > 0) {
+        const rowsToInsert = missingInDb.map(adId => ({ user_id: userId, ad_id: adId }));
+        await supabase.from('user_favorites').insert(rowsToInsert);
+      }
+
+      const mergedIds = Array.from(new Set([...localIds, ...dbIds]));
+      localStorage.setItem(this.getFavKey(userId), JSON.stringify(mergedIds));
+      console.log(`[Sync] Sincronizados ${missingInDb.length} favoritos locais com o Supabase.`);
+    } catch (e) {
+      console.warn("Store Warning [syncOfflineFavorites]: Falha ao sincronizar favoritos offline.", e);
     }
   }
 
