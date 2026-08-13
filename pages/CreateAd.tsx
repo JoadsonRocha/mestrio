@@ -5,7 +5,7 @@ import { Sparkles, Wand2, Upload, X, Clock, Calendar, Loader2, MapPin, LocateFix
 import imageCompression from 'browser-image-compression';
 import { store, uploadImage } from '../services/store';
 import { generateServiceDescription, suggestCategory } from '../services/geminiService';
-import { CATEGORIES } from '../constants';
+import { useCategories } from '../context/CategoriesContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { AdStatus } from '../types';
@@ -28,6 +28,7 @@ const CreateAd: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { options } = useCategories();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -68,6 +69,17 @@ const CreateAd: React.FC = () => {
 
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
+
+  // Garante que a categoria selecionada sempre exista nas opções dinâmicas.
+  React.useEffect(() => {
+    if (options.length <= 1) return;
+    setFormData(prev => {
+      const valid = options.some(c => c.id === prev.category);
+      if (valid) return prev;
+      const first = options.find(c => c.id !== 'all');
+      return first ? { ...prev, category: first.id } : prev;
+    });
+  }, [options]);
 
   // Initial load for editing
   React.useEffect(() => {
@@ -273,7 +285,7 @@ const CreateAd: React.FC = () => {
     
     // Suggest category first
     const suggestedCat = await suggestCategory(formData.title);
-    if (suggestedCat && CATEGORIES.some(c => c.id === suggestedCat)) {
+    if (suggestedCat && options.some(c => c.id === suggestedCat)) {
         setFormData(prev => ({ ...prev, category: suggestedCat }));
     }
 
@@ -447,7 +459,7 @@ const CreateAd: React.FC = () => {
                             onChange={handleInputChange}
                             className="w-full border border-gray-300 rounded-md p-2 focus:ring-brand-500 focus:border-brand-500"
                         >
-                            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
+                            {options.filter(c => c.id !== 'all').map(c => (
                                 <option key={c.id} value={c.id}>{c.label}</option>
                             ))}
                         </select>

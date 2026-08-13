@@ -4,26 +4,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, MessageSquare, Calendar, Star, CheckCircle2, Megaphone, Mail,
   Briefcase, X, Clock, DollarSign, Heart, TrendingUp, Bell, ArrowRight,
-  ShieldCheck, MapPin, Wrench, Zap, Paintbrush, Home as HomeIcon, Sparkles
+  ShieldCheck, MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd, UserRole, Appointment, ChatSession, SystemBroadcast, JobRequest } from '../types';
 import { ProfessionalScheduleModal } from '../components/ProfessionalScheduleModal';
 import { ProfessionalOnboardingModal } from '../components/ProfessionalOnboardingModal';
+import { categoryIcon } from '../components/CategoryIcon';
 import { Link as RouterLink } from 'react-router-dom';
-
-const QUICK_CATEGORIES = [
-  { id: 'reformas', name: 'Reformas & Obras', icon: Wrench, color: 'bg-amber-50 text-amber-600' },
-  { id: 'eletrica', name: 'Elétrica', icon: Zap, color: 'bg-yellow-50 text-yellow-600' },
-  { id: 'pintura', name: 'Pintura', icon: Paintbrush, color: 'bg-purple-50 text-purple-600' },
-  { id: 'limpeza', name: 'Limpeza', icon: Sparkles, color: 'bg-blue-50 text-blue-600' },
-];
 
 const DashboardHome: React.FC = () => {
   const { user, loading, refreshUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { categories } = useCategories();
 
   const [myAds, setMyAds] = useState<ServiceAd[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -271,14 +267,14 @@ const DashboardHome: React.FC = () => {
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
-                {QUICK_CATEGORIES.map(cat => (
+                {categories.slice(0, 4).map(cat => (
                   <RouterLink
-                    key={cat.id}
-                    to={`/search?category=${cat.id}`}
+                    key={cat.slug}
+                    to={`/search?category=${cat.slug}`}
                     className="p-3 rounded-xl border border-gray-100 hover:border-brand-300 hover:shadow-sm transition flex flex-col items-center group bg-gray-50/50"
                   >
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 transition group-hover:scale-110 ${cat.color}`}>
-                      <cat.icon size={18} />
+                    <div className="w-9 h-9 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center mb-2 transition group-hover:scale-110">
+                      {categoryIcon(cat.icon, 18)}
                     </div>
                     <span className="text-xs font-semibold text-gray-700 group-hover:text-brand-600">{cat.name}</span>
                   </RouterLink>

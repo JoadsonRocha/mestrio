@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { useCategories } from '../../context/CategoriesContext';
 import { store } from '../../services/store';
 import { AdminStats, ServiceAd, User, UserRole, Category, AdStatus, AuditLogItem, SystemBroadcast, UserReport, KYCDocument, ReportStatus, KYCStatus } from '../../types';
 
@@ -227,6 +228,7 @@ const OwnerDashboard: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { refreshCategories } = useCategories();
 
   const handleAdminLogout = async () => {
     navigate('/');
@@ -598,6 +600,7 @@ const OwnerDashboard: React.FC = () => {
       await store.createCategory({ slug, name: newCat.name.trim(), icon: newCat.icon, sortOrder: categories.length + 1 });
       setNewCat({ name: '', icon: 'Wrench' });
       await loadCategories();
+      await refreshCategories();
       toast('Categoria criada.', 'success');
     } catch (e) { console.error(e); toast('Erro ao criar categoria.', 'error'); }
   };
@@ -606,6 +609,7 @@ const OwnerDashboard: React.FC = () => {
     try {
       await store.updateCategory(cat.id, { active: !cat.active });
       setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, active: !c.active } : c));
+      await refreshCategories();
     } catch (e) { console.error(e); toast('Erro ao atualizar categoria.', 'error'); }
   };
 
@@ -613,6 +617,7 @@ const OwnerDashboard: React.FC = () => {
     try {
       await store.deleteCategory(cat.id);
       setCategories(prev => prev.filter(c => c.id !== cat.id));
+      await refreshCategories();
       toast('Categoria excluída.', 'success');
     } catch (e) { console.error(e); toast('Erro ao excluir categoria.', 'error'); }
   };

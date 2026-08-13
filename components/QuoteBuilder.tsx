@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Sparkles, FileText, Send, Copy, Check, Calculator, Clock, Wrench, ShieldCheck, DollarSign, User, Phone, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { DEFAULT_CATEGORIES } from '../constants';
 
 interface QuoteItem {
   id: string;

@@ -4,12 +4,13 @@ import { Filter, X, Search, MapPin, Navigation, Map, List } from 'lucide-react';
 import { store } from '../services/store';
 import { ServiceCard, CategoryPill } from '../components/UI';
 import { MapView } from '../components/MapView';
-import { CATEGORIES } from '../constants';
+import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd } from '../types';
 import { useToast } from '../context/ToastContext';
 
 const SearchPage: React.FC = () => {
   const { toast } = useToast();
+  const { options } = useCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,7 +226,7 @@ const SearchPage: React.FC = () => {
                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-3">Categorias</label>
                       <div className="space-y-3">
-                        {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                        {options.filter(c => c.id !== 'all').map(cat => (
                             <div key={cat.id} className="flex items-center">
                                 <input 
                                     id={`cat-${cat.id}`}
@@ -247,7 +248,7 @@ const SearchPage: React.FC = () => {
 
           <main className="flex-1">
             <div className="hidden md:flex overflow-x-auto space-x-2 mb-6 pb-2 scrollbar-hide">
-                {CATEGORIES.map(cat => (
+                {options.map(cat => (
                     <CategoryPill 
                         key={cat.id} 
                         id={cat.id} 

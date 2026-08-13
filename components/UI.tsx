@@ -1,7 +1,7 @@
 import React from 'react';
 import { Star, MapPin, CheckCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CATEGORIES } from '../constants';
+import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd } from '../types';
 
 export const Badge: React.FC<{ children: React.ReactNode; variant?: 'primary' | 'secondary' | 'outline' }> = ({ children, variant = 'primary' }) => {
@@ -36,6 +36,7 @@ export const RatingStars: React.FC<{ rating: number; count?: number; size?: numb
 
 export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad, compact = false }) => {
   const navigate = useNavigate();
+  const { options } = useCategories();
   return (
     <Link to={`/service/${ad.id}`} className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-100 flex flex-col h-full">
       <div className={`relative ${compact ? 'h-[82px] md:h-[126px]' : 'aspect-video'} overflow-hidden bg-gray-100`}>
@@ -52,7 +53,7 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
           </div>
         )}
         <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded">
-            {CATEGORIES.find(c => c.id === ad.category)?.label || ad.category}
+            {options.find(c => c.id === ad.category)?.label || ad.category}
         </div>
       </div>
       

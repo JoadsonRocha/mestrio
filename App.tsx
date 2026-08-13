@@ -47,6 +47,7 @@ const JobRequestsTab = lazyRetry(() => import('./components/JobRequestsTab').the
 const QuoteBuilder = lazyRetry(() => import('./components/QuoteBuilder').then(m => ({ default: m.QuoteBuilder })));
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { CategoriesProvider } from './context/CategoriesContext';
 
 const PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/$/, title: 'Início' },
@@ -138,9 +139,11 @@ const App: React.FC = () => {
   return (
     <ToastProvider>
       <AuthProvider>
-        <Router>
-          <MainLayout />
-        </Router>
+        <CategoriesProvider>
+          <Router>
+            <MainLayout />
+          </Router>
+        </CategoriesProvider>
       </AuthProvider>
     </ToastProvider>
   );

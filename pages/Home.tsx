@@ -10,10 +10,11 @@ import {
 import { store } from '../services/store';
 import { ServiceCard } from '../components/UI';
 import { categoryIcon } from '../components/CategoryIcon';
-import { CATEGORIES } from '../constants';
+import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd } from '../types';
 
 const Home: React.FC = () => {
+  const { options } = useCategories();
   const [featuredAds, setFeaturedAds] = useState<ServiceAd[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -113,7 +114,7 @@ const Home: React.FC = () => {
       <section className="py-8 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex overflow-x-auto pb-4 pt-2 gap-4 md:gap-8 scrollbar-hide snap-x md:justify-center">
-                {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                {options.filter(c => c.id !== 'all').map(cat => (
                     <Link 
                         key={cat.id} 
                         to={`/categoria/${cat.id}`}

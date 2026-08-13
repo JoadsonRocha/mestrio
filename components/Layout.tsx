@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCategories } from '../context/CategoriesContext';
 import { store } from '../services/store';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { options } = useCategories();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -71,11 +73,9 @@ export const Navbar: React.FC = () => {
                     Categorias
                 </button>
                 <div className="absolute left-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-1">
-                    <Link to="/categoria/electrician" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Eletricista</Link>
-                    <Link to="/categoria/plumber" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Encanador</Link>
-                    <Link to="/categoria/cleaning" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Faxina</Link>
-                    <Link to="/categoria/handyman" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Marido de Aluguel</Link>
-                    <Link to="/categoria/moving" className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">Mudanças</Link>
+                    {options.filter(c => c.id !== 'all').map(cat => (
+                        <Link key={cat.id} to={`/categoria/${cat.id}`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">{cat.label}</Link>
+                    ))}
                 </div>
               </div>
             </div>

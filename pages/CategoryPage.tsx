@@ -4,11 +4,12 @@ import { store } from '../services/store';
 import { ServiceAd } from '../types';
 import { ServiceCard } from '../components/UI';
 import { categoryIcon } from '../components/CategoryIcon';
-import { CATEGORIES } from '../constants';
+import { useCategories } from '../context/CategoriesContext';
 import { Search, ArrowRight } from 'lucide-react';
 
 const CategoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { options, loading: loadingCategories } = useCategories();
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -16,7 +17,7 @@ const CategoryPage: React.FC = () => {
   const limit = 12;
   const navigate = useNavigate();
 
-  const categoryObj = CATEGORIES.find(c => c.id === id);
+  const categoryObj = options.find(c => c.id === id);
 
   const loadData = async (pageNum: number, overwrite = false) => {
     if (!id || id === 'all') return;
@@ -42,14 +43,15 @@ const CategoryPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!categoryObj) {
+    if (!loadingCategories && !categoryObj) {
         navigate('/search');
         return;
     }
+    if (!categoryObj) return;
     setPage(1);
     loadData(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, loadingCategories]);
 
   const handleLoadMore = () => {
       const nextPage = page + 1;
@@ -57,6 +59,7 @@ const CategoryPage: React.FC = () => {
       loadData(nextPage, false);
   };
 
+  if (!categoryObj && loadingCategories) return null;
   if (!categoryObj) return null;
 
   return (

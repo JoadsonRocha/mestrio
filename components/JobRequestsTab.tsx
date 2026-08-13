@@ -4,7 +4,7 @@ import { store } from '../services/store';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { JobRequest, QuoteProposal, UserRole } from '../types';
-import { DEFAULT_CATEGORIES } from '../constants';
+import { useCategories } from '../context/CategoriesContext';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -12,6 +12,7 @@ export const JobRequestsTab: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { categories } = useCategories();
 
   const [requests, setRequests] = useState<JobRequest[]>([]);
   const [proposals, setProposals] = useState<QuoteProposal[]>([]);
@@ -21,7 +22,7 @@ export const JobRequestsTab: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(DEFAULT_CATEGORIES[0]?.name || 'Geral');
+  const [category, setCategory] = useState('');
   const [location, setLocation] = useState(user?.location || 'São Paulo, SP');
   const [budget, setBudget] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +57,13 @@ export const JobRequestsTab: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [user]);
+
+  // Define a primeira categoria assim que as opções dinâmicas carregarem.
+  useEffect(() => {
+    if (!category && categories.length > 0) {
+      setCategory(categories[0].name);
+    }
+  }, [categories, category]);
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,7 +330,7 @@ export const JobRequestsTab: React.FC = () => {
                     onChange={e => setCategory(e.target.value)}
                     className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   >
-                    {DEFAULT_CATEGORIES.map(c => (
+                    {categories.map(c => (
                       <option key={c.slug} value={c.name}>{c.name}</option>
                     ))}
                   </select>
