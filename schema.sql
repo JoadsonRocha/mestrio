@@ -766,6 +766,8 @@ $$;
 
 -- Listar usuários com email/telefone — somente admin com 'manage_users' ou dono.
 -- (O SELECT público de profiles não expõe mais PII; aqui é canal privado.)
+-- O DROP evita o erro 42P13 ao mudar o tipo de retorno em bancos já existentes.
+DROP FUNCTION IF EXISTS get_admin_user_list();
 CREATE OR REPLACE FUNCTION get_admin_user_list()
 RETURNS TABLE (
   id uuid, name text, email text, role user_role, avatar text,
