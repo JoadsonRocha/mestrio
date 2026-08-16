@@ -2,10 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Inicializa e configura o servidor Express responsável pela API do backend.
@@ -84,7 +81,7 @@ async function startServer() {
     next();
   });
 
-  const distDir = path.join(__dirname, 'dist');
+  const distDir = path.join(process.cwd(), 'dist');
 
   // Health check
   app.get('/healthz', (req: Request, res: Response) => {
