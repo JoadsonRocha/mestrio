@@ -236,6 +236,13 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE appointments;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
 -- ==========================================
 -- 5. MÓDULO DE ADMINISTRAÇÃO / MODERAÇÃO
 -- ==========================================
