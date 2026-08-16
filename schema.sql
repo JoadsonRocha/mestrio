@@ -112,7 +112,7 @@ ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para Profiles
-CREATE POLICY "Usuários leem seus próprios perfis" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Perfis são públicos para leitura" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Usuários inserem seu próprio perfil" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Usuários atualizam seu próprio perfil" ON profiles FOR UPDATE USING (auth.uid() = id);
 
@@ -216,6 +216,30 @@ CREATE POLICY "Clientes podem criar agendamentos" ON appointments
 DROP POLICY IF EXISTS "Participantes podem atualizar agendamentos" ON appointments;
 CREATE POLICY "Participantes podem atualizar agendamentos" ON appointments 
   FOR UPDATE USING (auth.uid() = client_id OR auth.uid() = provider_id);
+
+-- ==========================================
+-- Tabela de Favoritos (Sincronização com LocalStorage)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS user_favorites (
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  ad_id UUID NOT NULL REFERENCES service_ads(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  PRIMARY KEY (user_id, ad_id)
+);
+
+ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Usuários leem seus próprios favoritos" ON user_favorites;
+CREATE POLICY "Usuários leem seus próprios favoritos" ON user_favorites 
+  FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Usuários inserem seus próprios favoritos" ON user_favorites;
+CREATE POLICY "Usuários inserem seus próprios favoritos" ON user_favorites 
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Usuários deletam seus próprios favoritos" ON user_favorites;
+CREATE POLICY "Usuários deletam seus próprios favoritos" ON user_favorites 
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- ==========================================
 -- 4. REALTIME (mensagens em tempo real no chat)
