@@ -7,4 +7,4 @@ nixPkgs = ["nodejs_20", "bun"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "node server.js"
+cmd = "npm start"
