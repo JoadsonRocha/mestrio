@@ -271,7 +271,7 @@ const EditProfile: React.FC = () => {
               </div>
 
               {/* Seção de Verificação de Identidade (KYC - Selo Ouro) para Profissionais */}
-              {user?.role === 'PROVIDER' && (
+              {(user?.role === 'PROVIDER' || user?.roleRequest === 'PROVIDER') && (
                 <div className="pt-6 border-t border-gray-100 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
