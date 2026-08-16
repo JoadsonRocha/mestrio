@@ -2,6 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { store, supabase } from '../services/store';
 
+/**
+ * Estrutura do contexto de autenticação.
+ * Expõe o usuário atual, funções de controle de sessão e estado de carregamento.
+ */
 interface AuthContextType {
   user: User | null;
   login: (email: string, password?: string) => Promise<void>;
@@ -14,6 +18,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Provedor de Autenticação (Provider).
+ * Gerencia o estado da sessão do usuário, integrando com o Supabase Auth e
+ * populando os dados de perfil (User) através da Store.
+ */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+/**
+ * Hook customizado para consumir o contexto de autenticação.
+ * Garante que o componente acesse os dados de sessão e funções de login/logout.
+ * 
+ * @returns O contexto contendo o `user` e as operações de autenticação.
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { store, uploadImage } from '../services/store';
 
+/**
+ * Propriedades do modal de onboarding profissional.
+ */
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -15,6 +18,12 @@ interface Props {
   onSuccess?: () => void;
 }
 
+/**
+ * Modal multifuncional utilizado para:
+ * 1. Coletar dados extras (telefone, bio) no primeiro login do profissional (Onboarding).
+ * 2. Permitir que um cliente solicite conversão para conta profissional (Request Provider).
+ * 3. Solicitar selo de verificação KYC através de envio de documento (Request Verification).
+ */
 export const ProfessionalOnboardingModal: React.FC<Props> = ({
   isOpen,
   onClose,

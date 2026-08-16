@@ -3,12 +3,20 @@ import { Bot, Loader2, Search, ArrowRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 
+/**
+ * Estrutura da resposta fornecida pela IA para uma estimativa.
+ */
 interface EstimateResponse {
   category: string;
   possible_issue: string;
   price_range: string;
 }
 
+/**
+ * Componente "Orçador Inteligente".
+ * Um widget flutuante no canto inferior que permite ao usuário relatar um problema
+ * para que a IA sugira uma categoria e um preço médio estimado.
+ */
 export const SmartEstimator: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [problem, setProblem] = useState('');

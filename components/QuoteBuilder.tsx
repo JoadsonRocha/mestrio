@@ -3,6 +3,9 @@ import { Sparkles, FileText, Send, Copy, Check, Calculator, Clock, Wrench, Shiel
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
+/**
+ * Representa um item individual em um orçamento gerado.
+ */
 interface QuoteItem {
   id: string;
   description: string;
@@ -10,6 +13,11 @@ interface QuoteItem {
   unitPrice: number;
 }
 
+/**
+ * Ferramenta avançada para profissionais criarem orçamentos detalhados.
+ * Permite adicionar itens manualmente ou gerar uma estimativa automática usando IA.
+ * Exporta o resultado formatado pronto para envio pelo WhatsApp.
+ */
 export const QuoteBuilder: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();

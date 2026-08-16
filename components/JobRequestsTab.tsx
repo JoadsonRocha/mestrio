@@ -8,6 +8,11 @@ import { useCategories } from '../context/CategoriesContext';
 
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Aba/Tab que lista as solicitações de orçamento.
+ * Se o usuário for cliente, mostra as solicitações criadas por ele e as propostas recebidas.
+ * Se o usuário for profissional, mostra as oportunidades abertas na plataforma para enviar orçamentos.
+ */
 export const JobRequestsTab: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();

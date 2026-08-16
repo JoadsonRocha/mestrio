@@ -8,6 +8,10 @@ import { createServer as createViteServer } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Inicializa e configura o servidor Express responsável pela API do backend.
+ * Inclui configurações de proxy, segurança, rotas e serving do frontend.
+ */
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
@@ -41,6 +45,10 @@ async function startServer() {
     return ip || req.socket.remoteAddress || 'unknown';
   }
 
+  /**
+   * Middleware para limitar o número de requisições e evitar abusos (Rate Limiting).
+   * Restringe chamadas excessivas baseando-se no IP do cliente.
+   */
   function rateLimit(req: Request, res: Response, next: NextFunction) {
     if (!req.path.startsWith('/api/')) {
       return next();
@@ -86,7 +94,10 @@ async function startServer() {
 
   const MODEL = 'llama3-8b-8192';
 
-  // AI Generation proxy
+  /**
+   * Endpoint de proxy para geração de texto via IA (Groq).
+   * Responsável por classificar automaticamente serviços ou criar descrições chamativas.
+   */
   app.post('/api/ai', async (req: Request, res: Response) => {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
@@ -154,7 +165,11 @@ Regras:
     }
   });
 
-  // Smart Estimator proxy
+  /**
+   * Endpoint do Smart Estimator.
+   * Utiliza a IA (Groq) para estimar um problema, sugerir uma categoria e fornecer 
+   * uma margem de preço aproximada com base no relato do usuário.
+   */
   app.post('/api/ai/estimate', async (req: Request, res: Response) => {
     const body = req.body || {};
     const problem = String(body.problem || '').trim();
@@ -216,6 +231,12 @@ JSON puro:`;
     }
   });
 
+  /**
+   * Executa a expiração de anúncios que ultrapassaram a data limite configurada.
+   * Atualiza o status para 'expired' no banco de dados.
+   * 
+   * @returns O número de anúncios que foram expirados.
+   */
   async function expireAds() {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada no servidor.');
@@ -260,6 +281,10 @@ JSON puro:`;
     }
   });
 
+  /**
+   * Verifica a existência dos buckets necessários de storage no Supabase ('ad-images' e 'avatars').
+   * Cria-os publicamente caso não existam, simplificando a inicialização do projeto em novos ambientes.
+   */
   async function ensureStorageBuckets() {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const url = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';

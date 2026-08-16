@@ -1,5 +1,13 @@
 import { Appointment } from '../types';
 
+/**
+ * Gera uma URL para criar um evento no Google Calendar a partir de um agendamento.
+ * Baseia-se na data, hora, detalhes e informações do cliente fornecidas.
+ * 
+ * @param app - O objeto de agendamento (Appointment) contendo os dados do serviço.
+ * @returns Uma URL (string) formatada para abrir a tela de novo evento no Google Calendar, 
+ *          ou '#' caso os dados de data/hora sejam inválidos.
+ */
 export const generateGoogleCalendarUrl = (app: Appointment): string => {
   if (!app.date || !app.time) return '#';
   

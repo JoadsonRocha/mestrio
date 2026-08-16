@@ -6,6 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { ServiceAd } from '../types';
 
+/**
+ * Aba/Tab do painel do usuário que lista todos os anúncios que o usuário marcou como favoritos.
+ * Permite desfavoritar itens diretamente.
+ */
 export const FavoritesTab: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();

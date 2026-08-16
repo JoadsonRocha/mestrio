@@ -120,6 +120,14 @@ class Store {
     };
   }
 
+  /**
+   * Busca uma lista paginada de anúncios de serviços no banco de dados.
+   * Utiliza filtros baseados na URL (categoria, termo de pesquisa, localidade, etc).
+   * Caso esteja buscando a página pública, retorna apenas anúncios aprovados e ativos.
+   * 
+   * @param params - Objeto contendo os filtros e opções de paginação (GetAdsParams).
+   * @returns Uma Promise contendo o array de anúncios formatados.
+   */
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
     let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
 
@@ -189,6 +197,13 @@ class Store {
     return (data || []).map(ad => this.mapAd(ad));
   }
 
+  /**
+   * Busca os detalhes completos de um anúncio específico pelo seu ID.
+   * Inclui o perfil do profissional (provider) e as avaliações associadas (reviews).
+   * 
+   * @param id - UUID do anúncio (ServiceAd).
+   * @returns Uma Promise com o anúncio ou null se não for encontrado.
+   */
   async getAdById(id: string): Promise<ServiceAd | null> {
     const { data, error } = await supabase
       .from('service_ads')
@@ -206,6 +221,14 @@ class Store {
     if (error) { console.error("Store Error [incrementAdView]:", error); }
   }
 
+  /**
+   * Cria um novo anúncio de serviço no banco de dados.
+   * O status inicial é definido como 'pending' para que os administradores possam aprovar.
+   * A data de expiração (expires_at) é automaticamente calculada com base nas configurações globais.
+   * 
+   * @param ad - Os dados do anúncio (excluindo campos autogerados).
+   * @returns Uma Promise contendo o anúncio recém-criado.
+   */
   async addAd(ad: Omit<ServiceAd, 'id' | 'createdAt' | 'rating' | 'reviewCount' | 'reviews' | 'providerName'>): Promise<ServiceAd> {
     const durationDays = await this.getAdDurationDays();
     const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
@@ -280,6 +303,12 @@ class Store {
     if (error) { console.error("Store Error [deleteAd]:", error); throw error; }
   }
 
+  /**
+   * Recupera o perfil do usuário logado na sessão ativa.
+   * Faz o join com permissões caso o usuário seja Admin, e busca o telefone (PII) na tabela privada.
+   * 
+   * @returns O objeto `User` completo ou null se não houver sessão ou o usuário estiver suspenso.
+   */
   async getCurrentUser(): Promise<User | null> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user) return null;
@@ -425,6 +454,13 @@ class Store {
     if (error) { console.error("Store Error [requestPasswordReset]:", error); throw error; }
   }
 
+  /**
+   * Retorna todas as sessões de chat em que o usuário fornecido participa.
+   * Inclui as mensagens internas, contagem de não lidas e dados do anúncio relacionado.
+   * 
+   * @param userId - ID do usuário para o qual os chats serão buscados.
+   * @returns Uma lista de sessões de chat.
+   */
   async getChats(userId: string): Promise<ChatSession[]> {
     const { data: participantData } = await supabase
         .from('chat_participants')

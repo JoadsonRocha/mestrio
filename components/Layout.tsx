@@ -5,6 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
 import { store } from '../services/store';
 
+/**
+ * Barra de navegação principal (Navbar).
+ * Gerencia o roteamento, estado de autenticação (login/logout) e exibe o menu do usuário.
+ */
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -284,6 +288,10 @@ export const Navbar: React.FC = () => {
   );
 };
 
+/**
+ * Rodapé principal da aplicação (Footer).
+ * Contém links rápidos, informações de contato e direitos autorais.
+ */
 export const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-white mt-auto">

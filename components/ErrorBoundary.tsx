@@ -9,6 +9,10 @@ interface State {
   hasError: boolean;
 }
 
+/**
+ * Componente que captura erros JavaScript ocorridos em componentes filhos,
+ * loga esses erros e exibe uma interface de fallback ao invés de quebrar a árvore de componentes inteira.
+ */
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);

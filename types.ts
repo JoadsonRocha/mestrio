@@ -1,9 +1,15 @@
+/**
+ * Define os papéis de usuário (roles) disponíveis no sistema.
+ */
 export enum UserRole {
   CLIENT = 'CLIENT',
   PROVIDER = 'PROVIDER',
   ADMIN = 'ADMIN'
 }
 
+/**
+ * Estrutura principal do Usuário (Cliente, Profissional ou Admin).
+ */
 export interface User {
   id: string;
   name: string;
@@ -27,6 +33,9 @@ export interface User {
   createdAt?: string;
 }
 
+/**
+ * Permissões detalhadas para administradores do sistema.
+ */
 export type AdminPermission =
   | 'moderate_ads'
   | 'manage_users'
@@ -38,8 +47,12 @@ export type AdminPermission =
   | 'manage_kyc'
   | 'view_metrics';
 
+/** Status possíveis para um anúncio (ServiceAd) */
 export type AdStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'suspended';
 
+/**
+ * Estrutura de categoria de serviço, usada para agrupar e filtrar anúncios e pedidos.
+ */
 export interface Category {
   id: string;
   slug: string;
@@ -83,6 +96,9 @@ export interface AdminStats {
   }[];
 }
 
+/**
+ * Avaliação feita por um cliente a um profissional/anúncio.
+ */
 export interface Review {
   id: string;
   authorId: string;
@@ -92,6 +108,9 @@ export interface Review {
   date: string;
 }
 
+/**
+ * Anúncio de um serviço oferecido por um prestador.
+ */
 export interface ServiceAd {
   id: string;
   providerId: string;
@@ -121,6 +140,9 @@ export interface ServiceAd {
   lng?: number;
 }
 
+/**
+ * Representa os filtros selecionados na busca.
+ */
 export interface FilterState {
   category: string;
   query: string;
@@ -131,12 +153,18 @@ export interface FilterState {
 
 export type ToastType = 'success' | 'error' | 'info';
 
+/**
+ * Mensagem de notificação toast na interface de usuário.
+ */
 export interface ToastMessage {
   id: string;
   type: ToastType;
   message: string;
 }
 
+/**
+ * Mensagem individual do chat.
+ */
 export interface Message {
   id: string;
   senderId: string;
@@ -145,6 +173,9 @@ export interface Message {
   timestamp: string;
 }
 
+/**
+ * Sessão de chat entre usuários (geralmente cliente e prestador) referente a um anúncio.
+ */
 export interface ChatSession {
   id: string;
   participants: string[]; // [userId1, userId2]
@@ -159,8 +190,12 @@ export interface ChatSession {
   messages: Message[];
 }
 
+/** Status de um agendamento */
 export type AppointmentStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 
+/**
+ * Agendamento de serviço entre cliente e prestador.
+ */
 export interface Appointment {
   id: string;
   clientId: string;
@@ -174,13 +209,16 @@ export interface Appointment {
   clientLocation?: string;
   reviewed?: boolean;
   
-  // Dados populados no Join
+  // Dados populados no Join (junção de tabelas)
   adTitle?: string;
   clientName?: string;
   providerName?: string;
   clientAvatar?: string;
 }
 
+/**
+ * Pedido de serviço (Job Request) criado por um cliente para receber orçamentos.
+ */
 export interface JobRequest {
   id: string;
   clientId: string;
@@ -196,6 +234,9 @@ export interface JobRequest {
   createdAt: string;
 }
 
+/**
+ * Proposta de orçamento (Quote) enviada por um prestador em resposta a um Job Request.
+ */
 export interface QuoteProposal {
   id: string;
   jobRequestId?: string;

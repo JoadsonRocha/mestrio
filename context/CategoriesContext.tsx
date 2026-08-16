@@ -2,11 +2,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { store } from '../services/store';
 import { Category } from '../types';
 
+/**
+ * Opção simplificada de categoria para uso em selects/comboboxes.
+ */
 export interface CategoryOption {
   id: string;
   label: string;
 }
 
+/**
+ * Estrutura do contexto de categorias.
+ * Fornece acesso às categorias disponíveis e seus estados de carregamento.
+ */
 interface CategoriesContextValue {
   categories: Category[];
   options: CategoryOption[];
@@ -21,6 +28,10 @@ const CategoriesContext = createContext<CategoriesContextValue>({
   refreshCategories: async () => {},
 });
 
+/**
+ * Provedor de Categorias.
+ * Busca as categorias no banco e disponibiliza a lista para toda a aplicação.
+ */
 export const CategoriesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,4 +71,8 @@ export const CategoriesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   );
 };
 
+/**
+ * Hook customizado para acessar rapidamente as categorias disponíveis.
+ * Utilizado por componentes de busca e criação de anúncios.
+ */
 export const useCategories = () => useContext(CategoriesContext);

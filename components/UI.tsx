@@ -4,6 +4,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd } from '../types';
 
+/**
+ * Componente visual de tag/selo (Badge).
+ * Usado para destacar pequenos textos (ex: 'Novo', 'Pendente').
+ */
 export const Badge: React.FC<{ children: React.ReactNode; variant?: 'primary' | 'secondary' | 'outline' }> = ({ children, variant = 'primary' }) => {
   const styles = {
     primary: 'bg-brand-100 text-brand-800',
@@ -17,6 +21,10 @@ export const Badge: React.FC<{ children: React.ReactNode; variant?: 'primary' | 
   );
 };
 
+/**
+ * Componente que renderiza de 1 a 5 estrelas baseadas em uma nota (rating).
+ * Aceita exibir também a contagem de avaliações.
+ */
 export const RatingStars: React.FC<{ rating: number; count?: number; size?: number }> = ({ rating, count, size = 16 }) => {
   return (
     <div className="flex items-center">
@@ -34,6 +42,10 @@ export const RatingStars: React.FC<{ rating: number; count?: number; size?: numb
   );
 };
 
+/**
+ * Cartão de Serviço (Service Card).
+ * Componente principal usado nas listagens e buscas para exibir um anúncio resumido.
+ */
 export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad, compact = false }) => {
   const navigate = useNavigate();
   const { options } = useCategories();
@@ -123,6 +135,9 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
   );
 };
 
+/**
+ * Botão em formato de pílula arredondada usado para selecionar filtros e categorias.
+ */
 export const CategoryPill: React.FC<{ id: string; label: string; active?: boolean; onClick: () => void; icon?: React.ReactNode }> = ({ id, label, active, onClick, icon }) => {
     return (
         <button

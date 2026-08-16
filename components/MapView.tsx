@@ -18,6 +18,9 @@ const DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+/**
+ * Propriedades para o componente de Mapa.
+ */
 interface MapViewProps {
   ads: ServiceAd[];
 }
@@ -30,6 +33,10 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 }
 
+/**
+ * Renderiza um mapa interativo utilizando Leaflet para exibir anúncios de serviços
+ * que possuem coordenadas geográficas válidas (latitude e longitude).
+ */
 export const MapView: React.FC<MapViewProps> = ({ ads }) => {
   const navigate = useNavigate();
   // Filter ads that have valid lat and lng

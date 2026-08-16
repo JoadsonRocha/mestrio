@@ -2,12 +2,19 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 import { ToastType } from '../types';
 
+/**
+ * Representa uma mensagem toast ativa na tela.
+ */
 interface ToastItem {
   id: number;
   type: ToastType;
   message: string;
 }
 
+/**
+ * Estrutura do contexto de notificações (Toasts).
+ * Expõe as funções para disparar alertas de sucesso, erro e informação.
+ */
 interface ToastContextType {
   toast: (message: string, type?: ToastType) => void;
   success: (message: string) => void;
@@ -17,6 +24,10 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+/**
+ * Provedor de Notificações (Toasts).
+ * Controla a fila e renderização de pop-ups flutuantes na interface do usuário.
+ */
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const idRef = useRef(0);
@@ -79,6 +90,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
+/**
+ * Hook customizado para disparar notificações (toasts).
+ * Fornece atalhos como `success()`, `error()` e `info()`.
+ */
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) throw new Error('useToast deve ser usado dentro de um ToastProvider');

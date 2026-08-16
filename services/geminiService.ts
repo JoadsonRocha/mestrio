@@ -2,12 +2,22 @@ import { logSecurityWarning } from './audit';
 
 const AI_ENDPOINT = '/api/ai';
 
+/**
+ * Interface que define a resposta esperada da API de inteligência artificial.
+ */
 interface AIResponse {
   text?: string;
   category?: string;
   error?: string;
 }
 
+/**
+ * Função utilitária para fazer requisições POST para o endpoint local de IA.
+ * 
+ * @param body - Corpo da requisição contendo os parâmetros (ex: task, title, etc).
+ * @returns Uma Promise com a resposta tipada `AIResponse`.
+ * @throws Dispara um erro caso a chamada falhe (status HTTP != 2xx).
+ */
 const request = async (body: unknown): Promise<AIResponse> => {
   const res = await fetch(AI_ENDPOINT, {
     method: 'POST',
@@ -22,6 +32,14 @@ const request = async (body: unknown): Promise<AIResponse> => {
   return data;
 };
 
+/**
+ * Gera uma descrição automática para um serviço usando IA, baseando-se no título, categoria e palavras-chave.
+ * 
+ * @param title - Título do anúncio do serviço.
+ * @param category - Categoria do serviço.
+ * @param keywords - Palavras-chave ou detalhes adicionais.
+ * @returns Uma Promise contendo o texto gerado pela IA ou uma mensagem de erro fallback.
+ */
 export const generateServiceDescription = async (title: string, category: string, keywords: string): Promise<string> => {
   try {
     const data = await request({ task: 'describe', title, category, keywords });
@@ -32,6 +50,12 @@ export const generateServiceDescription = async (title: string, category: string
   }
 };
 
+/**
+ * Sugere automaticamente a melhor categoria (slug) para um serviço com base no título fornecido.
+ * 
+ * @param title - Título do serviço.
+ * @returns Uma Promise contendo a slug da categoria sugerida ou string vazia em caso de falha.
+ */
 export const suggestCategory = async (title: string): Promise<string> => {
   try {
     const data = await request({ task: 'category', title });

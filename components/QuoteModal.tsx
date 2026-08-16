@@ -4,6 +4,9 @@ import { store } from '../services/store';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
+/**
+ * Propriedades do modal de envio de orçamento.
+ */
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -13,6 +16,10 @@ interface Props {
   onSuccess?: () => void;
 }
 
+/**
+ * Modal flutuante que permite ao profissional enviar uma proposta formal de orçamento
+ * diretamente para um cliente que solicitou um serviço.
+ */
 export const QuoteModal: React.FC<Props> = ({ isOpen, onClose, clientId, clientName, adId, onSuccess }) => {
   const { user } = useAuth();
   const { toast } = useToast();

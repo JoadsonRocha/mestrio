@@ -20,6 +20,14 @@ const ICONS: Record<string, LucideIcon> = {
   Hammer, Cog, Plug, Drill, Sparkles, Scissors, Sofa, Laptop, Bike, KeyRound, Wifi, ShowerHead,
 };
 
+/**
+ * Componente utilitário que renderiza o ícone correspondente a uma categoria.
+ * Caso o ID fornecido não exista no mapa de ícones, renderiza um `ArrowRight` como fallback.
+ * 
+ * @param id - A slug da categoria ou nome do ícone (ex: 'electrician' ou 'Hammer').
+ * @param size - O tamanho do ícone em pixels (padrão: 20).
+ * @returns Um elemento React (SVG do lucide-react).
+ */
 export function categoryIcon(id: string, size = 20): React.ReactNode {
   const Icon = ICONS[id] || ArrowRight;
   return <Icon size={size} />;

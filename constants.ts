@@ -1,3 +1,6 @@
+/**
+ * Interface que define a estrutura de uma categoria de serviço no sistema.
+ */
 export interface DefaultCategory {
   slug: string;
   name: string;
@@ -5,8 +8,10 @@ export interface DefaultCategory {
   sortOrder: number;
 }
 
-// Fallback usado quando o banco (tabela categories) ainda não tem dados.
-// O admin pode gerenciar essas categorias pelo painel /owner.
+/**
+ * Fallback usado quando o banco (tabela categories) ainda não tem dados.
+ * O admin pode gerenciar essas categorias pelo painel /owner.
+ */
 export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { slug: 'electrician', name: 'Eletricista', icon: 'Zap', sortOrder: 1 },
   { slug: 'plumber', name: 'Encanador', icon: 'Droplets', sortOrder: 2 },
@@ -18,19 +23,28 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { slug: 'assembly', name: 'Montagem de Móveis', icon: 'Package', sortOrder: 8 },
 ];
 
-// Ícones disponíveis para escolha ao cadastrar/editar uma categoria
+/**
+ * Ícones do lucide-react disponíveis para escolha ao cadastrar/editar uma categoria no painel de admin.
+ */
 export const CATEGORY_ICON_OPTIONS: string[] = [
   'Zap', 'Droplets', 'Paintbrush', 'Brush', 'Wrench', 'Truck', 'Leaf', 'Package',
   'Hammer', 'Cog', 'Plug', 'Drill', 'Sparkles', 'Scissors', 'Sofa', 'Laptop',
   'Bike', 'KeyRound', 'Wifi', 'ShowerHead',
 ];
 
-// Compat com código legado que espera { id, label } (mantém 'all' = "Todos").
+/**
+ * Estrutura de opção de categoria utilizada em componentes de seleção (Select).
+ * Compatível com código legado que espera { id, label } (mantém 'all' = "Todos").
+ */
 export interface CategoryOption {
   id: string;
   label: string;
 }
 
+/**
+ * Lista padronizada de opções de categoria, frequentemente utilizada para filtros, 
+ * que adiciona uma opção geral "Todos" no topo.
+ */
 export const CATEGORIES: CategoryOption[] = [
   { id: 'all', label: 'Todos' },
   ...DEFAULT_CATEGORIES.map(c => ({ id: c.slug, label: c.name })),

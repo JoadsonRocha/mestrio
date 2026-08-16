@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { ProfessionalSchedule } from '../types';
 
+/**
+ * Propriedades para o modal de grade de horários.
+ */
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -22,6 +25,10 @@ const WEEKDAYS: { id: string; label: string }[] = [
   { id: '24h', label: '24h' },
 ];
 
+/**
+ * Modal que permite ao prestador de serviços configurar sua disponibilidade semanal.
+ * Define dias de trabalho, horários de início/fim e intervalos de almoço.
+ */
 export const ProfessionalScheduleModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { toast } = useToast();
