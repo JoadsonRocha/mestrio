@@ -90,7 +90,7 @@ mentrio/
 │   └── store.ts               # Camada principal de dados (Supabase + LocalStorage)
 ├── types.ts                   # Definições de Interfaces e Tipos TypeScript
 ├── App.tsx                    # Roteamento central da aplicação
-├── server.js                  # Servidor Express de produção e proxy da IA
+├── server.ts                  # Servidor Express TypeScript de produção e proxy da IA
 ├── schema.sql                 # Script SQL completo de criação do banco Supabase
 └── tailwind.config.js         # Configurações do Tailwind CSS
 ```
@@ -161,14 +161,14 @@ ALLOWED_ORIGINS=http://localhost:5173
 - `npm run build`: Compila a aplicação para produção na pasta `dist/`.
 - `npm run preview`: Visualiza o build de produção localmente.
 - `npm run type-check`: Executa a verificação estática de tipos do TypeScript sem emitir arquivos.
-- `npm start`: Executa o servidor de produção `server.js`.
+- `npm start`: Executa o servidor de produção compilado `dist/server.cjs`.
 - `npm run expire:ads`: Executa a rotina automática de expiração de anúncios.
 
 ---
 
 ## 🚢 Deploy em Produção (Railway / Docker)
 
-O projeto inclui arquivos `nixpacks.toml` e `server.js` configurados para deploy automático no **Railway** ou em containers **Docker**:
+O projeto inclui arquivos `nixpacks.toml` e `railway.toml` configurados para deploy automático no **Railway** ou em containers **Docker**:
 
 1. Conecte o repositório Git ao Railway.
 2. Defina as variáveis de ambiente no dashboard do Railway (`GROQ_API_KEY`, `VITE_SUPABASE_URL`, etc.).

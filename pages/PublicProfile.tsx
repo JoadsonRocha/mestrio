@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { store } from '../services/store';
-import { User, ServiceAd } from '../types';
+import { User, ServiceAd, BeforeAfterProject } from '../types';
 import { ServiceCard } from '../components/UI';
-import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon } from 'lucide-react';
+import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Sparkles, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
+import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 
 const PublicProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [profile, setProfile] = useState<User | null>(null);
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showBusinessCard, setShowBusinessCard] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -77,6 +80,20 @@ const PublicProfile: React.FC = () => {
       
   const totalReviews = ads.reduce((acc, ad) => acc + ad.reviewCount, 0);
 
+  // Projetos Antes/Depois do perfil ou amostra profissional
+  const beforeAfterProjects: BeforeAfterProject[] = profile.beforeAfterProjects && profile.beforeAfterProjects.length > 0
+    ? profile.beforeAfterProjects
+    : [
+        {
+          id: 'proj-1',
+          title: 'Transformação & Acabamento Residencial',
+          description: 'Execução de reparo completo, preparação de superfície e acabamento com garantia técnica.',
+          beforeImage: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&auto=format&fit=crop&q=80',
+          afterImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
+          category: 'Reforma & Manutenção'
+        }
+      ];
+
   return (
     <div className="flex-1 bg-gray-50 pb-12">
       {/* Cover and Profile Header */}
@@ -115,6 +132,14 @@ const PublicProfile: React.FC = () => {
                 </div>
 
                 <div className="mt-6 md:mt-0 md:ml-6 flex items-center space-x-3">
+                    <button
+                        onClick={() => setShowBusinessCard(true)}
+                        className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold py-2 px-4 rounded-lg shadow-2xs transition-colors flex items-center text-sm"
+                        title="Ver e compartilhar cartão de visitas digital"
+                    >
+                        <QrCode size={16} className="mr-2 text-purple-600" /> Cartão Digital
+                    </button>
+
                     {user?.id !== profile.id && ads.length > 0 && (
                         <button 
                             onClick={() => handleStartChat(ads[0].id)}
@@ -131,32 +156,72 @@ const PublicProfile: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 flex flex-col md:flex-row gap-8">
         
         {/* Sidebar Info */}
-        <aside className="md:w-1/3">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
-                <h3 className="font-bold text-gray-900 text-lg mb-4">Sobre o profissional</h3>
-                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+        <aside className="md:w-1/3 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24 space-y-4">
+                <h3 className="font-bold text-gray-900 text-lg mb-2">Sobre o profissional</h3>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-sm">
                     {profile.bio || "Este profissional ainda não adicionou uma biografia."}
                 </p>
+
+                {profile.isCertified && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center gap-3">
+                    <Award size={22} className="text-emerald-600 shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-900">Profissional Certificado</h4>
+                      <p className="text-[11px] text-emerald-700">Documentação e identidade validadas pela equipe Mestrio.</p>
+                    </div>
+                  </div>
+                )}
             </div>
         </aside>
 
-        {/* Ads Showcase */}
-        <main className="md:w-2/3">
-            <h3 className="font-bold text-gray-900 text-xl mb-6">Serviços ({ads.length})</h3>
-            
-            {ads.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
-                    Nenhum anúncio publicado no momento.
+        {/* Ads & Portfolio Showcase */}
+        <main className="md:w-2/3 space-y-8">
+            {/* Galeria de Resultados Antes & Depois */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-xl flex items-center gap-2">
+                    <Sparkles size={20} className="text-amber-500" /> Resultados & Transformações (Antes/Depois)
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Arraste o slider para comparar o estado inicial e o resultado final do serviço.</p>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {ads.map(ad => (
-                        <ServiceCard key={ad.id} ad={ad} compact />
-                    ))}
-                </div>
-            )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                {beforeAfterProjects.map(proj => (
+                  <BeforeAfterSlider key={proj.id} project={proj} />
+                ))}
+              </div>
+            </div>
+
+            {/* Lista de Anúncios */}
+            <div>
+              <h3 className="font-bold text-gray-900 text-xl mb-6">Serviços Publicados ({ads.length})</h3>
+              
+              {ads.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
+                      Nenhum anúncio publicado no momento.
+                  </div>
+              ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {ads.map(ad => (
+                          <ServiceCard key={ad.id} ad={ad} compact />
+                      ))}
+                  </div>
+              )}
+            </div>
         </main>
       </div>
+
+      {/* Modal de Cartão de Visitas Digital */}
+      {profile && (
+        <DigitalBusinessCardModal
+          isOpen={showBusinessCard}
+          onClose={() => setShowBusinessCard(false)}
+          user={profile}
+        />
+      )}
     </div>
   );
 };

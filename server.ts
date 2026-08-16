@@ -175,7 +175,9 @@ Regras:
     const fallback = {
       category: 'handyman',
       possible_issue: `Serviço recomendado para solucionar: ${problem}`,
-      price_range: 'R$ 150 a R$ 350'
+      price_range: 'R$ 150 a R$ 350',
+      estimated_time: '1 dia',
+      recommended_materials: ['Materiais básicos de instalação / reparo']
     };
 
     const apiKey = process.env.GROQ_API_KEY;
@@ -188,6 +190,8 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves (sem usar blocos d
 - category: A categoria mais adequada (electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly, ou outros).
 - possible_issue: Uma breve descrição de 1 frase sobre o que pode ser o defeito/solução.
 - price_range: Uma estimativa de preço no formato "R$ X a R$ Y".
+- estimated_time: Prazo estimado (ex: "1 a 2 dias", "4 horas").
+- recommended_materials: Array de strings com 1 a 3 materiais prováveis necessários.
 
 JSON puro:`;
 

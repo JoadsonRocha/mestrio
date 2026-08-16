@@ -1,11 +1,11 @@
 # Configuração do Railway (serviço web principal)
-# Build: npm run build (gera dist/) | Start: node server.js (serve SPA + /api)
+# Build: npm run build (gera dist/) | Start: node dist/server.cjs (serve SPA + /api)
 [build]
 builder = "nixpacks"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "node server.js"
+startCommand = "node dist/server.cjs"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

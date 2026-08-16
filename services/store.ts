@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, ProfessionalSchedule, AuditLogItem, SystemBroadcast, Appointment, AppointmentStatus, UserReport, KYCDocument, ReportStatus, KYCStatus } from '../types';
+import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, AdminStats, AdStatus, JobRequest, QuoteProposal, DetailedQuote, DetailedQuoteItem, QuoteStatus, ProfessionalSchedule, AuditLogItem, SystemBroadcast, Appointment, AppointmentStatus, UserReport, KYCDocument, ReportStatus, KYCStatus } from '../types';
 
 import { DEFAULT_CATEGORIES } from '../constants';
 import { sanitizeText, sanitizeHtmlLike, sanitizePhone } from '../utils/sanitization';
@@ -28,7 +28,7 @@ export interface GetAdsParams {
  */
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYnRrbXRqdGtpZGZlc2dhbGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MjAwMDAwMDAwMH0.placeholder_anon_key';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -1296,6 +1296,59 @@ class Store {
     if (item) {
       item.status = status;
       localStorage.setItem(this.QUOTES_KEY, JSON.stringify(list));
+    }
+  }
+
+  // --- DETAILED COMMERCIAL QUOTES (DOCUMENTS / PDF / DOCX) ---
+  private DETAILED_QUOTES_KEY = 'mestrio_detailed_quotes';
+
+  async getDetailedQuotes(providerId?: string): Promise<DetailedQuote[]> {
+    try {
+      const stored = localStorage.getItem(this.DETAILED_QUOTES_KEY);
+      const list: DetailedQuote[] = stored ? JSON.parse(stored) : [];
+      if (providerId) {
+        return list.filter(q => q.providerId === providerId);
+      }
+      return list;
+    } catch (e) {
+      console.warn('Store Warning [getDetailedQuotes]:', e);
+      return [];
+    }
+  }
+
+  async saveDetailedQuote(quote: DetailedQuote): Promise<DetailedQuote> {
+    const list = await this.getDetailedQuotes();
+    const existingIndex = list.findIndex(q => q.id === quote.id);
+    const updatedQuote: DetailedQuote = {
+      ...quote,
+      clientName: sanitizeText(quote.clientName),
+      title: sanitizeText(quote.title),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      list[existingIndex] = updatedQuote;
+    } else {
+      list.unshift(updatedQuote);
+    }
+
+    localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(list));
+    return updatedQuote;
+  }
+
+  async deleteDetailedQuote(id: string): Promise<void> {
+    const list = await this.getDetailedQuotes();
+    const filtered = list.filter(q => q.id !== id);
+    localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(filtered));
+  }
+
+  async updateDetailedQuoteStatus(id: string, status: QuoteStatus): Promise<void> {
+    const list = await this.getDetailedQuotes();
+    const item = list.find(q => q.id === id);
+    if (item) {
+      item.status = status;
+      item.updatedAt = new Date().toISOString();
+      localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(list));
     }
   }
 

@@ -644,6 +644,13 @@ const ServiceDetail: React.FC = () => {
                              <div className="flex items-center"><Clock size={16} className="mr-3 text-indigo-500"/> Responde em poucos minutos</div>
                              <div className="flex items-start"><Calendar size={16} className="mr-3 text-orange-500 mt-0.5"/> <span>{formatAvailability()}</span></div>
                         </div>
+
+                        <Link
+                          to={`/profile/${ad.providerId}`}
+                          className="mt-3.5 w-full bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs py-2.5 px-4 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-center transition"
+                        >
+                          Ver Perfil Completo & Portfólio →
+                        </Link>
                     </div>
                 </div>
             </div>

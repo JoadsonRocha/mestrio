@@ -30,6 +30,7 @@ export interface User {
   referredBy?: string;
   referralCredits?: number;
   referralCashEarnings?: number;
+  beforeAfterProjects?: BeforeAfterProject[];
   createdAt?: string;
 }
 
@@ -108,6 +109,16 @@ export interface Review {
   date: string;
 }
 
+export interface BeforeAfterProject {
+  id: string;
+  title: string;
+  category?: string;
+  description?: string;
+  beforeImage: string;
+  afterImage: string;
+  date?: string;
+}
+
 /**
  * Anúncio de um serviço oferecido por um prestador.
  */
@@ -122,6 +133,7 @@ export interface ServiceAd {
   priceUnit: 'hour' | 'job' | 'estimate';
   location: string;
   images: string[];
+  beforeAfterProjects?: BeforeAfterProject[];
   rating: number;
   reviewCount: number;
   reviews: Review[];
@@ -252,6 +264,73 @@ export interface QuoteProposal {
   createdAt: string;
 }
 
+/**
+ * Item detalhado de um orçamento comercial (mão de obra, material, serviço ou taxa).
+ */
+export interface DetailedQuoteItem {
+  id: string;
+  description: string;
+  type: 'labor' | 'material' | 'service' | 'tax' | 'other';
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'completed';
+
+/**
+ * Estrutura completa de um Orçamento Comercial Profissional no Mestrio.
+ */
+export interface DetailedQuote {
+  id: string;
+  quoteNumber: string;
+  providerId: string;
+  providerName: string;
+  providerDocument?: string;
+  providerPhone?: string;
+  providerEmail?: string;
+  providerPixKey?: string;
+  providerCity?: string;
+  
+  clientName: string;
+  clientDocument?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+
+  title: string;
+  category: string;
+  problemDescription?: string;
+  
+  items: DetailedQuoteItem[];
+  
+  subtotal: number;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  travelFee: number;
+  totalAmount: number;
+  
+  estimatedDays: string;
+  validityDays: string;
+  paymentTerms: string;
+  notes?: string;
+  warranty?: string;
+  
+  status: QuoteStatus;
+  
+  // Assinatura e Quitação
+  providerSignature?: string;
+  clientSignature?: string;
+  signedAt?: string;
+  paidAt?: string;
+  receiptNumber?: string;
+  paymentMethod?: string;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProfessionalSchedule {
   providerId: string;
   workDays: string[];
@@ -314,4 +393,4 @@ export interface KYCDocument {
   createdAt: string;
 }
 
-export type EscrowPaymentStatus = 'pending' | 'in_escrow' | 'released_to_provider' | 'refunded';
+export type EscrowPaymentStatus = 'pending' | 'in_escrow' | 'released_to_provider' | 'refunded';

@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, MessageSquare, Calendar, Star, CheckCircle2, Megaphone, Mail,
   Briefcase, X, Clock, DollarSign, Heart, TrendingUp, Bell, ArrowRight,
-  ShieldCheck, MapPin
+  ShieldCheck, MapPin, Share2, Award, QrCode
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -12,6 +12,8 @@ import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd, UserRole, Appointment, ChatSession, SystemBroadcast, JobRequest } from '../types';
 import { ProfessionalScheduleModal } from '../components/ProfessionalScheduleModal';
 import { ProfessionalOnboardingModal } from '../components/ProfessionalOnboardingModal';
+import { ProfileCompletionWidget } from '../components/ProfileCompletionWidget';
+import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
 import { categoryIcon } from '../components/CategoryIcon';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -28,6 +30,7 @@ const DashboardHome: React.FC = () => {
   const [jobRequests, setJobRequests] = useState<JobRequest[]>([]);
   const [requesting, setRequesting] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showBusinessCardModal, setShowBusinessCardModal] = useState(false);
   const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [onboardingMode, setOnboardingMode] = useState<'onboarding' | 'request_provider' | 'request_verification'>('onboarding');
 
@@ -186,6 +189,12 @@ const DashboardHome: React.FC = () => {
                   <CheckCircle2 size={14} className="mr-1 text-emerald-600" /> Profissional Verificado
                 </span>
               )}
+              <button
+                onClick={() => setShowBusinessCardModal(true)}
+                className="bg-purple-50 text-purple-700 border border-purple-200 px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-purple-100 transition shadow-2xs"
+              >
+                <QrCode size={14} className="mr-1.5 text-purple-600" /> Cartão Digital
+              </button>
               <button
                 onClick={() => setShowScheduleModal(true)}
                 className="bg-gray-100 text-gray-700 px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-gray-200 transition"
@@ -365,6 +374,16 @@ const DashboardHome: React.FC = () => {
       {/* ========================================================================= */}
       {!isClient && (
         <div className="space-y-6">
+          {/* Widget de Conclusão de Perfil */}
+          <ProfileCompletionWidget
+            user={user}
+            ads={myAds}
+            onOpenKYC={() => {
+              setOnboardingMode('request_verification');
+              setOnboardingModalOpen(true);
+            }}
+          />
+
           {/* Faturamento e Desempenho */}
           <div>
             <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center">
@@ -467,6 +486,15 @@ const DashboardHome: React.FC = () => {
         closable={onboardingMode !== 'onboarding'}
         onSuccess={() => refreshUser()}
       />
+
+      {/* Modal de Cartão de Visitas Digital */}
+      {user && (
+        <DigitalBusinessCardModal
+          isOpen={showBusinessCardModal}
+          onClose={() => setShowBusinessCardModal(false)}
+          user={user}
+        />
+      )}
     </div>
   );
 };
