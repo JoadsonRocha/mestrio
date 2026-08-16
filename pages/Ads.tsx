@@ -128,12 +128,12 @@ const Ads: React.FC = () => {
               {ads.map(ad => (
                 <div key={ad.id} className="relative group">
                   <ServiceCard ad={ad} compact />
-                  <div className="absolute top-2 left-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link to={`/edit-ad/${ad.id}`} className="bg-white/90 text-gray-800 text-xs px-2 py-1 rounded shadow hover:bg-white font-medium">Editar</Link>
+                  <div className="absolute top-2 left-2 flex space-x-2 z-10">
+                    <Link to={`/edit-ad/${ad.id}`} className="bg-white/95 text-gray-800 text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-white font-bold border border-gray-200">Editar</Link>
                     <button
-                      onClick={() => handleDelete(ad.id)}
+                      onClick={(e) => { e.preventDefault(); handleDelete(ad.id); }}
                       disabled={deletingId === ad.id}
-                      className={`${confirmingId === ad.id ? 'bg-red-600' : 'bg-red-500/90'} text-white text-xs px-2 py-1 rounded shadow hover:bg-red-600 flex items-center disabled:opacity-50 transition-colors`}
+                      className={`${confirmingId === ad.id ? 'bg-red-600' : 'bg-red-500/95'} text-white text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-red-600 flex items-center font-bold disabled:opacity-50 transition-colors`}
                     >
                       <Trash2 size={12} className="mr-1" /> {deletingId === ad.id ? 'Excluindo...' : confirmingId === ad.id ? 'Confirmar?' : 'Excluir'}
                     </button>
