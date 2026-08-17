@@ -33,9 +33,45 @@ const DAY_ALIASES: Record<string, string> = {
 };
 
 /**
+ * Normaliza e extrai blocos de dias e horários de uma string de disponibilidade.
+ * Suporta formatos:
+ * 1) "Seg, Ter, Qua, 08:00 - 18:00"
+ * 2) "Seg: 08:00 - 18:00, Ter: 08:00 - 18:00, Sáb: 08:00 - 12:00"
+ */
+export interface ScheduleBlock {
+  days: string[];
+  startMinutes: number;
+  endMinutes: number;
+  startStr: string;
+  endStr: string;
+}
+
+export function parseAllScheduleBlocks(availability?: string): ScheduleBlock[] {
+  if (!availability) return [];
+  const clean = availability.trim();
+
+  // Verifica se tem formato com dois pontos para cada dia, ex: "Seg: 08:00 - 18:00"
+  if (clean.includes(':') && (clean.includes('Seg:') || clean.includes('Ter:') || clean.includes('Qua:') || clean.includes('Qui:') || clean.includes('Sex:') || clean.includes('Sáb:') || clean.includes('Sab:') || clean.includes('Dom:'))) {
+    const parts = clean.split(/,\s*(?=[A-Za-zÀ-ÿ]+:)/);
+    const blocks: ScheduleBlock[] = [];
+
+    for (const part of parts) {
+      const sub = parseAvailabilityString(part);
+      if (sub && sub.days.length > 0) {
+        blocks.push(sub);
+      }
+    }
+    if (blocks.length > 0) return blocks;
+  }
+
+  const single = parseAvailabilityString(clean);
+  return single ? [single] : [];
+}
+
+/**
  * Normaliza e extrai dias e horários de uma string de disponibilidade.
  */
-export function parseAvailabilityString(availability?: string): { days: string[]; startMinutes: number; endMinutes: number; startStr: string; endStr: string } | null {
+export function parseAvailabilityString(availability?: string): ScheduleBlock | null {
   if (!availability) return null;
 
   const clean = availability.trim();
@@ -56,7 +92,7 @@ export function parseAvailabilityString(availability?: string): { days: string[]
   const endStr = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
 
   const dayPart = clean.replace(timeMatch[0], '').toLowerCase();
-  const rawSegments = dayPart.split(/[,;\/\-e\s]+/).filter(Boolean);
+  const rawSegments = dayPart.split(/[,;:\/\-e\s]+/).filter(Boolean);
 
   const days: string[] = [];
   for (const raw of rawSegments) {
@@ -137,9 +173,9 @@ export function getBusinessStatus(availability?: string, now = new Date()): Busi
     };
   }
 
-  // 3. Parse estruturado de dias e horários
-  const parsed = parseAvailabilityString(availability);
-  if (!parsed) {
+  // 3. Parse estruturado de múltiplos blocos de dias e horários
+  const blocks = parseAllScheduleBlocks(availability);
+  if (blocks.length === 0) {
     return {
       isOpen: true,
       statusText: 'Disponível para contato',
@@ -153,13 +189,14 @@ export function getBusinessStatus(availability?: string, now = new Date()): Busi
   const currentDayId = DAY_MAP[now.getDay()];
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const isDayMatch = parsed.days.length === 0 || parsed.days.includes(currentDayId);
+  // Procura se hoje coincide com algum bloco
+  const matchingBlock = blocks.find(b => b.days.length === 0 || b.days.includes(currentDayId));
 
-  if (isDayMatch) {
-    if (currentMinutes >= parsed.startMinutes && currentMinutes <= parsed.endMinutes) {
+  if (matchingBlock) {
+    if (currentMinutes >= matchingBlock.startMinutes && currentMinutes <= matchingBlock.endMinutes) {
       return {
         isOpen: true,
-        statusText: `Atendendo Agora (Até às ${parsed.endStr})`,
+        statusText: `Atendendo Agora (Até às ${matchingBlock.endStr})`,
         badgeVariant: 'open',
         shortBadge: 'Atendendo Agora',
         colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -167,12 +204,12 @@ export function getBusinessStatus(availability?: string, now = new Date()): Busi
       };
     }
 
-    if (currentMinutes < parsed.startMinutes) {
+    if (currentMinutes < matchingBlock.startMinutes) {
       return {
         isOpen: false,
-        statusText: `Abre hoje às ${parsed.startStr}`,
+        statusText: `Abre hoje às ${matchingBlock.startStr}`,
         badgeVariant: 'closed',
-        shortBadge: `Abre às ${parsed.startStr}`,
+        shortBadge: `Abre às ${matchingBlock.startStr}`,
         colorClass: 'bg-amber-50 text-amber-700 border-amber-200',
         dotColorClass: 'bg-amber-400 ring-amber-200',
       };
@@ -180,7 +217,7 @@ export function getBusinessStatus(availability?: string, now = new Date()): Busi
 
     return {
       isOpen: false,
-      statusText: `Fechado no momento (Encerrou às ${parsed.endStr})`,
+      statusText: `Fechado no momento (Encerrou às ${matchingBlock.endStr})`,
       badgeVariant: 'closed',
       shortBadge: 'Fechado',
       colorClass: 'bg-gray-100 text-gray-600 border-gray-200',

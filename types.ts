@@ -153,6 +153,7 @@ export interface ServiceAd {
   whatsapp: string;
   availability?: string; 
   tags?: string[];
+  customAttributes?: Record<string, boolean | string>;
   isCertified?: boolean;
   providerAvatar?: string;
   status?: AdStatus;

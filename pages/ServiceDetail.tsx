@@ -1,8 +1,7 @@
 
-// Add React import to resolve namespace errors for FC and FormEvent
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye } from 'lucide-react';
+import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye, Sparkles } from 'lucide-react';
 import { store } from '../services/store';
 import { ServiceAd, Review } from '../types';
 import { RatingStars, Badge } from '../components/UI';
@@ -12,6 +11,7 @@ import { VerifiedBadge } from '../components/VerifiedBadge';
 import { getBusinessStatus } from '../utils/businessHours';
 import { MultiCriteriaBreakdown, MultiCriteriaRatingInput, ReviewCriteriaBadges } from '../components/MultiCriteriaReviewWidget';
 import { ReviewCriteria } from '../types';
+import { getCategoryAttributes } from '../utils/categoryAttributes';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -463,6 +463,26 @@ const ServiceDetail: React.FC = () => {
                         {ad.description}
                     </div>
                 </div>
+
+                {/* Diferenciais Técnicos e Qualificações (Directorist Pattern) */}
+                {ad.customAttributes && Object.keys(ad.customAttributes).some(k => ad.customAttributes![k]) && (
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Sparkles size={20} className="text-amber-500" /> Diferenciais & Garantias Técnicas
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {getCategoryAttributes(ad.category).filter(attr => ad.customAttributes?.[attr.id]).map(attr => (
+                                <div key={attr.id} className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 flex items-start gap-2.5">
+                                    <CheckCircle className="text-emerald-600 w-4 h-4 mt-0.5 shrink-0" />
+                                    <div>
+                                        <span className="text-xs font-bold text-emerald-950 block">{attr.label}</span>
+                                        <span className="text-[11px] text-emerald-800/80 block mt-0.5">{attr.description}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {ad.images.length > 1 && (
                     <div className="bg-white rounded-lg shadow-sm p-6">

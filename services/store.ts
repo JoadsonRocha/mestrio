@@ -197,7 +197,7 @@ class Store {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    query = query.range(from, to).order('created_at', { ascending: false });
+    query = query.range(from, to).order('is_premium', { ascending: false }).order('created_at', { ascending: false });
 
     let { data, error } = await query;
     
@@ -208,7 +208,7 @@ class Store {
       if (params?.providerId) fallbackQuery = fallbackQuery.eq('provider_id', params.providerId);
       else fallbackQuery = fallbackQuery.eq('status', 'approved');
       if (params?.location) fallbackQuery = fallbackQuery.ilike('location', `%${params.location}%`);
-      fallbackQuery = fallbackQuery.range(from, to).order('created_at', { ascending: false });
+      fallbackQuery = fallbackQuery.range(from, to).order('is_premium', { ascending: false }).order('created_at', { ascending: false });
 
       const fallbackRes = await fallbackQuery;
       if (!fallbackRes.error && fallbackRes.data) {
@@ -416,24 +416,79 @@ class Store {
   }
 
   async getUserProfile(userId: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('public_profiles')
-      .select('id, name, avatar, bio, location, role, is_certified')
-      .eq('id', userId)
-      .maybeSingle();
+    if (!userId) return null;
 
-    if (error || !data) return null;
-    return {
-      id: data.id,
-      name: data.name,
-      role: data.role as UserRole,
-      avatar: data.avatar,
-      location: data.location,
-      bio: data.bio,
-      isCertified: data.is_certified || false,
-      email: '', // omitted for privacy in public profile
-      phone: ''  // omitted for privacy unless needed (we can fetch later if required)
-    };
+    try {
+      // 1. Tenta buscar direto da tabela profiles
+      const { data: profileData, error: profileErr } = await supabase
+        .from('profiles')
+        .select('id, name, avatar, bio, location, role, is_certified, created_at')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!profileErr && profileData) {
+        return {
+          id: profileData.id,
+          name: profileData.name || 'Profissional',
+          role: (profileData.role as UserRole) || UserRole.PROVIDER,
+          avatar: profileData.avatar,
+          location: profileData.location,
+          bio: profileData.bio,
+          isCertified: Boolean(profileData.is_certified),
+          email: '', // omitido no perfil público
+          phone: '',
+          createdAt: profileData.created_at
+        };
+      }
+
+      // 2. Tenta view public_profiles
+      const { data: publicData, error: publicErr } = await supabase
+        .from('public_profiles')
+        .select('id, name, avatar, bio, location, role, is_certified')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!publicErr && publicData) {
+        return {
+          id: publicData.id,
+          name: publicData.name || 'Profissional',
+          role: (publicData.role as UserRole) || UserRole.PROVIDER,
+          avatar: publicData.avatar,
+          location: publicData.location,
+          bio: publicData.bio,
+          isCertified: Boolean(publicData.is_certified),
+          email: '',
+          phone: ''
+        };
+      }
+
+      // 3. Fallback: Recupera dados do prestador a partir de seus anúncios publicados
+      const { data: adData } = await supabase
+        .from('service_ads')
+        .select('provider_id, location, is_certified, profiles!provider_id(name, avatar, bio, location, role, is_certified)')
+        .eq('provider_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (adData) {
+        const prof = Array.isArray(adData.profiles) ? adData.profiles[0] : adData.profiles;
+        return {
+          id: userId,
+          name: prof?.name || 'Profissional Mestrio',
+          role: (prof?.role as UserRole) || UserRole.PROVIDER,
+          avatar: prof?.avatar,
+          location: prof?.location || adData.location,
+          bio: prof?.bio || '',
+          isCertified: Boolean(prof?.is_certified ?? adData.is_certified),
+          email: '',
+          phone: ''
+        };
+      }
+    } catch (err) {
+      console.warn("Store Warning [getUserProfile]:", err);
+    }
+
+    return null;
   }
 
   private normalizeUserInput(value: string): string {

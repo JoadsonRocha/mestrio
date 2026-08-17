@@ -12,18 +12,20 @@ import { AdStatus } from '../types';
 import { validateUploadCount, validateUploadFileContent } from '../utils/security';
 import { logSecurityWarning, logSecurityError } from '../services/audit';
 import { analyzeAdSafety } from '../services/adSafety';
+import { getCategoryAttributes } from '../utils/categoryAttributes';
+import { parseAllScheduleBlocks } from '../utils/businessHours';
 
 const DAYS_OF_WEEK = [
-  { id: 'seg', label: 'Seg' },
-  { id: 'ter', label: 'Ter' },
-  { id: 'qua', label: 'Qua' },
-  { id: 'qui', label: 'Qui' },
-  { id: 'sex', label: 'Sex' },
-  { id: 'sab', label: 'Sáb' },
-  { id: 'dom', label: 'Dom' },
-  { id: 'emergency', label: 'Emergências' },
-  { id: '24h', label: '24h' },
+  { id: 'seg', label: 'Seg', fullName: 'Segunda-feira' },
+  { id: 'ter', label: 'Ter', fullName: 'Terça-feira' },
+  { id: 'qua', label: 'Qua', fullName: 'Quarta-feira' },
+  { id: 'qui', label: 'Qui', fullName: 'Quinta-feira' },
+  { id: 'sex', label: 'Sex', fullName: 'Sexta-feira' },
+  { id: 'sab', label: 'Sáb', fullName: 'Sábado' },
+  { id: 'dom', label: 'Dom', fullName: 'Domingo' },
 ];
+
+type AvailabilityType = 'standard' | '24h' | 'emergency';
 
 const CreateAd: React.FC = () => {
   const navigate = useNavigate();
@@ -44,10 +46,24 @@ const CreateAd: React.FC = () => {
     keywords: '' 
   });
 
-  // Availability State
+  // Atributos customizados por especialidade (Directorist Pattern)
+  const [customAttributes, setCustomAttributes] = useState<Record<string, boolean>>({});
+
+  // Availability State Flexível
+  const [availabilityType, setAvailabilityType] = useState<AvailabilityType>('standard');
   const [selectedDays, setSelectedDays] = useState<string[]>(['seg', 'ter', 'qua', 'qui', 'sex']);
   const [hoursStart, setHoursStart] = useState('08:00');
   const [hoursEnd, setHoursEnd] = useState('18:00');
+  const [customDailyHours, setCustomDailyHours] = useState(false);
+  const [dailyHours, setDailyHours] = useState<Record<string, { start: string; end: string }>>({
+    seg: { start: '08:00', end: '18:00' },
+    ter: { start: '08:00', end: '18:00' },
+    qua: { start: '08:00', end: '18:00' },
+    qui: { start: '08:00', end: '18:00' },
+    sex: { start: '08:00', end: '18:00' },
+    sab: { start: '08:00', end: '12:00' },
+    dom: { start: '08:00', end: '12:00' },
+  });
 
   // Images State
   const [images, setImages] = useState<string[]>([]);
@@ -103,19 +119,42 @@ const CreateAd: React.FC = () => {
                 });
                 setImages(ad.images || []);
                 setTags(ad.tags || []);
+                setCustomAttributes((ad.customAttributes as Record<string, boolean>) || {});
                 setAdStatus(ad.status || null);
                 setAdRejectionReason(ad.rejectionReason);
                 setAdExpiresAt(ad.expiresAt);
                 
                 // Parse availability if possible, else leave defaults
-                // Format was: "Seg, Ter, 08:00 - 18:00"
                 if (ad.availability) {
-                    const parts = ad.availability.split(',');
-                    const timePart = parts[parts.length - 1].trim(); // "08:00 - 18:00"
-                    if (timePart.includes('-')) {
-                        const times = timePart.split('-');
-                        setHoursStart(times[0].trim());
-                        setHoursEnd(times[1].trim());
+                    const raw = ad.availability.toLowerCase();
+                    if (raw.includes('24h') || raw.includes('24 horas')) {
+                        setAvailabilityType('24h');
+                    } else if (raw.includes('emergencia') || raw.includes('emergência') || raw.includes('plantao') || raw.includes('plantão')) {
+                        setAvailabilityType('emergency');
+                    } else {
+                        setAvailabilityType('standard');
+                        if (ad.availability.includes(':') && (ad.availability.includes('Seg:') || ad.availability.includes('Sáb:') || ad.availability.includes('Sab:') || ad.availability.includes('Ter:'))) {
+                            setCustomDailyHours(true);
+                            const blocks = parseAllScheduleBlocks(ad.availability);
+                            const activeDays: string[] = [];
+                            const newDaily: Record<string, { start: string; end: string }> = { ...dailyHours };
+                            for (const b of blocks) {
+                                for (const day of b.days) {
+                                    activeDays.push(day);
+                                    newDaily[day] = { start: b.startStr, end: b.endStr };
+                                }
+                            }
+                            if (activeDays.length > 0) setSelectedDays(Array.from(new Set(activeDays)));
+                            setDailyHours(newDaily);
+                        } else {
+                            const parts = ad.availability.split(',');
+                            const timePart = parts[parts.length - 1].trim(); // "08:00 - 18:00"
+                            if (timePart.includes('-')) {
+                                const times = timePart.split('-');
+                                setHoursStart(times[0].trim());
+                                setHoursEnd(times[1].trim());
+                            }
+                        }
                     }
                 }
             } else {
@@ -341,9 +380,23 @@ const CreateAd: React.FC = () => {
         }
       }
 
-      // Format availability string
-      const selectedDayLabels = selectedDays.map(id => DAYS_OF_WEEK.find(d => d.id === id)?.label).join(', ');
-      const availabilityString = selectedDays.length > 0 ? `${selectedDayLabels}, ${hoursStart} - ${hoursEnd}` : '';
+      // Format availability string (Flexível: 24h, Emergência, Global ou por Dia)
+      let availabilityString = '';
+      if (availabilityType === '24h') {
+        availabilityString = 'Atendimento 24 Horas';
+      } else if (availabilityType === 'emergency') {
+        availabilityString = 'Plantão de Emergências 24h';
+      } else if (customDailyHours) {
+        const dayStrings = selectedDays.map(d => {
+          const dayInfo = DAYS_OF_WEEK.find(item => item.id === d);
+          const dHours = dailyHours[d] || { start: '08:00', end: '18:00' };
+          return `${dayInfo?.label || d}: ${dHours.start} - ${dHours.end}`;
+        });
+        availabilityString = dayStrings.length > 0 ? dayStrings.join(', ') : 'Horário Comercial';
+      } else {
+        const selectedDayLabels = selectedDays.map(id => DAYS_OF_WEEK.find(d => d.id === id)?.label).filter(Boolean).join(', ');
+        availabilityString = selectedDays.length > 0 ? `${selectedDayLabels}, ${hoursStart} - ${hoursEnd}` : 'Horário Comercial';
+      }
 
       if (isEditing && id) {
           await store.updateAd(id, {
@@ -359,6 +412,7 @@ const CreateAd: React.FC = () => {
               images: finalImages.length > 0 ? finalImages : undefined,
               availability: availabilityString,
               tags: tags,
+              customAttributes: customAttributes,
               riskScore: safetyCheck.riskScore,
               safetyFlags: safetyCheck.flags,
               safetyCategories: safetyCheck.categoriesDetected
@@ -386,6 +440,7 @@ const CreateAd: React.FC = () => {
               isPremium: false,
               availability: availabilityString,
               tags: tags,
+              customAttributes: customAttributes,
               riskScore: safetyCheck.riskScore,
               safetyFlags: safetyCheck.flags,
               safetyCategories: safetyCheck.categoriesDetected
@@ -519,6 +574,58 @@ const CreateAd: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Diferenciais Técnicos por Especialidade (Directorist Pattern) */}
+                {(() => {
+                    const categoryAttrs = getCategoryAttributes(formData.category);
+                    if (categoryAttrs.length === 0) return null;
+                    return (
+                        <div className="bg-brand-50/50 rounded-2xl p-4 sm:p-5 border border-brand-100 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-sm font-bold text-brand-950 flex items-center gap-1.5">
+                                        <Sparkles size={16} className="text-amber-500" /> Diferenciais Técnicos da Especialidade
+                                    </h4>
+                                    <p className="text-xs text-brand-700">Marque suas qualificações e diferenciais para ganhar mais destaque.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                {categoryAttrs.map((attr) => {
+                                    const checked = !!customAttributes[attr.id];
+                                    return (
+                                        <label
+                                            key={attr.id}
+                                            className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                                                checked ? 'bg-white border-brand-400 shadow-2xs ring-1 ring-brand-200' : 'bg-white/60 border-gray-200 hover:bg-white'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={(e) => {
+                                                    const isChecked = e.target.checked;
+                                                    setCustomAttributes(prev => ({
+                                                        ...prev,
+                                                        [attr.id]: isChecked,
+                                                    }));
+                                                    if (isChecked && !tags.includes(attr.label)) {
+                                                        setTags(prev => [...prev, attr.label]);
+                                                    }
+                                                }}
+                                                className="mt-0.5 rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-xs font-bold text-gray-900 block leading-snug">{attr.label}</span>
+                                                <span className="text-[11px] text-gray-500 leading-tight block mt-0.5">{attr.description}</span>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 {/* Photos Section */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Fotos do Serviço</label>
@@ -640,60 +747,201 @@ const CreateAd: React.FC = () => {
                     />
                 </div>
 
-                {/* Availability Section */}
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                        <Calendar size={16} className="mr-2 text-brand-600"/> Disponibilidade
-                    </h3>
-                    
-                    <div className="mb-4">
-                        <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Dias de Atendimento</label>
-                        <div className="flex flex-wrap gap-2">
-                            {DAYS_OF_WEEK.map(day => (
-                                <button
-                                    type="button"
-                                    key={day.id}
-                                    onClick={() => handleDayToggle(day.id)}
-                                    className={`
-                                        px-3 py-1 text-sm rounded-full border transition-all
-                                        ${selectedDays.includes(day.id) 
-                                            ? 'bg-brand-600 text-white border-brand-600 shadow-sm' 
-                                            : 'bg-white text-gray-600 border-gray-300 hover:border-brand-400'
-                                        }
-                                    `}
-                                >
-                                    {day.label}
-                                </button>
-                            ))}
-                        </div>
+                {/* Availability Section (Modos 24h, Emergência ou Horário Flexível por Dia) */}
+                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-gray-900 flex items-center">
+                            <Calendar size={18} className="mr-2 text-brand-600"/> Regime & Horários de Atendimento
+                        </h3>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Das</label>
-                            <div className="relative">
-                                <Clock className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
-                                <input 
-                                    type="time" 
-                                    value={hoursStart}
-                                    onChange={(e) => setHoursStart(e.target.value)}
-                                    className="w-full pl-9 border border-gray-300 rounded-md p-2 text-sm"
-                                />
+                    {/* 3 Opções de Regime */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <button
+                            type="button"
+                            onClick={() => setAvailabilityType('standard')}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                                availabilityType === 'standard'
+                                    ? 'bg-white border-brand-600 shadow-2xs ring-2 ring-brand-100'
+                                    : 'bg-white/70 border-gray-200 hover:bg-white text-gray-600'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2 mb-1">
+                                <Clock size={16} className={availabilityType === 'standard' ? 'text-brand-600' : 'text-gray-400'} />
+                                <span className="font-bold text-xs text-gray-900">Horário Comercial</span>
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Até as</label>
-                            <div className="relative">
-                                <Clock className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
-                                <input 
-                                    type="time" 
-                                    value={hoursEnd}
-                                    onChange={(e) => setHoursEnd(e.target.value)}
-                                    className="w-full pl-9 border border-gray-300 rounded-md p-2 text-sm"
-                                />
+                            <p className="text-[11px] text-gray-500">Dias e horários programados</p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setAvailabilityType('24h')}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                                availabilityType === '24h'
+                                    ? 'bg-emerald-50/80 border-emerald-500 shadow-2xs ring-2 ring-emerald-100'
+                                    : 'bg-white/70 border-gray-200 hover:bg-white text-gray-600'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span className="font-bold text-xs text-gray-900">Atendimento 24h</span>
                             </div>
-                        </div>
+                            <p className="text-[11px] text-gray-500">Sempre aberto ininterrupto</p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setAvailabilityType('emergency')}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                                availabilityType === 'emergency'
+                                    ? 'bg-rose-50/80 border-rose-500 shadow-2xs ring-2 ring-rose-100'
+                                    : 'bg-white/70 border-gray-200 hover:bg-white text-gray-600'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                <span className="font-bold text-xs text-gray-900">Plantão Emergências</span>
+                            </div>
+                            <p className="text-[11px] text-gray-500">Chamados urgentes 24h</p>
+                        </button>
                     </div>
+
+                    {/* Conteúdo específico por Regime */}
+                    {availabilityType === '24h' && (
+                        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2.5">
+                            <Clock size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                            <div>
+                                <strong className="font-bold block mb-0.5">Disponibilidade Total 24 Horas Ativa</strong>
+                                Os horários manuais são dispensados. Seu anúncio exibirá a tag de destaque <strong>🟢 24 Horas</strong> no topo das buscas e no perfil.
+                            </div>
+                        </div>
+                    )}
+
+                    {availabilityType === 'emergency' && (
+                        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5">
+                            <Clock size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                            <div>
+                                <strong className="font-bold block mb-0.5">Plantão de Emergências 24h Ativo</strong>
+                                Indicado para eletricistas, encanadores, chaveiros e socorros rápidos com tag <strong>🚨 Emergências</strong>.
+                            </div>
+                        </div>
+                    )}
+
+                    {availabilityType === 'standard' && (
+                        <div className="space-y-4 pt-1">
+                            {/* Seleção dos dias da semana */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-2">Selecione os Dias que Você Trabalha:</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {DAYS_OF_WEEK.map(day => {
+                                        const isSelected = selectedDays.includes(day.id);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={day.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        if (selectedDays.length > 1) {
+                                                            setSelectedDays(selectedDays.filter(d => d !== day.id));
+                                                        }
+                                                    } else {
+                                                        setSelectedDays([...selectedDays, day.id]);
+                                                    }
+                                                }}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                                                    isSelected
+                                                        ? 'bg-brand-600 text-white border-brand-600 shadow-2xs'
+                                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                {day.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Switch de Personalização por dia */}
+                            <div className="pt-2 border-t border-gray-200">
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={customDailyHours}
+                                        onChange={(e) => setCustomDailyHours(e.target.checked)}
+                                        className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                                    />
+                                    <span className="text-xs font-bold text-gray-800">
+                                        Definir horário diferente para cada dia (ex: Sábado meio período)
+                                    </span>
+                                </label>
+                            </div>
+
+                            {!customDailyHours ? (
+                                /* Horário Único para todos os dias */
+                                <div className="grid grid-cols-2 gap-3 bg-white p-3.5 rounded-xl border border-gray-200">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Horário de Início (Das)</label>
+                                        <input 
+                                            type="time" 
+                                            value={hoursStart}
+                                            onChange={(e) => setHoursStart(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-brand-500 focus:border-brand-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Horário de Encerramento (Até)</label>
+                                        <input 
+                                            type="time" 
+                                            value={hoursEnd}
+                                            onChange={(e) => setHoursEnd(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-brand-500 focus:border-brand-500"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Horários Individuais por Dia Marcado */
+                                <div className="space-y-2 bg-white p-3.5 rounded-xl border border-gray-200">
+                                    <p className="text-[11px] text-gray-500 mb-1">Ajuste o início e fim de cada dia marcado:</p>
+                                    {selectedDays.map(dayId => {
+                                        const dayInfo = DAYS_OF_WEEK.find(d => d.id === dayId);
+                                        const cur = dailyHours[dayId] || { start: '08:00', end: '18:00' };
+                                        return (
+                                            <div key={dayId} className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-100 last:border-0">
+                                                <span className="text-xs font-bold text-gray-800 w-24">{dayInfo?.fullName || dayId}</span>
+                                                <div className="flex items-center gap-2 flex-1 justify-end">
+                                                    <input
+                                                        type="time"
+                                                        value={cur.start}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setDailyHours(prev => ({
+                                                                ...prev,
+                                                                [dayId]: { ...(prev[dayId] || { end: '18:00' }), start: val }
+                                                            }));
+                                                        }}
+                                                        className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-brand-500"
+                                                    />
+                                                    <span className="text-xs text-gray-400">às</span>
+                                                    <input
+                                                        type="time"
+                                                        value={cur.end}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setDailyHours(prev => ({
+                                                                ...prev,
+                                                                [dayId]: { ...(prev[dayId] || { start: '08:00' }), end: val }
+                                                            }));
+                                                        }}
+                                                        className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-brand-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

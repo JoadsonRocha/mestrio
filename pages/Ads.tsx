@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Clock, Star, Megaphone, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Clock, Star, Megaphone, TrendingUp, Rocket } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { store } from '../services/store';
 import { ServiceAd, UserRole } from '../types';
 import { ServiceCard } from '../components/UI';
 import { useToast } from '../context/ToastContext';
+import { BoostAdModal } from '../components/BoostAdModal';
 
 const Ads: React.FC = () => {
   const { user, loading } = useAuth();
@@ -16,6 +17,20 @@ const Ads: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [boostingAd, setBoostingAd] = useState<ServiceAd | null>(null);
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    try {
+      await store.expireAds().catch(() => undefined);
+      const data = await store.getAds({ providerId: user.id });
+      setAds(data);
+    } catch (e) {
+      console.error("Erro ao carregar anúncios:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (loading) return;
@@ -27,20 +42,8 @@ const Ads: React.FC = () => {
       navigate('/dashboard');
       return;
     }
-
-    const load = async () => {
-      try {
-        await store.expireAds().catch(() => undefined);
-        const data = await store.getAds({ providerId: user.id });
-        setAds(data);
-      } catch (e) {
-        console.error("Erro ao carregar anúncios:", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     load();
-  }, [user, loading]);
+  }, [user, loading, navigate, load]);
 
   const handleDelete = async (id: string) => {
     if (confirmingId !== id) {
@@ -128,14 +131,27 @@ const Ads: React.FC = () => {
               {ads.map(ad => (
                 <div key={ad.id} className="relative group">
                   <ServiceCard ad={ad} compact />
-                  <div className="absolute top-2 left-2 flex space-x-2 z-10">
+                  <div className="absolute top-2 left-2 flex space-x-1.5 z-10">
                     <Link
                       to={`/edit-ad/${ad.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="bg-white/95 text-gray-800 text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-white font-bold border border-gray-200"
+                      className="bg-white/95 text-gray-800 text-xs px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-white font-bold border border-gray-200"
                     >
                       Editar
                     </Link>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setBoostingAd(ad);
+                      }}
+                      className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-sm flex items-center font-bold transition-transform active:scale-95"
+                      title="Destacar no topo da categoria"
+                    >
+                      <Rocket size={12} className="mr-1" /> Turbinar
+                    </button>
+
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -143,7 +159,7 @@ const Ads: React.FC = () => {
                         handleDelete(ad.id);
                       }}
                       disabled={deletingId === ad.id}
-                      className={`${confirmingId === ad.id ? 'bg-red-600' : 'bg-red-500/95'} text-white text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-red-600 flex items-center font-bold disabled:opacity-50 transition-colors`}
+                      className={`${confirmingId === ad.id ? 'bg-red-600' : 'bg-red-500/95'} text-white text-xs px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-red-600 flex items-center font-bold disabled:opacity-50 transition-colors`}
                     >
                       <Trash2 size={12} className="mr-1" /> {deletingId === ad.id ? 'Excluindo...' : confirmingId === ad.id ? 'Confirmar?' : 'Excluir'}
                     </button>
@@ -165,6 +181,16 @@ const Ads: React.FC = () => {
             </div>
           )}
         </div>
+
+      {/* Modal de Destaque Patrocinado */}
+      {boostingAd && (
+        <BoostAdModal
+          isOpen={!!boostingAd}
+          ad={boostingAd}
+          onClose={() => setBoostingAd(null)}
+          onSuccess={load}
+        />
+      )}
     </div>
   );
 };

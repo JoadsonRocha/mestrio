@@ -1337,5 +1337,17 @@ BEGIN
 END;
 $$;
 
+-- Coluna para atributos dinâmicos por categoria
+ALTER TABLE service_ads ADD COLUMN IF NOT EXISTS custom_attributes JSONB DEFAULT '{}'::jsonb;
+
+-- Permissão de leitura pública para perfis de prestadores (rota /profissional/:id)
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Leitura pública de perfis" ON profiles;
+CREATE POLICY "Leitura pública de perfis" ON profiles
+  FOR SELECT USING (true);
+
+
+
 
 
