@@ -5,7 +5,8 @@ import {
   Trash2, Check, X, Ban, RefreshCw, Clock, Shield, Star,
   Calendar, MessageSquare, CheckCircle2, TrendingUp, AlertTriangle, Eye,
   FileText, Download, Bell, Activity, Search, Filter, Layers, Sun, Moon,
-  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info, ShieldAlert, ShieldCheck, LogOut
+  ChevronRight, ArrowUpRight, BarChart2, PieChart, Info, ShieldAlert, ShieldCheck, LogOut,
+  Menu, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -237,6 +238,8 @@ const OwnerDashboard: React.FC = () => {
 
   const [isDark, setIsDark] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [searchTerm, setSearchTerm] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<UserRoleFilter>('all');
@@ -648,11 +651,17 @@ const OwnerDashboard: React.FC = () => {
     return true;
   });
 
-  const filteredAds = ads.filter(a =>
-    a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAds = ads.filter(a => {
+    const matchesSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'suspicious') return (a.riskScore && a.riskScore >= 25) || (a.safetyFlags && a.safetyFlags.length > 0);
+    return (a.status || 'pending') === filterStatus;
+  });
 
   // Power BI Card KPI Component
   const PBICard: React.FC<{
@@ -700,165 +709,237 @@ const OwnerDashboard: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? 'bg-[#0B0F17] text-slate-100' : 'bg-[#F1F5F9] text-slate-900'}`}>
 
-      {/* 🚀 POWER BI TOP HEADER BAR (ALTO CONTRASTE EXECUTIVO ESCURO) */}
-      <header className="bg-[#020617] border-b border-slate-800 border-t-4 border-t-[#F2C811] text-white px-4 py-3.5 sticky top-0 z-30 shadow-2xl">
-        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* 🚀 ADMIN EXECUTIVE TOP HEADER BAR (ALTA VISIBILIDADE, CONTRASTE NÍTIDO E LUXO) */}
+      <header className="bg-gradient-to-r from-[#0a0f1d] via-[#111827] to-[#0a0f1d] border-b-2 border-amber-500/40 text-white px-4 md:px-6 py-3.5 sticky top-0 z-30 shadow-2xl backdrop-blur-md">
+        <div className="max-w-[1920px] mx-auto flex items-center justify-between gap-4">
           
           {/* Logo & Platform Info */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-lg bg-[#F2C811] text-[#020617] font-black flex items-center justify-center shadow-lg shrink-0 ring-2 ring-[#F2C811]/20">
+          <div className="flex items-center gap-3 md:gap-4">
+            {/* Sidebar toggle button */}
+            <button
+              onClick={() => {
+                setIsSidebarOpen(!isSidebarOpen);
+                setIsMobileSidebarOpen(!isMobileSidebarOpen);
+              }}
+              className="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-slate-700 transition shadow-sm"
+              title="Recolher/Expandir Menu Lateral"
+            >
+              {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
+            </button>
+
+            <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0 ring-2 ring-amber-300">
               <BarChart2 size={24} strokeWidth={2.8} />
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                  Power BI Analytics <span className="text-[#F2C811] text-xs px-2.5 py-0.5 rounded-md bg-[#F2C811]/10 border border-[#F2C811]/30 font-bold uppercase tracking-wider">Mestrio Dashboard</span>
+                <h1 className="text-base md:text-lg font-black tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
+                  Mestrio <span className="text-amber-400 font-extrabold text-xs px-2 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/30 uppercase tracking-wider">Admin</span>
                 </h1>
                 {user.isOwner ? (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold uppercase tracking-wider shadow-sm">Dono Master</span>
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/50 font-extrabold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                    <Shield size={11} className="text-purple-300" /> Dono Master
+                  </span>
                 ) : (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-extrabold uppercase tracking-wider shadow-sm">Admin</span>
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-200 border border-blue-400/50 font-extrabold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                    <Shield size={11} className="text-blue-300" /> Admin
+                  </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 font-medium flex items-center gap-2 mt-0.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-                Painel de Controle de Negócios & Métricas ao Vivo
+              <p className="text-[11px] text-slate-300 font-medium hidden sm:flex items-center gap-2 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]" />
+                Centro de Operações & Moderação em Tempo Real
               </p>
             </div>
           </div>
 
           {/* Quick Actions Header Toolbar */}
-          <div className="flex items-center gap-2.5 flex-wrap text-xs">
+          <div className="flex items-center gap-2 md:gap-2.5 flex-wrap text-xs">
+            <Link
+              to="/"
+              className="px-3 py-1.5 md:py-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold transition shadow-sm flex items-center gap-1.5"
+            >
+              <Layers size={14} className="text-amber-400" /> <span className="hidden sm:inline">Ver Plataforma</span>
+            </Link>
+
             <button
               onClick={refreshAllData}
               disabled={isRefreshing}
-              className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 flex items-center gap-2 font-bold transition shadow-sm disabled:opacity-50"
+              className="px-3 py-1.5 md:py-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-100 border border-slate-600 flex items-center gap-2 font-bold transition shadow-sm disabled:opacity-50"
             >
-              <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-[#F2C811]' : ''} />
-              {isRefreshing ? 'Atualizando...' : 'Atualizar Dados'}
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-amber-400' : 'text-amber-400'} />
+              <span className="hidden sm:inline">{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
             </button>
 
             <div className="relative group">
               <button
-                className="px-4 py-2 rounded-lg bg-[#F2C811] hover:bg-[#d4af0e] text-[#020617] font-black flex items-center gap-2 transition shadow-lg"
+                className="px-3 py-1.5 md:py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black flex items-center gap-2 transition shadow-lg shadow-amber-500/20"
               >
-                <Download size={14} strokeWidth={2.5} /> Exportar Relatórios
+                <Download size={14} strokeWidth={2.5} /> <span className="hidden md:inline">Exportar</span>
               </button>
-              <div className="absolute right-0 mt-1 hidden group-hover:block w-52 bg-[#090D16] border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50">
+              <div className="absolute right-0 mt-1 hidden group-hover:block w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50">
                 <button onClick={handleExportUsers} className="w-full text-left px-3.5 py-2 hover:bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-2">
-                  <Users size={14} className="text-[#F2C811]" /> Exportar Usuários (CSV)
+                  <Users size={14} className="text-amber-400" /> Exportar Usuários (CSV)
                 </button>
                 <button onClick={handleExportAds} className="w-full text-left px-3.5 py-2 hover:bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-2">
-                  <Megaphone size={14} className="text-[#F2C811]" /> Exportar Anúncios (CSV)
+                  <Megaphone size={14} className="text-amber-400" /> Exportar Anúncios (CSV)
                 </button>
               </div>
             </div>
 
             <button
               onClick={() => setIsDark(!isDark)}
-              className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-[#F2C811] border border-slate-700/80 transition shadow-sm"
+              className="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-slate-600 transition shadow-sm"
               title="Alternar Tema Claro/Escuro"
             >
-              {isDark ? <Sun size={17} className="text-[#F2C811]" /> : <Moon size={17} className="text-slate-300" />}
+              {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-slate-200" />}
             </button>
 
             <button
               onClick={handleAdminLogout}
-              className="px-3.5 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition shadow-sm flex items-center gap-1.5"
+              className="px-3 py-1.5 md:py-2 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-200 border border-rose-500/40 font-bold transition shadow-sm flex items-center gap-1.5"
             >
-              <LogOut size={14} /> Sair
+              <LogOut size={14} /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* 🎛️ POWER BI SLICERS / FILTERS TOOLBAR (FUNDO SLATE ESCURO E CONTRASTE) */}
-      <section className="bg-[#0B0F17] border-b border-slate-800 text-white px-4 py-3 shadow-inner">
-        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
+      {/* 🎛️ POWER BI SLICERS / FILTERS TOOLBAR (CONTRASTE NÍTIDO) */}
+      <section className="bg-slate-900 border-b border-slate-800 text-white px-4 md:px-6 py-2.5 shadow-md">
+        <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
           
           {/* Date Range Slicers */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-            <span className="font-extrabold text-slate-300 mr-2 flex items-center gap-1 uppercase tracking-wider text-[11px]">
-              <Filter size={13} className="text-[#F2C811]" /> Fatiador de Período:
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+            <span className="font-black text-amber-400 mr-1 flex items-center gap-1 uppercase tracking-wider text-[11px]">
+              <Filter size={13} className="text-amber-400" /> Período:
             </span>
             {(['7d', '30d', '90d', 'all'] as DateRange[]).map(r => (
               <button
                 key={r}
                 onClick={() => setDateRange(r)}
-                className={`px-3.5 py-1.5 rounded-lg font-extrabold transition text-xs ${
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-xs shadow-sm ${
                   dateRange === r
-                    ? 'bg-[#F2C811] text-[#0F172A] shadow-md'
-                    : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700'
+                    ? 'bg-amber-400 text-slate-950 font-black ring-2 ring-amber-300'
+                    : 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 hover:text-white'
                 }`}
               >
-                {r === '7d' ? 'Últimos 7 dias' : r === '30d' ? 'Últimos 30 dias' : r === '90d' ? 'Últimos 90 dias' : 'Todo o Histórico'}
+                {r === '7d' ? '7 dias' : r === '30d' ? '30 dias' : r === '90d' ? '90 dias' : 'Tudo'}
               </button>
             ))}
           </div>
 
           {/* Quick Search Filter */}
           <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Pesquisar em relatórios, usuários, anúncios ou categorias..."
-              className="w-full pl-9 pr-3 py-2 rounded-lg text-xs border border-slate-600 bg-slate-900 text-white placeholder-slate-400 outline-none transition focus:border-[#F2C811] font-medium"
+              placeholder="Pesquisar em relatórios, usuários, anúncios..."
+              className="w-full pl-10 pr-3 py-2 rounded-lg text-xs border border-slate-700 bg-slate-950 text-white placeholder-slate-400 outline-none transition focus:border-amber-400 focus:ring-1 focus:ring-amber-400 font-medium shadow-inner"
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
-                <X size={13} />
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                <X size={14} />
               </button>
             )}
           </div>
         </div>
       </section>
 
+      {/* 📊 MAIN LAYOUT COM MENU LATERAL (SIDEBAR) */}
+      <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row min-h-[calc(100vh-120px)]">
 
-      {/* 📊 MAIN POWER BI CANVAS */}
-      <main className="max-w-[1700px] mx-auto p-4 md:p-6 space-y-6">
+        {/* 🧭 MENU LATERAL (SIDEBAR) RESPONSIVO */}
+        <aside
+          className={`
+            ${isSidebarOpen ? 'md:w-64 lg:w-72' : 'md:w-20'} 
+            ${isMobileSidebarOpen ? 'block' : 'hidden md:block'}
+            bg-white dark:bg-[#0E131F] border-r border-slate-200 dark:border-slate-800 transition-all duration-300 shrink-0 z-20 flex flex-col
+          `}
+        >
+          <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <span className={`text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 ${!isSidebarOpen && 'hidden md:hidden'}`}>
+              Navegação do Sistema
+            </span>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition mx-auto"
+              title={isSidebarOpen ? 'Recolher Menu' : 'Expandir Menu'}
+            >
+              {isSidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeft size={16} />}
+            </button>
+          </div>
 
-        {/* 📑 POWER BI REPORT TABS HEADER */}
-        <nav className="flex items-center gap-2 border-b border-slate-500/20 overflow-x-auto pb-1">
-          {(['overview', 'ads', 'users', 'reports', 'kyc', 'categories', 'audit', 'broadcasts', 'settings'] as Tab[]).map(t => {
-            const labels: Record<Tab, { name: string; icon: any; badge?: number }> = {
-              overview: { name: 'Painel Executivo', icon: LayoutDashboard },
-              ads: { name: 'Matriz de Anúncios', icon: Megaphone, badge: stats?.adsPending },
-              users: { name: 'Usuários & Permissões', icon: Users },
-              reports: { name: 'Denúncias & Disputas', icon: ShieldAlert, badge: reports.filter(r => r.status === 'pending').length },
-              kyc: { name: 'Validação KYC', icon: ShieldCheck, badge: kycDocs.filter(k => k.status === 'pending').length },
-              categories: { name: 'Gestão de Categorias', icon: FolderOpen },
-              audit: { name: 'Trilha de Auditoria', icon: FileText },
-              broadcasts: { name: 'Central de Comunicados', icon: Bell },
-              settings: { name: 'Configurações de Sistema', icon: Settings2 },
-            };
-            const item = labels[t];
-            const isActive = tab === t;
+          <nav className="p-2.5 space-y-1 flex-1 overflow-y-auto">
+            {(['overview', 'ads', 'users', 'reports', 'kyc', 'categories', 'audit', 'broadcasts', 'settings'] as Tab[]).map(t => {
+              const labels: Record<Tab, { name: string; icon: any; badge?: number }> = {
+                overview: { name: 'Painel Executivo', icon: LayoutDashboard },
+                ads: { name: 'Matriz de Anúncios', icon: Megaphone, badge: stats?.adsPending },
+                users: { name: 'Usuários & Permissões', icon: Users },
+                reports: { name: 'Denúncias & Disputas', icon: ShieldAlert, badge: reports.filter(r => r.status === 'pending').length },
+                kyc: { name: 'Validação KYC', icon: ShieldCheck, badge: kycDocs.filter(k => k.status === 'pending').length },
+                categories: { name: 'Gestão de Categorias', icon: FolderOpen },
+                audit: { name: 'Trilha de Auditoria', icon: FileText },
+                broadcasts: { name: 'Central de Comunicados', icon: Bell },
+                settings: { name: 'Configurações de Sistema', icon: Settings2 },
+              };
+              const item = labels[t];
+              const isActive = tab === t;
 
-            return (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-semibold text-xs transition border-b-2 whitespace-nowrap ${
-                  isActive
-                    ? 'border-[#F2C811] text-[#F2C811] bg-[#F2C811]/10'
-                    : isDark
-                    ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
-              >
-                {React.createElement(item.icon, { size: 15 })}
-                {item.name}
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full font-extrabold bg-amber-500 text-slate-950">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+              return (
+                <button
+                  key={t}
+                  onClick={() => {
+                    setTab(t);
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs transition ${
+                    isActive
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-black'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title={item.name}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={isActive ? 'text-slate-950' : 'text-amber-500 dark:text-amber-400'}>
+                      {React.createElement(item.icon, { size: 18, strokeWidth: isActive ? 2.5 : 2 })}
+                    </span>
+                    {isSidebarOpen && <span className="truncate">{item.name}</span>}
+                  </div>
+
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span
+                      className={`px-2 py-0.5 text-[10px] rounded-full font-black ${
+                        isActive
+                          ? 'bg-slate-950 text-amber-300'
+                          : 'bg-rose-500 text-white shadow-sm'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Sidebar Footer Info */}
+          {isSidebarOpen && (
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+              <div className="flex items-center justify-between font-semibold">
+                <span>Versão do Painel</span>
+                <span className="text-amber-500 font-mono">v2.5.0</span>
+              </div>
+              <div className="text-[10px] text-slate-400">
+                Conexão Supabase Segura (RLS Ativo)
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* 📊 MAIN POWER BI CANVAS */}
+        <main className="flex-1 p-4 md:p-6 space-y-6 overflow-x-hidden">
 
         {/* 1️⃣ OVERVIEW REPORT TAB */}
         {activeTab === 'overview' && (
@@ -1064,6 +1145,18 @@ const OwnerDashboard: React.FC = () => {
                     {s === 'all' ? 'Todos' : STATUS_LABEL[s as AdStatus]}
                   </button>
                 ))}
+                <button
+                  onClick={() => setFilterStatus('suspicious')}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 ${
+                    filterStatus === 'suspicious'
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : isDark
+                      ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30'
+                      : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                  }`}
+                >
+                  <AlertTriangle size={12} /> 🚨 Suspeitos / Alertas
+                </button>
               </div>
             </div>
 
@@ -1071,30 +1164,63 @@ const OwnerDashboard: React.FC = () => {
               {filteredAds.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs">
                   <Megaphone size={32} className="mx-auto mb-2 opacity-40 text-slate-400" />
-                  Nenhum anúncio encontrado {filterStatus !== 'all' ? `com o status "${STATUS_LABEL[filterStatus as AdStatus]}"` : ''}.
+                  Nenhum anúncio encontrado {filterStatus === 'suspicious' ? 'com alertas de suspeita' : filterStatus !== 'all' ? `com o status "${STATUS_LABEL[filterStatus as AdStatus]}"` : ''}.
                 </div>
               ) : (
                 filteredAds.map(ad => (
                   <div key={ad.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-500/5 transition">
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{ad.title}</h3>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider ${STATUS_STYLE[ad.status || 'pending']}`}>
-                          {STATUS_LABEL[ad.status || 'pending']}
-                        </span>
+                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                      {/* Foto do Anúncio ou Avatar do Profissional */}
+                      <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        {ad.images && ad.images[0] ? (
+                          <img src={ad.images[0]} alt={ad.title} className="w-full h-full object-cover" />
+                        ) : ad.providerAvatar ? (
+                          <img src={ad.providerAvatar} alt={ad.providerName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-amber-500 font-bold text-base">
+                            {(ad.providerName || 'P').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {ad.providerAvatar && ad.images && ad.images[0] && (
+                          <img
+                            src={ad.providerAvatar}
+                            alt={ad.providerName}
+                            title={`Profissional: ${ad.providerName}`}
+                            className="absolute bottom-1 right-1 w-5 h-5 rounded-full border border-white dark:border-slate-900 object-cover shadow-sm"
+                          />
+                        )}
                       </div>
-                      <p className="text-xs text-slate-400 line-clamp-1">{ad.description}</p>
-                      <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap font-mono">
-                        <span>Profissional: <strong className={isDark ? 'text-slate-200' : 'text-slate-700'}>{ad.providerName}</strong></span>
-                        <span>Cat: <strong className={isDark ? 'text-slate-200' : 'text-slate-700'}>{ad.category}</strong></span>
-                        <span className="flex items-center gap-1"><Eye size={12} /> {ad.views || 0} views</span>
-                        <span className="flex items-center gap-1"><Star size={12} className="text-amber-500 fill-amber-500" /> {ad.rating || 0}</span>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{ad.title}</h3>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider ${STATUS_STYLE[ad.status || 'pending']}`}>
+                            {STATUS_LABEL[ad.status || 'pending']}
+                          </span>
+                          {((ad.riskScore && ad.riskScore >= 25) || (ad.safetyFlags && ad.safetyFlags.length > 0)) && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold flex items-center gap-1">
+                              <AlertTriangle size={10} /> Risco {ad.riskScore || 50}/100: {ad.safetyFlags?.[0] || 'Suspeita'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 line-clamp-1">{ad.description}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap font-mono">
+                          <span className="flex items-center gap-1.5 font-sans">
+                            <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-500 text-[10px] font-bold inline-flex items-center justify-center">
+                              {(ad.providerName || 'P').charAt(0).toUpperCase()}
+                            </span>
+                            Profissional: <strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>{ad.providerName || 'Não identificado'}</strong>
+                          </span>
+                          <span>Cat: <strong className={isDark ? 'text-slate-200' : 'text-slate-700'}>{ad.category}</strong></span>
+                          <span className="flex items-center gap-1"><Eye size={12} /> {ad.views || 0} views</span>
+                          <span className="flex items-center gap-1"><Star size={12} className="text-amber-500 fill-amber-500" /> {ad.rating || 0}</span>
+                        </div>
+                        {ad.rejectionReason && (
+                          <p className="text-xs text-rose-500 flex items-center gap-1 font-semibold mt-1">
+                            <AlertTriangle size={13} /> Motivo da Rejeição: {ad.rejectionReason}
+                          </p>
+                        )}
                       </div>
-                      {ad.rejectionReason && (
-                        <p className="text-xs text-rose-500 flex items-center gap-1 font-semibold mt-1">
-                          <AlertTriangle size={13} /> Motivo da Rejeição: {ad.rejectionReason}
-                        </p>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -1734,7 +1860,8 @@ const OwnerDashboard: React.FC = () => {
           </div>
         )}
 
-      </main>
+        </main>
+      </div>
 
       {/* 🔐 MODAL DE PERMISSÕES RBAC PARA ADMINS */}
       {editingPerms && (
@@ -1810,6 +1937,31 @@ const OwnerDashboard: React.FC = () => {
                 <h3 className="font-bold text-xs text-[#F2C811] uppercase tracking-wider flex items-center gap-1.5">
                   <Megaphone size={16} /> Detalhes do Anúncio
                 </h3>
+
+                {/* Painel de Análise de Risco / Segurança */}
+                {((inspectAd.riskScore && inspectAd.riskScore > 0) || (inspectAd.safetyFlags && inspectAd.safetyFlags.length > 0)) && (
+                  <div className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+                    (inspectAd.riskScore || 0) >= 50
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="flex items-center gap-1">
+                        <AlertTriangle size={14} /> Auditoria de Risco IA / Segurança
+                      </span>
+                      <span className="font-mono px-2 py-0.5 rounded bg-black/40 text-xs">
+                        Score: {inspectAd.riskScore || 0}/100
+                      </span>
+                    </div>
+                    {inspectAd.safetyFlags && inspectAd.safetyFlags.length > 0 && (
+                      <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-300 pt-1">
+                        {inspectAd.safetyFlags.map((f, idx) => (
+                          <li key={idx}>{f}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
 
                 {/* Fotos */}
                 {inspectAd.images && inspectAd.images.length > 0 ? (

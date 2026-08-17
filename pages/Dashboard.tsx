@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { store } from '../services/store';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -46,7 +47,7 @@ const Dashboard: React.FC = () => {
       badge: unreadChatCount > 0 ? unreadChatCount : undefined 
     },
     { to: '/dashboard/appointments', label: 'Meus Agendamentos', icon: Calendar },
-    { to: '/dashboard/job-requests', label: isClient ? 'Solicitar Orçamento' : 'Oportunidades', icon: Briefcase },
+    { to: '/dashboard/job-requests', label: isClient ? 'Solicitar Serviço' : 'Mural de Pedidos', icon: Briefcase },
     ...(isClient 
       ? [{ to: '/dashboard/favorites', label: 'Favoritos', icon: Heart }] 
       : [
@@ -87,12 +88,15 @@ const Dashboard: React.FC = () => {
                   className="w-16 h-16 rounded-full object-cover ring-2 ring-brand-500/20 shadow-sm" 
                 />
                 {user.isCertified && (
-                  <span className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full shadow-sm" title="Profissional Certificado">
-                    <CheckCircle2 size={12} />
+                  <span className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full shadow-sm" title="Profissional Certificado Mestrio">
+                    <VerifiedBadge size={18} />
                   </span>
                 )}
               </div>
-              <h2 className="text-base font-bold text-gray-900 truncate max-w-full">{user.name}</h2>
+              <h2 className="text-base font-bold text-gray-900 truncate max-w-full flex items-center justify-center gap-1.5">
+                <span>{user.name}</span>
+                {user.isCertified && <VerifiedBadge size={16} />}
+              </h2>
               <p className="text-gray-500 text-xs truncate max-w-full mb-2">{user.email}</p>
               
               <div className="flex items-center gap-1.5 flex-wrap justify-center">
@@ -104,10 +108,7 @@ const Dashboard: React.FC = () => {
                   {isClient ? 'Cliente' : 'Profissional'}
                 </span>
                 {user.isCertified && (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
-                    <UserCheck size={10} />
-                    Verificado
-                  </span>
+                  <VerifiedBadge showText text="Verificado" />
                 )}
               </div>
             </div>

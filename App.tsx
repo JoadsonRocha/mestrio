@@ -61,7 +61,7 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/dashboard\/appointments/, title: 'Meus Agendamentos' },
   { match: /^\/dashboard\/ads/, title: 'Meus Anúncios' },
   { match: /^\/dashboard\/favorites/, title: 'Favoritos' },
-  { match: /^\/dashboard\/job-requests/, title: 'Solicitações de Orçamento' },
+  { match: /^\/dashboard\/job-requests/, title: 'Pedidos de Serviços' },
   { match: /^\/dashboard\/quote-builder/, title: 'Gerador de Orçamentos IA' },
   { match: /^\/dashboard/, title: 'Meu Painel' },
   { match: /^\/owner/, title: 'Painel do Dono' },

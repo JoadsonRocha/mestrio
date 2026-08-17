@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { AdStatus } from '../types';
 import { validateUploadCount, validateUploadFileContent } from '../utils/security';
 import { logSecurityWarning, logSecurityError } from '../services/audit';
+import { analyzeAdSafety } from '../services/adSafety';
 
 const DAYS_OF_WEEK = [
   { id: 'seg', label: 'Seg' },
@@ -308,6 +309,26 @@ const CreateAd: React.FC = () => {
       if (formData.whatsapp && formData.whatsapp.replace(/\D/g, '').length < 10) {
         throw new Error('Número de WhatsApp inválido.');
       }
+
+      // Verificação de Segurança e Conteúdo Proibido (Sexualidade, Fraudes, etc.)
+      const safetyCheck = analyzeAdSafety({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        price: Number(formData.price) || 0,
+        priceUnit: formData.priceUnit as 'job' | 'hour' | 'estimate',
+        tags: tags
+      });
+
+      if (safetyCheck.isCriticalBlocked) {
+        logSecurityWarning('ad.content_blocked', 'Anúncio bloqueado por violação das diretrizes de segurança', {
+          flags: safetyCheck.flags,
+          categories: safetyCheck.categoriesDetected,
+          userId: user.id
+        });
+        throw new Error(safetyCheck.userMessage || 'Seu anúncio contém termos não permitidos pelas diretrizes do Mestrio.');
+      }
+
       // Upload new images to Supabase Storage (keep existing URLs in edit mode)
       const finalImages: string[] = [];
       for (let i = 0; i < images.length; i++) {
@@ -337,7 +358,10 @@ const CreateAd: React.FC = () => {
               whatsapp: formData.whatsapp,
               images: finalImages.length > 0 ? finalImages : undefined,
               availability: availabilityString,
-              tags: tags
+              tags: tags,
+              riskScore: safetyCheck.riskScore,
+              safetyFlags: safetyCheck.flags,
+              safetyCategories: safetyCheck.categoriesDetected
           });
           if (adStatus === 'rejected') {
               await store.updateAdStatus(id, 'pending');
@@ -361,7 +385,10 @@ const CreateAd: React.FC = () => {
               images: finalImages.length > 0 ? finalImages : ['https://picsum.photos/400/300?random=' + Math.floor(Math.random() * 100)],
               isPremium: false,
               availability: availabilityString,
-              tags: tags
+              tags: tags,
+              riskScore: safetyCheck.riskScore,
+              safetyFlags: safetyCheck.flags,
+              safetyCategories: safetyCheck.categoriesDetected
           });
           toast('Anúncio enviado para análise. Ele será publicado após a aprovação.', 'success');
           navigate('/dashboard');
@@ -706,6 +733,15 @@ const CreateAd: React.FC = () => {
                             onChange={handleInputChange}
                         />
                         <p className="text-xs text-gray-500 mt-1">Com DDI e DDD (ex: 5511999999999).</p>
+                    </div>
+                </div>
+
+                {/* Security Guidelines Notice */}
+                <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                        <strong className="text-slate-800 font-semibold block mb-0.5">Diretrizes da Comunidade Mestrio:</strong>
+                        É estritamente proibido anunciar conteúdo adulto, acompanhantes, serviços de cunho sexual, esquemas de renda fácil/fraudes financeiras ou preços irreais. Todos os anúncios passam por verificação automática e moderação ativa.
                     </div>
                 </div>
 

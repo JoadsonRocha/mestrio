@@ -492,46 +492,50 @@ export const QuoteBuilder: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 bg-gray-50 p-4 md:p-6 overflow-y-auto print:bg-white print:p-0">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="flex-1 bg-slate-50/80 p-3 md:p-5 overflow-y-auto print:bg-white print:p-0">
+      <div className="max-w-6xl mx-auto space-y-4">
         
-        {/* Banner Superior com Ações Principais */}
-        <div className="bg-gradient-to-r from-blue-900 via-brand-800 to-slate-900 rounded-2xl p-6 text-white shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 print:hidden">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-xs rounded-full text-xs font-semibold text-blue-200 mb-2">
-              <Calculator size={14} /> Sistema Avançado de Orçamentos Comerciais
+        {/* Banner Superior com Ações Principais (Compacto e Elegante) */}
+        <div className="bg-gradient-to-r from-slate-900 via-brand-900 to-slate-900 rounded-xl p-4 md:p-5 text-white shadow-md border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3.5 print:hidden">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-brand-500/20 border border-brand-400/30 rounded-full text-[11px] font-semibold text-brand-200">
+              <Calculator size={13} className="text-amber-400" /> Sistema de Orçamentos Profissionais
             </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight">Gerador & Emissor de Orçamentos</h1>
-            <p className="text-blue-100 text-sm mt-1 max-w-2xl">
-              Crie propostas comerciais de alto impacto, exporte em <strong>PDF Timbrado</strong> ou <strong>Word (.docx)</strong>, importe arquivos existentes e envie direto no WhatsApp do cliente.
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              Gerador de Orçamentos <span className="text-amber-400 text-xs px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 font-bold uppercase tracking-wider">Mestrio Pro</span>
+            </h1>
+            <p className="text-slate-300 text-xs max-w-xl line-clamp-1 md:line-clamp-none">
+              Propostas comerciais completas com exportação em <strong>PDF Timbrado</strong>, <strong>Word (.docx)</strong> e envio direto no WhatsApp.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               onClick={() => setIsTemplatesModalOpen(true)}
-              className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition flex items-center gap-2 border border-white/20"
+              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-100 font-semibold text-xs rounded-lg transition flex items-center gap-1.5 border border-slate-700 shadow-sm"
+              title="Modelos Prontos de Orçamento"
             >
-              <Layers size={15} className="text-amber-300" />
-              Modelos Rápidos
+              <Layers size={14} className="text-amber-400" />
+              <span>Modelos</span>
             </button>
 
             <button
               onClick={() => setIsImportModalOpen(true)}
-              className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition flex items-center gap-2 border border-white/20"
+              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-100 font-semibold text-xs rounded-lg transition flex items-center gap-1.5 border border-slate-700 shadow-sm"
+              title="Importar Documento Word ou PDF"
             >
-              <UploadCloud size={15} className="text-blue-300" />
-              Importar DOCX / PDF
+              <UploadCloud size={14} className="text-blue-400" />
+              <span>Importar</span>
             </button>
 
             <button
               onClick={() => setIsHistoryDrawerOpen(true)}
-              className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition flex items-center gap-2 border border-white/20 relative"
+              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-100 font-semibold text-xs rounded-lg transition flex items-center gap-1.5 border border-slate-700 shadow-sm relative"
             >
-              <FolderOpen size={15} className="text-emerald-300" />
-              Meus Orçamentos
+              <FolderOpen size={14} className="text-emerald-400" />
+              <span>Histórico</span>
               {savedQuotes.length > 0 && (
-                <span className="bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                <span className="bg-emerald-500 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full ml-0.5">
                   {savedQuotes.length}
                 </span>
               )}
@@ -540,113 +544,113 @@ export const QuoteBuilder: React.FC = () => {
             <button
               onClick={handleGenerateAI}
               disabled={isGeneratingAI}
-              className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 disabled:opacity-50"
+              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg shadow-sm transition flex items-center gap-1.5 disabled:opacity-50 active:scale-95"
             >
               {isGeneratingAI ? (
-                <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-950 border-t-transparent"></span>
+                <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-950 border-t-transparent"></span>
               ) : (
-                <Sparkles size={15} />
+                <Sparkles size={14} />
               )}
-              {isGeneratingAI ? 'Gerando...' : 'Gerar com IA'}
+              <span>{isGeneratingAI ? 'Gerando...' : 'IA Auto-Completar'}</span>
             </button>
           </div>
         </div>
 
         {/* Layout Principal: Formulário de Edição & Pré-visualização Lateral */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           
           {/* LADO ESQUERDO: Formulário Modular (7 Colunas) */}
-          <div className="lg:col-span-7 space-y-5 print:hidden">
+          <div className="lg:col-span-7 space-y-3.5 print:hidden">
             
             {/* Seletor de Abas do Formulário */}
-            <div className="bg-white rounded-2xl p-1.5 shadow-xs border border-gray-200 flex flex-wrap gap-1">
+            <div className="bg-white rounded-xl p-1 shadow-xs border border-gray-200/90 flex flex-wrap gap-1">
               <button
                 type="button"
                 onClick={() => setActiveTab('items')}
-                className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                   activeTab === 'items'
                     ? 'bg-brand-600 text-white shadow-xs'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                <Tag size={14} /> Itens & Valores ({items.length})
+                <Tag size={13} /> Itens & Valores ({items.length})
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('client')}
-                className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                   activeTab === 'client'
                     ? 'bg-brand-600 text-white shadow-xs'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                <User size={14} /> Dados do Cliente
+                <User size={13} /> Cliente
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('provider')}
-                className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                   activeTab === 'provider'
                     ? 'bg-brand-600 text-white shadow-xs'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                <CreditCard size={14} /> Meus Dados & PIX
+                <CreditCard size={13} /> Meus Dados
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('terms')}
-                className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                   activeTab === 'terms'
                     ? 'bg-brand-600 text-white shadow-xs'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                <ShieldCheck size={14} /> Condições & Taxas
+                <ShieldCheck size={13} /> Condições & Prazos
               </button>
             </div>
 
             {/* Conteúdo da Aba 1: ITENS & VALORES */}
             {activeTab === 'items' && (
-              <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-200 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+              <div className="bg-white rounded-xl p-4 md:p-5 shadow-xs border border-gray-200/90 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
                   <div>
-                    <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                      <FileText size={18} className="text-brand-600" /> Itens, Mão de Obra e Materiais
+                    <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                      <FileText size={16} className="text-brand-600" /> Itens, Mão de Obra e Materiais
                     </h2>
-                    <p className="text-xs text-gray-500">Discrimine cada etapa do serviço para transparência com o cliente</p>
+                    <p className="text-[11px] text-gray-500">Discrimine serviços, materiais e etapas do trabalho</p>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto border border-brand-200"
+                    className="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-xs rounded-lg transition flex items-center gap-1 self-start sm:self-auto border border-brand-200"
                   >
-                    <Plus size={15} /> Adicionar Item
+                    <Plus size={14} /> Adicionar Item
                   </button>
                 </div>
 
                 {/* Título & Categoria da Proposta */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Título / Assunto da Proposta</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Título / Assunto da Proposta</label>
                     <input
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      placeholder="Ex: Reforma Elétrica Completa e Troca de Disjuntores"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      placeholder="Ex: Reforma Elétrica e Substituição de Disjuntores"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Categoria Principal</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Categoria Principal</label>
                     <select
                       value={category}
                       onChange={e => setCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none bg-white font-medium"
                     >
                       <option value="Eletricista">Eletricista</option>
                       <option value="Encanador">Encanador</option>
@@ -663,34 +667,34 @@ export const QuoteBuilder: React.FC = () => {
 
                 {/* Descrição do Problema / Prompt IA */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Descrição Detalhada do Problema / Necessidade (usada também pela IA):
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                    Descrição Detalhada da Necessidade (usada pelo auto-completar IA):
                   </label>
                   <textarea
                     rows={2}
                     value={problemDescription}
                     onChange={e => setProblemDescription(e.target.value)}
-                    placeholder="Ex: Troca de fiação de 2 chuveiros para 6mm² + substituição de disjuntor bipolar 40A que está desarmando."
-                    className="w-full p-2.5 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    placeholder="Ex: Troca de fiação para 6mm² + substituição de disjuntor bipolar 40A."
+                    className="w-full p-2 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none leading-relaxed"
                   />
                 </div>
 
-                {/* Lista de Itens */}
-                <div className="space-y-3">
+                {/* Lista de Itens (Cards Compactos & Densidade Visual Otimizada) */}
+                <div className="space-y-2">
                   {items.map((item, index) => (
                     <div
                       key={item.id}
-                      className="p-3.5 bg-gray-50/80 hover:bg-gray-50 rounded-xl border border-gray-200 space-y-2.5 transition"
+                      className="p-2.5 bg-slate-50/70 hover:bg-slate-50 rounded-lg border border-gray-200/80 space-y-2 transition shadow-2xs"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 bg-brand-100 text-brand-700 rounded-full text-[10px] font-black flex items-center justify-center">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-4 h-4 bg-brand-100 text-brand-700 rounded-full text-[10px] font-black flex items-center justify-center">
                             {index + 1}
                           </span>
                           <select
                             value={item.type}
                             onChange={e => handleUpdateItem(item.id, 'type', e.target.value)}
-                            className="text-[11px] font-semibold bg-white border border-gray-300 rounded-lg px-2 py-1 focus:ring-1 focus:ring-brand-500"
+                            className="text-[11px] font-bold bg-white border border-gray-300 rounded-md px-1.5 py-0.5 focus:ring-1 focus:ring-brand-500"
                           >
                             <option value="labor">🛠️ Mão de Obra</option>
                             <option value="material">📦 Material</option>
@@ -700,9 +704,9 @@ export const QuoteBuilder: React.FC = () => {
                           </select>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-gray-800">
-                            Total: {formatCurrency(item.quantity * item.unitPrice)}
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-gray-200">
+                            {formatCurrency(item.quantity * item.unitPrice)}
                           </span>
                           <button
                             type="button"
@@ -711,7 +715,7 @@ export const QuoteBuilder: React.FC = () => {
                             className="p-1 text-gray-400 hover:text-red-600 rounded transition disabled:opacity-30"
                             title="Remover Item"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
@@ -721,52 +725,52 @@ export const QuoteBuilder: React.FC = () => {
                         type="text"
                         value={item.description}
                         onChange={e => handleUpdateItem(item.id, 'description', e.target.value)}
-                        placeholder="Descrição clara do item, peça ou mão de obra"
-                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                        placeholder="Descrição do item, peça ou serviço executado"
+                        className="w-full px-2.5 py-1 bg-white border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none font-medium"
                       />
 
                       {/* Qtd, Unidade e Preço Unitário */}
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-1.5">
                         <div>
-                          <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Quantidade</label>
+                          <label className="block text-[9px] font-bold text-gray-500 mb-0.5">Quantidade</label>
                           <input
                             type="number"
                             min="0.1"
                             step="any"
                             value={item.quantity}
                             onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs text-center focus:ring-1 focus:ring-brand-500"
+                            className="w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-xs text-center focus:ring-1 focus:ring-brand-500 font-semibold"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Unidade</label>
+                          <label className="block text-[9px] font-bold text-gray-500 mb-0.5">Unidade</label>
                           <select
                             value={item.unit}
                             onChange={e => handleUpdateItem(item.id, 'unit', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500"
+                            className="w-full px-1.5 py-1 bg-white border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-brand-500 font-medium"
                           >
                             <option value="un">un (Unidade)</option>
                             <option value="hrs">hrs (Horas)</option>
                             <option value="serviço">serviço</option>
-                            <option value="m²">m² (Metro Quadrado)</option>
+                            <option value="m²">m² (Metro²)</option>
                             <option value="m">m (Metro Linear)</option>
                             <option value="diária">diária</option>
-                            <option value="kit">kit / conjunto</option>
+                            <option value="kit">kit / conj.</option>
                             <option value="gl">gl (Galão)</option>
                             <option value="kg">kg (Quilo)</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Preço Unitário (R$)</label>
+                          <label className="block text-[9px] font-bold text-gray-500 mb-0.5">Valor Unitário (R$)</label>
                           <input
                             type="number"
                             min="0"
                             step="any"
                             value={item.unitPrice}
                             onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs text-right font-semibold focus:ring-1 focus:ring-brand-500"
+                            className="w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-xs text-right font-bold text-brand-700 focus:ring-1 focus:ring-brand-500"
                           />
                         </div>
                       </div>
@@ -774,18 +778,18 @@ export const QuoteBuilder: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="pt-2 flex justify-between items-center border-t">
+                <div className="pt-2 flex justify-between items-center border-t border-gray-100">
                   <button
                     type="button"
                     onClick={handleAddItem}
                     className="text-xs font-bold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1"
                   >
-                    <Plus size={15} /> Adicionar mais um item
+                    <Plus size={14} /> Adicionar mais um item
                   </button>
 
                   <div className="text-right">
-                    <span className="text-xs text-gray-500">Subtotal dos Itens: </span>
-                    <span className="text-sm font-bold text-gray-900">{formatCurrency(subtotal)}</span>
+                    <span className="text-[11px] text-gray-500">Subtotal dos Itens: </span>
+                    <span className="text-xs font-black text-gray-900">{formatCurrency(subtotal)}</span>
                   </div>
                 </div>
               </div>
@@ -793,78 +797,78 @@ export const QuoteBuilder: React.FC = () => {
 
             {/* Conteúdo da Aba 2: DADOS DO CLIENTE */}
             {activeTab === 'client' && (
-              <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-200 space-y-4">
-                <div className="border-b pb-3">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <User size={18} className="text-brand-600" /> Informações do Cliente & Local da Obra
+              <div className="bg-white rounded-xl p-4 md:p-5 shadow-xs border border-gray-200/90 space-y-3.5">
+                <div className="border-b border-gray-100 pb-2.5">
+                  <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                    <User size={16} className="text-brand-600" /> Informações do Cliente & Local
                   </h2>
-                  <p className="text-xs text-gray-500">Preencha para personalizar o cabeçalho do documento oficial</p>
+                  <p className="text-[11px] text-gray-500">Dados do destinatário no cabeçalho do documento</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Nome Completo do Cliente *</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Nome Completo do Cliente *</label>
                     <div className="relative">
-                      <User size={16} className="absolute left-3 top-3 text-gray-400" />
+                      <User size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                       <input
                         type="text"
                         value={clientName}
                         onChange={e => setClientName(e.target.value)}
                         placeholder="Ex: Carla Vasconcelos"
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        className="w-full pl-8 pr-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">WhatsApp / Telefone *</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">WhatsApp / Telefone *</label>
                     <div className="relative">
-                      <Phone size={16} className="absolute left-3 top-3 text-gray-400" />
+                      <Phone size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                       <input
                         type="text"
                         value={clientPhone}
                         onChange={e => setClientPhone(e.target.value)}
                         placeholder="Ex: (11) 98765-4321"
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        className="w-full pl-8 pr-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">E-mail do Cliente (Opcional)</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">E-mail (Opcional)</label>
                     <div className="relative">
-                      <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
+                      <Mail size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                       <input
                         type="email"
                         value={clientEmail}
                         onChange={e => setClientEmail(e.target.value)}
                         placeholder="Ex: cliente@email.com"
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        className="w-full pl-8 pr-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">CPF ou CNPJ (Opcional)</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">CPF ou CNPJ (Opcional)</label>
                     <input
                       type="text"
                       value={clientDocument}
                       onChange={e => setClientDocument(e.target.value)}
                       placeholder="Ex: 123.456.789-00"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Endereço de Execução do Serviço</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Endereço de Execução do Serviço</label>
                     <div className="relative">
-                      <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
+                      <MapPin size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                       <input
                         type="text"
                         value={clientAddress}
                         onChange={e => setClientAddress(e.target.value)}
-                        placeholder="Ex: Rua das Flores, 142 - Apto 34B - Jardim Paulista, SP"
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        placeholder="Ex: Rua das Flores, 142 - Apto 34B - São Paulo, SP"
+                        className="w-full pl-8 pr-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -874,78 +878,78 @@ export const QuoteBuilder: React.FC = () => {
 
             {/* Conteúdo da Aba 3: DADOS DO PRESTADOR & PIX */}
             {activeTab === 'provider' && (
-              <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-200 space-y-4">
-                <div className="border-b pb-3">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <CreditCard size={18} className="text-brand-600" /> Dados Comerciais do Prestador & Chave PIX
+              <div className="bg-white rounded-xl p-4 md:p-5 shadow-xs border border-gray-200/90 space-y-3.5">
+                <div className="border-b border-gray-100 pb-2.5">
+                  <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                    <CreditCard size={16} className="text-brand-600" /> Dados Comerciais do Prestador & PIX
                   </h2>
-                  <p className="text-xs text-gray-500">Suas informações aparecerão no cabeçalho e rodapé do documento comercial</p>
+                  <p className="text-[11px] text-gray-500">Exibidos no rodapé do documento e comprovante</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Nome Comercial / Razão Social</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Nome Comercial / Razão Social</label>
                     <input
                       type="text"
                       value={providerName}
                       onChange={e => setProviderName(e.target.value)}
                       placeholder="Ex: Silva Manutenções Elétricas"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Seu CPF ou CNPJ / MEI</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">CPF ou CNPJ / MEI</label>
                     <input
                       type="text"
                       value={providerDocument}
                       onChange={e => setProviderDocument(e.target.value)}
                       placeholder="Ex: 00.000.000/0001-00"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Telefone / WhatsApp Profissional</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Telefone / WhatsApp Profissional</label>
                     <input
                       type="text"
                       value={providerPhone}
                       onChange={e => setProviderPhone(e.target.value)}
                       placeholder="Ex: (11) 99999-8888"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Chave PIX p/ Pagamento de Entrada</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Chave PIX (Entrada ou Quitação)</label>
                     <input
                       type="text"
                       value={providerPixKey}
                       onChange={e => setProviderPixKey(e.target.value)}
                       placeholder="Ex: financeiro@silva.com ou Celular"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">E-mail Profissional</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">E-mail Profissional</label>
                     <input
                       type="email"
                       value={providerEmail}
                       onChange={e => setProviderEmail(e.target.value)}
                       placeholder="Ex: contato@profissionais.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Cidade / Estado de Atuação</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Cidade / Região de Atuação</label>
                     <input
                       type="text"
                       value={providerCity}
                       onChange={e => setProviderCity(e.target.value)}
                       placeholder="Ex: São Paulo, SP"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -954,43 +958,43 @@ export const QuoteBuilder: React.FC = () => {
 
             {/* Conteúdo da Aba 4: CONDIÇÕES, DESCONTOS & TAXAS */}
             {activeTab === 'terms' && (
-              <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-200 space-y-4">
-                <div className="border-b pb-3">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <ShieldCheck size={18} className="text-brand-600" /> Condições Comerciais, Descontos & Prazos
+              <div className="bg-white rounded-xl p-4 md:p-5 shadow-xs border border-gray-200/90 space-y-3.5">
+                <div className="border-b border-gray-100 pb-2.5">
+                  <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                    <ShieldCheck size={16} className="text-brand-600" /> Condições Comerciais, Prazos & Assinaturas
                   </h2>
-                  <p className="text-xs text-gray-500">Defina garantias, formas de pagamento e descontos promocionais</p>
+                  <p className="text-[11px] text-gray-500">Defina garantias, descontos e colete assinaturas</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Prazo de Execução</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Prazo de Execução</label>
                     <input
                       type="text"
                       value={estimatedDays}
                       onChange={e => setEstimatedDays(e.target.value)}
                       placeholder="Ex: 1 dia útil"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Validade da Proposta</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Validade da Proposta</label>
                     <input
                       type="text"
                       value={validityDays}
                       onChange={e => setValidityDays(e.target.value)}
                       placeholder="Ex: 15 dias"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Status da Proposta</label>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Status da Proposta</label>
                     <select
                       value={status}
                       onChange={e => setStatus(e.target.value as QuoteStatus)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white font-semibold"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none bg-white font-semibold"
                     >
                       <option value="draft">🟡 Rascunho</option>
                       <option value="sent">🔵 Enviado ao Cliente</option>
@@ -1002,16 +1006,16 @@ export const QuoteBuilder: React.FC = () => {
                 </div>
 
                 {/* Descontos e Taxa de Deslocamento */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/80 p-3 rounded-lg border border-gray-200">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1 flex items-center justify-between">
                       <span>Desconto Aplicado</span>
-                      <div className="inline-flex rounded-md shadow-2xs">
+                      <div className="inline-flex rounded-md overflow-hidden border border-gray-300">
                         <button
                           type="button"
                           onClick={() => setDiscountType('percent')}
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded-l-md ${
-                            discountType === 'percent' ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-700'
+                          className={`px-2 py-0.5 text-[10px] font-bold ${
+                            discountType === 'percent' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-700'
                           }`}
                         >
                           %
@@ -1019,8 +1023,8 @@ export const QuoteBuilder: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setDiscountType('fixed')}
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded-r-md ${
-                            discountType === 'fixed' ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-700'
+                          className={`px-2 py-0.5 text-[10px] font-bold ${
+                            discountType === 'fixed' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-700'
                           }`}
                         >
                           R$
@@ -1033,13 +1037,13 @@ export const QuoteBuilder: React.FC = () => {
                       value={discountValue}
                       onChange={e => setDiscountValue(parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none font-semibold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Taxa de Deslocamento / Visita (R$)
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                      Taxa de Visita / Deslocamento (R$)
                     </label>
                     <input
                       type="number"
@@ -1047,54 +1051,56 @@ export const QuoteBuilder: React.FC = () => {
                       value={travelFee}
                       onChange={e => setTravelFee(parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Condições de Pagamento</label>
+                    <input
+                      type="text"
+                      value={paymentTerms}
+                      onChange={e => setPaymentTerms(e.target.value)}
+                      placeholder="Ex: 50% no início e 50% na entrega"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Termos de Garantia</label>
+                    <input
+                      type="text"
+                      value={warranty}
+                      onChange={e => setWarranty(e.target.value)}
+                      placeholder="Ex: 90 dias sobre mão de obra"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Condições de Pagamento</label>
-                  <input
-                    type="text"
-                    value={paymentTerms}
-                    onChange={e => setPaymentTerms(e.target.value)}
-                    placeholder="Ex: 50% na aprovação (PIX) e 50% na conclusão"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Termos de Garantia</label>
-                  <input
-                    type="text"
-                    value={warranty}
-                    onChange={e => setWarranty(e.target.value)}
-                    placeholder="Ex: 90 dias conforme CDC sobre serviços executados."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Observações Gerais</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Observações Gerais</label>
                   <textarea
                     rows={2}
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
-                    placeholder="Observações complementares sobre acesso, materiais não inclusos, etc."
-                    className="w-full p-2.5 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    placeholder="Observações complementares, avisos de materiais, etc."
+                    className="w-full p-2 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none leading-relaxed"
                   />
                 </div>
 
                 {/* Bloco de Assinaturas Digitais */}
-                <div className="pt-3 border-t border-gray-200">
+                <div className="pt-2.5 border-t border-gray-100">
                   <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                    <PenTool size={14} className="text-brand-600" /> Assinaturas Digitais no Documento
+                    <PenTool size={13} className="text-brand-600" /> Assinaturas Digitais
                   </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {/* Assinatura do Prestador */}
-                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-gray-200 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-gray-700">
                         <span>Prestador (Emitente)</span>
                         {providerSignature ? (
                           <span className="text-emerald-600 text-[11px] font-bold flex items-center gap-1">
@@ -1106,15 +1112,15 @@ export const QuoteBuilder: React.FC = () => {
                       </div>
 
                       {providerSignature ? (
-                        <div className="bg-white p-2 rounded-lg border border-gray-200 flex items-center justify-between">
-                          <img src={providerSignature} alt="Assinatura Prestador" className="h-10 object-contain max-w-[120px]" />
+                        <div className="bg-white p-1.5 rounded border border-gray-200 flex items-center justify-between">
+                          <img src={providerSignature} alt="Assinatura Prestador" className="h-8 object-contain max-w-[100px]" />
                           <button
                             type="button"
                             onClick={() => {
                               setSignatureRole('provider');
                               setIsSignatureModalOpen(true);
                             }}
-                            className="text-xs text-brand-600 hover:underline font-medium"
+                            className="text-xs text-brand-600 hover:underline font-semibold"
                           >
                             Refazer
                           </button>
@@ -1126,16 +1132,16 @@ export const QuoteBuilder: React.FC = () => {
                             setSignatureRole('provider');
                             setIsSignatureModalOpen(true);
                           }}
-                          className="w-full py-2 bg-white hover:bg-brand-50 border border-brand-300 text-brand-700 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5"
+                          className="w-full py-1.5 bg-white hover:bg-brand-50 border border-brand-300 text-brand-700 text-xs font-bold rounded-md transition flex items-center justify-center gap-1.5"
                         >
-                          <PenTool size={13} /> Assinar Documento
+                          <PenTool size={12} /> Assinar Documento
                         </button>
                       )}
                     </div>
 
                     {/* Assinatura do Cliente */}
-                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-gray-200 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-gray-700">
                         <span>Cliente (Aprovação)</span>
                         {clientSignature ? (
                           <span className="text-emerald-600 text-[11px] font-bold flex items-center gap-1">
@@ -1147,15 +1153,15 @@ export const QuoteBuilder: React.FC = () => {
                       </div>
 
                       {clientSignature ? (
-                        <div className="bg-white p-2 rounded-lg border border-gray-200 flex items-center justify-between">
-                          <img src={clientSignature} alt="Assinatura Cliente" className="h-10 object-contain max-w-[120px]" />
+                        <div className="bg-white p-1.5 rounded border border-gray-200 flex items-center justify-between">
+                          <img src={clientSignature} alt="Assinatura Cliente" className="h-8 object-contain max-w-[100px]" />
                           <button
                             type="button"
                             onClick={() => {
                               setSignatureRole('client');
                               setIsSignatureModalOpen(true);
                             }}
-                            className="text-xs text-brand-600 hover:underline font-medium"
+                            className="text-xs text-brand-600 hover:underline font-semibold"
                           >
                             Refazer
                           </button>
@@ -1167,9 +1173,9 @@ export const QuoteBuilder: React.FC = () => {
                             setSignatureRole('client');
                             setIsSignatureModalOpen(true);
                           }}
-                          className="w-full py-2 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5"
+                          className="w-full py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-bold rounded-md transition flex items-center justify-center gap-1.5"
                         >
-                          <CheckSquare size={13} /> Coletar Aceite do Cliente
+                          <CheckSquare size={12} /> Coletar Aceite do Cliente
                         </button>
                       )}
                     </div>
@@ -1179,13 +1185,13 @@ export const QuoteBuilder: React.FC = () => {
             )}
 
             {/* Barra de Ações Rápidas Abaixo do Form */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-3 rounded-xl border border-gray-200/90 shadow-xs">
               <button
                 type="button"
                 onClick={handleResetForm}
-                className="px-3 py-2 text-xs font-bold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition flex items-center gap-1.5"
+                className="px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition flex items-center gap-1.5"
               >
-                <RotateCcw size={14} /> Novo Orçamento (Limpar)
+                <RotateCcw size={13} /> Limpar Formulário
               </button>
 
               <div className="flex items-center gap-2">
@@ -1193,10 +1199,10 @@ export const QuoteBuilder: React.FC = () => {
                   type="button"
                   onClick={handleSaveQuote}
                   disabled={isSaving}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5 disabled:opacity-50 active:scale-95"
                 >
-                  <Save size={14} />
-                  {isSaving ? 'Salvando...' : 'Salvar no Histórico'}
+                  <Save size={13} />
+                  <span>{isSaving ? 'Salvando...' : 'Salvar no Histórico'}</span>
                 </button>
               </div>
             </div>
@@ -1204,75 +1210,75 @@ export const QuoteBuilder: React.FC = () => {
           </div>
 
           {/* LADO DIREITO: Pré-visualização do Documento & Download/Exportação (5 Colunas) */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-5 space-y-3">
             
-            <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 space-y-5 sticky top-4">
+            <div className="bg-slate-900 text-white rounded-xl p-4 md:p-5 shadow-lg border border-slate-800 space-y-4 sticky top-4">
               
               {/* Header do Box */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                  <h3 className="font-bold text-sm text-slate-100">Documento Oficial</h3>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                  <h3 className="font-bold text-xs text-slate-100">Documento de Proposta Comercial</h3>
                 </div>
-                <span className="text-[11px] font-mono bg-blue-500/20 text-blue-300 px-2.5 py-1 rounded-full font-bold">
+                <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold border border-blue-500/30">
                   {quoteNumber}
                 </span>
               </div>
 
               {/* Prévia Formatada dos Dados */}
-              <div className="bg-slate-950/90 rounded-xl p-4 font-mono text-[11px] text-slate-300 space-y-2.5 max-h-72 overflow-y-auto whitespace-pre-wrap border border-slate-800 leading-relaxed shadow-inner">
+              <div className="bg-slate-950 rounded-lg p-3 font-mono text-[11px] text-slate-300 space-y-1.5 max-h-60 overflow-y-auto whitespace-pre-wrap border border-slate-800 leading-relaxed shadow-inner">
                 {generateFormattedQuoteText().text}
               </div>
 
-              {/* Totalizador Destacado */}
-              <div className="pt-2 border-t border-slate-800 space-y-1.5">
-                <div className="flex justify-between text-xs text-slate-400">
+              {/* Totalizador Destacado Compacto */}
+              <div className="pt-1.5 border-t border-slate-800 space-y-1">
+                <div className="flex justify-between text-[11px] text-slate-400">
                   <span>Subtotal ({items.length} itens):</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discountValue > 0 && (
-                  <div className="flex justify-between text-xs text-red-400 font-semibold">
+                  <div className="flex justify-between text-[11px] text-red-400 font-semibold">
                     <span>Desconto ({discountType === 'percent' ? `${discountValue}%` : 'Fixo'}):</span>
                     <span>- {formatCurrency(discountAmount)}</span>
                   </div>
                 )}
                 {travelFee > 0 && (
-                  <div className="flex justify-between text-xs text-blue-300">
+                  <div className="flex justify-between text-[11px] text-blue-300">
                     <span>Taxa Deslocamento:</span>
                     <span>+ {formatCurrency(travelFee)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-between pt-1.5 border-t border-slate-800">
                   <span className="text-xs font-bold text-slate-300">VALOR TOTAL:</span>
-                  <span className="text-2xl font-black text-amber-400">{formatCurrency(totalAmount)}</span>
+                  <span className="text-xl font-black text-amber-400">{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
 
-              {/* Botões de Exportação / Download */}
-              <div className="space-y-2 pt-2">
+              {/* Botões de Exportação / Download (Refinados) */}
+              <div className="space-y-1.5 pt-1">
                 
-                {/* Botão WhatsApp */}
+                {/* Botão WhatsApp Principal */}
                 <button
                   onClick={handleSendWhatsApp}
-                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95"
                 >
-                  <Send size={16} /> Enviar Orçamento no WhatsApp
+                  <Send size={14} /> Enviar Orçamento no WhatsApp
                 </button>
 
                 {/* Grade de Exportação PDF / DOCX */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <button
                     onClick={handleExportPDF}
-                    className="py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
+                    className="py-2 bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs border border-red-500/30"
                   >
-                    <Download size={15} /> Baixar PDF
+                    <Download size={13} /> Baixar PDF
                   </button>
 
                   <button
                     onClick={handleExportDOCX}
-                    className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
+                    className="py-2 bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs border border-blue-500/30"
                   >
-                    <FileText size={15} /> Baixar Word (.docx)
+                    <FileText size={13} /> Baixar Word (.docx)
                   </button>
                 </div>
 
@@ -1288,26 +1294,26 @@ export const QuoteBuilder: React.FC = () => {
                       toast('Erro ao emitir recibo em PDF.', 'error');
                     }
                   }}
-                  className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs"
+                  className="w-full py-1.5 bg-teal-600/90 hover:bg-teal-600 text-white font-semibold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs border border-teal-500/30"
                 >
-                  <Receipt size={15} /> Emitir Recibo & Quitação (PDF)
+                  <Receipt size={13} /> Emitir Recibo & Quitação (PDF)
                 </button>
 
                 {/* Copiar Texto & Imprimir */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <button
                     onClick={handleCopy}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700"
+                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-lg transition flex items-center justify-center gap-1 border border-slate-700"
                   >
-                    {copied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
-                    {copied ? 'Copiado!' : 'Copiar Texto'}
+                    {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                    <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
                   </button>
 
                   <button
                     onClick={handlePrint}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700"
+                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-lg transition flex items-center justify-center gap-1 border border-slate-700"
                   >
-                    <Printer size={15} /> Imprimir
+                    <Printer size={13} /> Imprimir
                   </button>
                 </div>
 

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { User, ServiceAd } from '../types';
 import { useToast } from '../context/ToastContext';
+import { VerifiedBadge } from './VerifiedBadge';
 
 interface DigitalBusinessCardModalProps {
   isOpen: boolean;
@@ -93,21 +94,31 @@ export const DigitalBusinessCardModal: React.FC<DigitalBusinessCardModalProps> =
                   <Sparkles size={12} className="text-amber-400" /> MESTRIO PRO
                 </span>
                 {user.isCertified && (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                    <ShieldCheck size={13} /> Verificado
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-blue-200 bg-blue-900/70 px-2.5 py-0.5 rounded-full border border-blue-400/40">
+                    <VerifiedBadge size={14} /> Verificado
                   </span>
                 )}
               </div>
 
               {/* Informações do Profissional */}
               <div className="flex items-center gap-3.5 pt-1">
-                <img
-                  src={user.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`}
-                  alt={user.name}
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md"
-                />
+                <div className="relative">
+                  <img
+                    src={user.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`}
+                    alt={user.name}
+                    className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md"
+                  />
+                  {user.isCertified && (
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 p-0.5 rounded-full shadow-sm">
+                      <VerifiedBadge size={16} />
+                    </span>
+                  )}
+                </div>
                 <div>
-                  <h4 className="font-black text-lg text-white leading-tight">{user.name}</h4>
+                  <h4 className="font-black text-lg text-white leading-tight flex items-center gap-1.5">
+                    <span>{user.name}</span>
+                    {user.isCertified && <VerifiedBadge size="sm" />}
+                  </h4>
                   <div className="flex items-center gap-1 text-amber-400 text-xs font-bold mt-0.5">
                     <Star size={13} fill="currentColor" />
                     <span>{avgRating}</span>

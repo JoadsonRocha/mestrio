@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck } from 'lucide-react';
+import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
 import { store } from '../services/store';
@@ -86,7 +86,15 @@ export const Navbar: React.FC = () => {
           </div>
           
           <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
-            {(!user || user.role !== 'CLIENT') && (
+            {user?.role === 'CLIENT' ? (
+              <Link 
+                to="/dashboard/job-requests" 
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors"
+              >
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Solicitar Serviço
+              </Link>
+            ) : (
               <Link 
                 to="/create-ad" 
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors"
@@ -156,6 +164,15 @@ export const Navbar: React.FC = () => {
                           <LayoutDashboard className="w-4 h-4 text-gray-400" />
                           Meu Painel
                         </button>
+                        {user.role === 'PROVIDER' && (
+                          <button
+                            onClick={() => handleNav(`/profissional/${user.id}`)}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-blue-700 hover:bg-blue-50 transition-colors text-left font-medium"
+                          >
+                            <ExternalLink className="w-4 h-4 text-blue-600" />
+                            Ver Meu Perfil Público
+                          </button>
+                        )}
                         <button
                           onClick={() => handleNav('/profile/edit')}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors text-left"
@@ -224,7 +241,9 @@ export const Navbar: React.FC = () => {
           <div className="pt-2 pb-3 space-y-1">
             <Link onClick={() => setIsOpen(false)} to="/" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">Início</Link>
             <Link onClick={() => setIsOpen(false)} to="/search" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">Buscar</Link>
-            {(!user || user.role !== 'CLIENT') && (
+            {user?.role === 'CLIENT' ? (
+              <Link onClick={() => setIsOpen(false)} to="/dashboard/job-requests" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">Solicitar Serviço</Link>
+            ) : (
               <Link onClick={() => setIsOpen(false)} to="/create-ad" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-brand-600 hover:bg-brand-50 hover:border-brand-300">Anunciar Serviço</Link>
             )}
             {user && (

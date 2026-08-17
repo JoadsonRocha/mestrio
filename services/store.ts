@@ -4,6 +4,7 @@ import { ServiceAd, User, UserRole, ChatSession, Message, Review, Category, Admi
 
 import { DEFAULT_CATEGORIES } from '../constants';
 import { sanitizeText, sanitizeHtmlLike, sanitizePhone } from '../utils/sanitization';
+import { analyzeAdSafety } from './adSafety';
 
 export interface GetAdsParams {
   category?: string;
@@ -74,6 +75,15 @@ export { AD_IMAGES_BUCKET, AVATARS_BUCKET };
 
 class Store {
   private mapAd(data: any): ServiceAd {
+    const safety = analyzeAdSafety({
+      title: data.title || '',
+      description: data.description || '',
+      category: data.category,
+      price: data.price,
+      priceUnit: data.price_unit,
+      tags: data.tags || []
+    });
+
     return {
       id: data.id,
       providerId: data.provider_id,
@@ -105,7 +115,10 @@ class Store {
       status: data.status || 'approved',
       expiresAt: data.expires_at,
       rejectionReason: data.rejection_reason,
-      views: data.views || 0
+      views: data.views || 0,
+      riskScore: data.risk_score ?? safety.riskScore,
+      safetyFlags: data.safety_flags ?? safety.flags,
+      safetyCategories: data.safety_categories ?? safety.categoriesDetected
     };
   }
 
@@ -1250,6 +1263,12 @@ class Store {
       item.status = status;
       localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(list));
     }
+  }
+
+  async deleteJobRequest(id: string): Promise<void> {
+    const list = await this.getJobRequests();
+    const filtered = list.filter(r => r.id !== id);
+    localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(filtered));
   }
 
   async getQuoteProposals(jobRequestId?: string, providerId?: string): Promise<QuoteProposal[]> {

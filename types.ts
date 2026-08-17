@@ -150,6 +150,9 @@ export interface ServiceAd {
   views?: number;
   lat?: number;
   lng?: number;
+  riskScore?: number;
+  safetyFlags?: string[];
+  safetyCategories?: string[];
 }
 
 /**
@@ -229,18 +232,22 @@ export interface Appointment {
 }
 
 /**
- * Pedido de serviço (Job Request) criado por um cliente para receber orçamentos.
+ * Anúncio de Pedido de Serviço (Demanda criada por um cliente para receber propostas de prestadores).
  */
 export interface JobRequest {
   id: string;
   clientId: string;
   clientName: string;
   clientAvatar?: string;
+  clientPhone?: string;
   title: string;
   description: string;
   category: string;
   location: string;
   budget?: number;
+  urgency?: 'urgent' | 'this_week' | 'flexible';
+  photos?: string[];
+  preferredContactMethod?: 'whatsapp' | 'chat' | 'phone';
   status: 'open' | 'in_progress' | 'closed';
   proposalsCount?: number;
   createdAt: string;
@@ -393,4 +400,4 @@ export interface KYCDocument {
   createdAt: string;
 }
 
-export type EscrowPaymentStatus = 'pending' | 'in_escrow' | 'released_to_provider' | 'refunded';
+export type EscrowPaymentStatus = 'pending' | 'in_escrow' | 'released_to_provider' | 'refunded';

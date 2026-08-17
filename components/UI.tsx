@@ -3,6 +3,7 @@ import { Star, MapPin, CheckCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd } from '../types';
+import { VerifiedBadge } from './VerifiedBadge';
 
 /**
  * Componente visual de tag/selo (Badge).
@@ -109,18 +110,30 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
                         navigate(`/profissional/${ad.providerId}`);
                     }}
                     className="flex items-center space-x-2 group/profile hover:bg-gray-50 p-1 -ml-1 rounded-lg transition-colors text-left"
+                    title={`Ver perfil de ${ad.providerName || 'Profissional'}`}
                 >
-                    <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 text-xs font-bold group-hover/profile:bg-brand-600 group-hover/profile:text-white transition-colors overflow-hidden">
+                    <div className="w-7 h-7 rounded-full bg-brand-100 ring-1 ring-brand-200 flex items-center justify-center text-brand-700 text-xs font-bold group-hover/profile:bg-brand-600 group-hover/profile:text-white transition-colors overflow-hidden shrink-0 shadow-sm">
                         {ad.providerAvatar ? (
-                          <img src={ad.providerAvatar} alt={ad.providerName} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          <img 
+                            src={ad.providerAvatar} 
+                            alt={ad.providerName || 'Profissional'} 
+                            loading="lazy" 
+                            decoding="async" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
                         ) : (
-                          ad.providerName.charAt(0)
+                          <span>{(ad.providerName || 'P').charAt(0).toUpperCase()}</span>
                         )}
                     </div>
-                    <span className="text-[11px] text-gray-600 group-hover/profile:text-brand-600 truncate max-w-[100px] flex items-center transition-colors">
-                        {ad.providerName}
-                        {ad.isCertified && <span title="Profissional Verificado"><CheckCircle size={12} className="ml-1 text-brand-500" /></span>}
-                    </span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-semibold text-gray-800 group-hover/profile:text-brand-600 truncate max-w-[110px] flex items-center gap-1 transition-colors">
+                          {ad.providerName || 'Profissional'}
+                          {ad.isCertified && <VerifiedBadge size="xs" tooltip="Profissional Verificado Mestrio" />}
+                      </span>
+                    </div>
                 </button>
                 <div className="text-right">
                     <span className="text-sm font-bold text-gray-900">

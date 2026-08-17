@@ -8,6 +8,7 @@ import { ServiceAd, Review } from '../types';
 import { RatingStars, Badge } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -620,18 +621,30 @@ const ServiceDetail: React.FC = () => {
 
                     <div className="border-t border-gray-100 pt-6">
                         <div className="flex items-center mb-5">
-                            <div className="w-14 h-14 bg-gray-100 rounded-full flex-shrink-0 mr-4 overflow-hidden border-2 border-brand-100">
-                                {ad.providerAvatar ? (
-                                    <img src={ad.providerAvatar} className="w-full h-full object-cover" alt={ad.providerName} />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-brand-600 font-bold text-xl">{ad.providerName.charAt(0)}</div>
+                            <div className="relative w-14 h-14 bg-gray-100 rounded-full flex-shrink-0 mr-4 overflow-visible border-2 border-brand-100">
+                                <div className="w-full h-full rounded-full overflow-hidden">
+                                  {ad.providerAvatar ? (
+                                      <img src={ad.providerAvatar} className="w-full h-full object-cover" alt={ad.providerName} />
+                                  ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-brand-600 font-bold text-xl">{ad.providerName.charAt(0)}</div>
+                                  )}
+                                </div>
+                                {ad.isCertified && (
+                                  <span className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full shadow-sm">
+                                    <VerifiedBadge size={16} />
+                                  </span>
                                 )}
                             </div>
                             <div>
-                                <p className="font-bold text-gray-900 text-lg leading-tight">{ad.providerName}</p>
+                                <p className="font-bold text-gray-900 text-lg leading-tight flex items-center gap-1.5">
+                                  <span>{ad.providerName}</span>
+                                  {ad.isCertified && <VerifiedBadge size="sm" />}
+                                </p>
                                 <p className="text-xs text-gray-500 flex items-center mt-1">
                                     {ad.isCertified ? (
-                                        <><CheckCircle size={12} className="mr-1 text-brand-500"/> Profissional Verificado Mestrio</>
+                                        <span className="inline-flex items-center gap-1 text-blue-600 font-semibold">
+                                          <VerifiedBadge size={13} /> Profissional Verificado Mestrio
+                                        </span>
                                     ) : (
                                         'Profissional Mestrio'
                                     )}
@@ -640,7 +653,11 @@ const ServiceDetail: React.FC = () => {
                         </div>
                         
                         <div className="space-y-3 text-sm text-gray-600 bg-gray-50 p-4 rounded-xl">
-                             {ad.isCertified && <div className="flex items-center"><Shield size={16} className="mr-3 text-green-500"/> Identidade Verificada</div>}
+                             {ad.isCertified && (
+                               <div className="flex items-center text-blue-900 font-medium">
+                                 <VerifiedBadge size={16} className="mr-3" /> Identidade & Documentos Verificados
+                               </div>
+                             )}
                              <div className="flex items-center"><Clock size={16} className="mr-3 text-indigo-500"/> Responde em poucos minutos</div>
                              <div className="flex items-start"><Calendar size={16} className="mr-3 text-orange-500 mt-0.5"/> <span>{formatAvailability()}</span></div>
                         </div>
@@ -855,10 +872,11 @@ const ServiceDetail: React.FC = () => {
                   required
                 >
                   <option value="">Selecione o motivo...</option>
+                  <option value="Conteúdo Adulto, Sexual ou Acompanhante">Conteúdo Adulto, Sexual ou Acompanhante</option>
+                  <option value="Serviço Falso ou Golpe / Fraude">Serviço Falso ou Golpe / Fraude</option>
+                  <option value="Preço Irreal / Isca Enganosa">Preço Irreal / Isca Enganosa</option>
                   <option value="Conteúdo Inadequado ou Ofensivo">Conteúdo Inadequado ou Ofensivo</option>
-                  <option value="Serviço Falso ou Golpe">Serviço Falso ou Suspeita de Golpe</option>
-                  <option value="Preço Enganoso ou Abusivo">Preço Enganoso ou Abusivo</option>
-                  <option value="Telefone / Contato Inválido">Telefone / Contato Inválido</option>
+                  <option value="Telefone / Contato Inválido ou Mascarado">Telefone / Contato Inválido ou Mascarado</option>
                   <option value="Outro">Outro Motivo</option>
                 </select>
               </div>

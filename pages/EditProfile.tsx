@@ -5,6 +5,7 @@ import { Camera, User as UserIcon, MapPin, Phone, FileText, Save, ArrowLeft, Loa
 import { useAuth } from '../context/AuthContext';
 import { store, uploadImage, AVATARS_BUCKET } from '../services/store';
 import { useToast } from '../context/ToastContext';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 
 const EditProfile: React.FC = () => {
   const { user, refreshUser, loading: authLoading } = useAuth();
@@ -270,18 +271,18 @@ const EditProfile: React.FC = () => {
                 </div>
               </div>
 
-              {/* Seção de Verificação de Identidade (KYC - Selo Ouro) para Profissionais */}
+              {/* Seção de Verificação de Identidade (KYC) para Profissionais */}
               {(user?.role === 'PROVIDER' || user?.roleRequest === 'PROVIDER') && (
                 <div className="pt-6 border-t border-gray-100 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                        <Shield className="text-emerald-500" size={18} /> Verificação de Identidade KYC (Selo Ouro)
+                        <Shield className="text-blue-500" size={18} /> Verificação de Identidade KYC (Selo Azul Mestrio)
                       </h3>
-                      <p className="text-xs text-gray-500">Envie seu documento oficial para receber o Selo de Profissional Verificado no seu perfil</p>
+                      <p className="text-xs text-gray-500">Envie seu documento oficial para receber o Selo Azul de Profissional Verificado no seu perfil e anúncios</p>
                     </div>
                     {user.isCertified ? (
-                      <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✓ Certificado</span>
+                      <VerifiedBadge showText text="✓ Verificado Oficial" />
                     ) : (
                       <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Pendente / Não Enviado</span>
                     )}

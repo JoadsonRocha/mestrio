@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, MessageSquare, Calendar, Star, CheckCircle2, Megaphone, Mail,
   Briefcase, X, Clock, DollarSign, Heart, TrendingUp, Bell, ArrowRight,
-  ShieldCheck, MapPin, Share2, Award, QrCode
+  ShieldCheck, MapPin, Share2, Award, QrCode, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -16,6 +16,7 @@ import { ProfileCompletionWidget } from '../components/ProfileCompletionWidget';
 import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
 import { categoryIcon } from '../components/CategoryIcon';
 import { Link as RouterLink } from 'react-router-dom';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 
 const DashboardHome: React.FC = () => {
   const { user, loading, refreshUser } = useAuth();
@@ -169,7 +170,7 @@ const DashboardHome: React.FC = () => {
                 to="/dashboard/job-requests"
                 className="bg-brand-600 text-white px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-brand-700 transition shadow-sm"
               >
-                <Plus size={14} className="mr-1.5" /> Pedir Orçamento
+                <Plus size={14} className="mr-1.5" /> Solicitar Serviço
               </RouterLink>
             </>
           ) : (
@@ -185,8 +186,8 @@ const DashboardHome: React.FC = () => {
                   <ShieldCheck size={14} className="mr-1.5 text-blue-600" /> Solicitar Selo de Verificação
                 </button>
               ) : (
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs font-bold rounded-xl flex items-center">
-                  <CheckCircle2 size={14} className="mr-1 text-emerald-600" /> Profissional Verificado
+                <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-2xs">
+                  <VerifiedBadge size={15} /> Profissional Verificado
                 </span>
               )}
               <button
@@ -195,6 +196,12 @@ const DashboardHome: React.FC = () => {
               >
                 <QrCode size={14} className="mr-1.5 text-purple-600" /> Cartão Digital
               </button>
+              <RouterLink
+                to={`/profissional/${user.id}`}
+                className="bg-blue-50 text-blue-700 border border-blue-200 px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-blue-100 transition shadow-2xs"
+              >
+                <ExternalLink size={14} className="mr-1.5 text-blue-600" /> Ver Perfil Público
+              </RouterLink>
               <button
                 onClick={() => setShowScheduleModal(true)}
                 className="bg-gray-100 text-gray-700 px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center hover:bg-gray-200 transition"
@@ -296,15 +303,15 @@ const DashboardHome: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Mensagens Não Lidas" value={unreadMessagesCount} icon={MessageSquare} color="bg-green-50 text-green-600" />
             <StatCard label="Agendamentos Ativos" value={upcomingAppointments.length} icon={Calendar} color="bg-blue-50 text-blue-600" />
-            <StatCard label="Orçamentos Pedidos" value={myJobRequests.length} icon={Briefcase} color="bg-purple-50 text-purple-600" />
+            <StatCard label="Serviços Solicitados" value={myJobRequests.length} icon={Briefcase} color="bg-purple-50 text-purple-600" />
           </div>
 
-          {/* Minhas Solicitações de Orçamento */}
+          {/* Minhas Solicitações de Serviços */}
           {myJobRequests.length > 0 && (
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-900 text-base flex items-center">
-                  <Briefcase size={18} className="mr-2 text-brand-600" /> Meus Pedidos de Orçamento
+                  <Briefcase size={18} className="mr-2 text-brand-600" /> Meus Pedidos de Serviços Anunciados
                 </h3>
                 <RouterLink to="/dashboard/job-requests" className="text-xs text-brand-600 font-semibold hover:underline flex items-center">
                   Ver todos <ArrowRight size={12} className="ml-1" />
