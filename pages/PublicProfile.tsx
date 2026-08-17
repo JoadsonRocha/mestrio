@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { store } from '../services/store';
 import { User, ServiceAd, BeforeAfterProject } from '../types';
 import { ServiceCard } from '../components/UI';
-import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Sparkles, Award, Share2, Copy, Check, MessageCircle } from 'lucide-react';
+import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Sparkles, Award, Share2, Copy, Check, MessageCircle, Globe, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
@@ -11,6 +11,7 @@ import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { getBusinessStatus } from '../utils/businessHours';
 import { MultiCriteriaBreakdown } from '../components/MultiCriteriaReviewWidget';
+import { SocialShareModal } from '../components/SocialShareModal';
 
 const PublicProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
