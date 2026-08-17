@@ -1,9 +1,10 @@
 import React from 'react';
-import { Star, MapPin, CheckCircle } from 'lucide-react';
+import { Star, MapPin, CheckCircle, Clock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCategories } from '../context/CategoriesContext';
 import { ServiceAd } from '../types';
 import { VerifiedBadge } from './VerifiedBadge';
+import { getBusinessStatus } from '../utils/businessHours';
 
 /**
  * Componente visual de tag/selo (Badge).
@@ -50,22 +51,33 @@ export const RatingStars: React.FC<{ rating: number; count?: number; size?: numb
 export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad, compact = false }) => {
   const navigate = useNavigate();
   const { options } = useCategories();
+  const businessStatus = getBusinessStatus(ad.availability);
+
   return (
-    <Link to={`/service/${ad.id}`} className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-100 flex flex-col h-full">
+    <Link to={`/service/${ad.id}`} className="group bg-white rounded-xl shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-100 flex flex-col h-full">
       <div className={`relative ${compact ? 'h-[82px] md:h-[126px]' : 'aspect-video'} overflow-hidden bg-gray-100`}>
         <img 
           src={ad.images[0]} 
           alt={ad.title} 
-          loading="lazy"
+          loading="lazy" 
           decoding="async"
           className="w-full h-full object-contain bg-gray-50 group-hover:scale-105 transition-transform duration-300"
         />
+
+        {/* Tag em Tempo Real: Atendendo Agora / 24h / Fechado */}
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur-xs text-gray-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-2xs border border-gray-200/80">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${businessStatus.isOpen ? 'bg-emerald-500 ring-2 ring-emerald-300 animate-pulse' : 'bg-gray-400'}`}></span>
+          <span className={businessStatus.isOpen ? 'text-emerald-800' : 'text-gray-600'}>
+            {businessStatus.shortBadge}
+          </span>
+        </div>
+
         {ad.isPremium && (
-          <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md shadow-sm flex items-center">
+          <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md shadow-xs flex items-center z-10">
             <Star size={12} className="mr-1 fill-current" /> Destaque
           </div>
         )}
-        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded">
+        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-xs text-white text-xs px-2 py-1 rounded">
             {options.find(c => c.id === ad.category)?.label || ad.category}
         </div>
       </div>
@@ -98,8 +110,8 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
 
         <div className="mt-auto space-y-3">
              <div className="flex items-center text-xs text-gray-500">
-                <MapPin size={14} className="mr-1 text-gray-400" />
-                {ad.location}
+                <MapPin size={14} className="mr-1 text-gray-400 shrink-0" />
+                <span className="truncate">{ad.location}</span>
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-gray-100">
@@ -112,7 +124,7 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
                     className="flex items-center space-x-2 group/profile hover:bg-gray-50 p-1 -ml-1 rounded-lg transition-colors text-left"
                     title={`Ver perfil de ${ad.providerName || 'Profissional'}`}
                 >
-                    <div className="w-7 h-7 rounded-full bg-brand-100 ring-1 ring-brand-200 flex items-center justify-center text-brand-700 text-xs font-bold group-hover/profile:bg-brand-600 group-hover/profile:text-white transition-colors overflow-hidden shrink-0 shadow-sm">
+                    <div className="w-7 h-7 rounded-full bg-brand-100 ring-1 ring-brand-200 flex items-center justify-center text-brand-700 text-xs font-bold group-hover/profile:bg-brand-600 group-hover/profile:text-white transition-colors overflow-hidden shrink-0 shadow-xs">
                         {ad.providerAvatar ? (
                           <img 
                             src={ad.providerAvatar} 
