@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext';
 import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { VerifiedBadge } from '../components/VerifiedBadge';
+import { getBusinessStatus } from '../utils/businessHours';
 
 const PublicProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -157,6 +158,18 @@ const PublicProfile: React.FC = () => {
                         )}
                     </div>
                     <div className="flex flex-wrap items-center mt-2 text-sm text-gray-600 gap-4">
+                        {/* Status de Atendimento em Tempo Real (Directorist Style) */}
+                        {(() => {
+                            const primaryAvailability = ads[0]?.availability;
+                            const bStatus = getBusinessStatus(primaryAvailability);
+                            return (
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${bStatus.colorClass}`}>
+                                    <span className={`w-2 h-2 rounded-full shrink-0 ${bStatus.isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                                    {bStatus.statusText}
+                                </span>
+                            );
+                        })()}
+
                         {profile.location && (
                             <span className="flex items-center">
                                 <MapPin size={16} className="mr-1 text-gray-400" /> {profile.location}
