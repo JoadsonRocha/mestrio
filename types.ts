@@ -98,15 +98,26 @@ export interface AdminStats {
 }
 
 /**
+ * Sub-critérios de avaliação do serviço (padrão Directorist).
+ */
+export interface ReviewCriteria {
+  punctuality: number;     // 1-5: Pontualidade
+  quality: number;         // 1-5: Qualidade do Serviço
+  fairPrice: number;       // 1-5: Preço Justo
+  communication: number;   // 1-5: Comunicação & Atendimento
+}
+
+/**
  * Avaliação feita por um cliente a um profissional/anúncio.
  */
 export interface Review {
   id: string;
   authorId: string;
   authorName: string;
-  rating: number; // 1-5
+  rating: number; // 1-5 (Média geral dos critérios ou nota direta)
   comment: string;
   date: string;
+  criteria?: ReviewCriteria;
 }
 
 export interface BeforeAfterProject {

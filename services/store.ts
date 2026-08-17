@@ -108,7 +108,13 @@ class Store {
         authorName: r.author_name,
         rating: r.rating,
         comment: r.comment,
-        date: r.created_at
+        date: r.created_at,
+        criteria: (r.punctuality || r.quality || r.fair_price || r.communication || r.criteria) ? {
+          punctuality: Number(r.punctuality ?? r.criteria?.punctuality ?? r.rating ?? 5),
+          quality: Number(r.quality ?? r.criteria?.quality ?? r.rating ?? 5),
+          fairPrice: Number(r.fair_price ?? r.fairPrice ?? r.criteria?.fairPrice ?? r.rating ?? 5),
+          communication: Number(r.communication ?? r.criteria?.communication ?? r.rating ?? 5),
+        } : undefined
       })),
       isPremium: data.is_premium,
       createdAt: data.created_at,
@@ -313,15 +319,36 @@ class Store {
   }
 
   async addReview(adId: string, review: Omit<Review, 'id' | 'date'>): Promise<void> {
-    const { error: reviewError } = await supabase
-      .from('reviews')
-      .insert([{
+    const payload: any = {
+      ad_id: adId,
+      author_id: review.authorId,
+      author_name: review.authorName,
+      rating: review.rating,
+      comment: review.comment,
+    };
+
+    if (review.criteria) {
+      payload.punctuality = review.criteria.punctuality;
+      payload.quality = review.criteria.quality;
+      payload.fair_price = review.criteria.fairPrice;
+      payload.communication = review.criteria.communication;
+    }
+
+    let { error: reviewError } = await supabase.from('reviews').insert([payload]);
+    
+    // Fallback: se o banco ainda não tiver as colunas extras de multi-critérios
+    if (reviewError && (reviewError.message?.includes('column') || reviewError.code === '42703')) {
+      console.warn("Store Warning [addReview fallback to basic rating]:", reviewError.message);
+      const fallbackPayload = {
         ad_id: adId,
         author_id: review.authorId,
         author_name: review.authorName,
         rating: review.rating,
-        comment: review.comment
-      }]);
+        comment: review.comment,
+      };
+      const res = await supabase.from('reviews').insert([fallbackPayload]);
+      reviewError = res.error;
+    }
     
     if (reviewError) { console.error("Store Error [addReview]:", reviewError); throw reviewError; }
 

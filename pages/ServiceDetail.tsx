@@ -10,6 +10,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { getBusinessStatus } from '../utils/businessHours';
+import { MultiCriteriaBreakdown, MultiCriteriaRatingInput, ReviewCriteriaBadges } from '../components/MultiCriteriaReviewWidget';
+import { ReviewCriteria } from '../types';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,8 +20,16 @@ const ServiceDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submittingReview, setSubmittingReview] = useState(false);
   
-  // Reviews State
-  const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
+  // Reviews State com Multi-Critérios (Directorist Pattern)
+  const [newReview, setNewReview] = useState({
+    comment: '',
+    criteria: {
+      punctuality: 5,
+      quality: 5,
+      fairPrice: 5,
+      communication: 5,
+    } as ReviewCriteria,
+  });
   const [reviewError, setReviewError] = useState('');
 
   // Scheduling State
@@ -247,11 +257,16 @@ const ServiceDetail: React.FC = () => {
       setReviewError('');
 
       try {
+        const overallRating = Number((
+          (newReview.criteria.punctuality + newReview.criteria.quality + newReview.criteria.fairPrice + newReview.criteria.communication) / 4
+        ).toFixed(1));
+
         const reviewData: Omit<Review, 'id' | 'date'> = {
             authorId: user.id,
             authorName: user.name,
-            rating: newReview.rating,
+            rating: overallRating,
             comment: newReview.comment,
+            criteria: newReview.criteria,
         };
 
         await store.addReview(ad.id, reviewData);
@@ -260,8 +275,16 @@ const ServiceDetail: React.FC = () => {
         const updatedAd = await store.getAdById(ad.id);
         if (updatedAd) setAd(updatedAd);
         
-        setNewReview({ rating: 5, comment: '' });
-        toast("Avaliação publicada com sucesso!", 'success');
+        setNewReview({
+          comment: '',
+          criteria: {
+            punctuality: 5,
+            quality: 5,
+            fairPrice: 5,
+            communication: 5,
+          }
+        });
+        toast("Avaliação multi-critérios publicada com sucesso!", 'success');
       } catch (err: any) {
         console.error("Erro ao enviar avaliação:", err);
         if (err.code === '42501') {
@@ -464,43 +487,36 @@ const ServiceDetail: React.FC = () => {
                 )}
 
                 <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Avaliações</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Avaliações & Reputação</h2>
                     
+                    {/* Painel Consolidado de Multi-Critérios (Directorist Pattern) */}
+                    <MultiCriteriaBreakdown reviews={ad.reviews} overallRating={ad.rating} />
+
                     {/* Review Form */}
                     {user && user.id !== ad.providerId && (
-                        <form onSubmit={handleSubmitReview} className="mb-8 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                                <Star size={20} className="mr-2 text-yellow-500 fill-current" /> Conte sua experiência
+                        <form onSubmit={handleSubmitReview} className="mb-8 bg-gray-50 p-6 rounded-2xl border border-gray-200 space-y-4">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                                <Star size={20} className="mr-2 text-yellow-500 fill-current" /> Deixar uma Avaliação Detalhada
                             </h3>
                             
                             {reviewError && (
-                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm flex items-start">
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm flex items-start">
                                     <AlertTriangle size={16} className="mr-2 mt-0.5 flex-shrink-0" />
                                     <span>{reviewError}</span>
                                 </div>
                             )}
 
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Qual sua nota para este serviço?</label>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            onClick={() => setNewReview(prev => ({...prev, rating: s}))}
-                                            className={`p-2 rounded-lg border transition-all ${newReview.rating >= s ? 'bg-yellow-50 border-yellow-300 text-yellow-600' : 'bg-white border-gray-200 text-gray-300'}`}
-                                        >
-                                            <Star size={24} className={newReview.rating >= s ? 'fill-current' : ''} />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            {/* Seletor dos 4 Pilares Interativos */}
+                            <MultiCriteriaRatingInput
+                              criteria={newReview.criteria}
+                              onChange={(c) => setNewReview(prev => ({ ...prev, criteria: c }))}
+                            />
 
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Comentário</label>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Seu Comentário sobre o Serviço</label>
                                 <textarea 
-                                    placeholder="Como foi o atendimento? O profissional foi pontual? Recomendaria?" 
-                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
+                                    placeholder="Conte detalhes sobre o trabalho realizado, pontualidade, atendimento e se você recomenda o profissional..." 
+                                    className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none bg-white"
                                     rows={3}
                                     value={newReview.comment}
                                     onChange={(e) => setNewReview(prev => ({...prev, comment: e.target.value}))}
@@ -511,7 +527,7 @@ const ServiceDetail: React.FC = () => {
                             <button 
                                 type="submit" 
                                 disabled={submittingReview}
-                                className="w-full sm:w-auto bg-brand-600 text-white px-6 py-2.5 rounded-lg hover:bg-brand-700 font-bold flex items-center justify-center transition-colors disabled:opacity-50"
+                                className="w-full sm:w-auto bg-brand-600 text-white px-6 py-2.5 rounded-xl hover:bg-brand-700 font-bold flex items-center justify-center transition-colors disabled:opacity-50 shadow-sm"
                             >
                                 {submittingReview ? (
                                     <>
@@ -527,7 +543,7 @@ const ServiceDetail: React.FC = () => {
                     )}
 
                     {!user && (
-                        <div className="mb-8 p-4 bg-brand-50 rounded-lg border border-brand-100 text-center">
+                        <div className="mb-8 p-4 bg-brand-50 rounded-xl border border-brand-100 text-center">
                             <p className="text-brand-800 text-sm">
                                 <Link to="/login" className="font-bold underline">Faça login</Link> para deixar uma avaliação para este profissional.
                             </p>
@@ -555,6 +571,9 @@ const ServiceDetail: React.FC = () => {
                                         <RatingStars rating={review.rating} size={14} />
                                     </div>
                                     <p className="text-gray-600 text-sm mt-2 leading-relaxed">{review.comment}</p>
+                                    
+                                    {/* Mini Badges dos Critérios Individuais */}
+                                    <ReviewCriteriaBadges criteria={review.criteria} />
                                 </div>
                             ))}
                         </div>
