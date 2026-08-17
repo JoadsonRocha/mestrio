@@ -413,9 +413,17 @@ const Chat: React.FC = () => {
                             <div className="flex items-center gap-3">
                                 {/* Avatar */}
                                 <div className="relative shrink-0">
-                                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                                        {initial}
-                                    </div>
+                                    {chat.otherUserAvatar ? (
+                                        <img 
+                                            src={chat.otherUserAvatar} 
+                                            alt={displayName} 
+                                            className="w-11 h-11 rounded-full object-cover shadow-xs border border-slate-200" 
+                                        />
+                                    ) : (
+                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                                            {initial}
+                                        </div>
+                                    )}
                                     {hasUnread && (
                                         <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse"></span>
                                     )}
@@ -474,9 +482,17 @@ const Chat: React.FC = () => {
                         </button>
 
                         <div className="flex items-center min-w-0 gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                                {(activeChat.otherUserName || activeChat.providerName || 'U').charAt(0).toUpperCase()}
-                            </div>
+                            {activeChat.otherUserAvatar ? (
+                                <img 
+                                  src={activeChat.otherUserAvatar} 
+                                  alt={activeChat.otherUserName || activeChat.providerName || 'Contato'} 
+                                  className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0 shadow-xs" 
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                                    {(activeChat.otherUserName || activeChat.providerName || 'U').charAt(0).toUpperCase()}
+                                </div>
+                            )}
                             <div className="min-w-0">
                                 <h3 className="font-bold text-slate-900 text-sm truncate flex items-center gap-1.5">
                                     <span>{activeChat.otherUserName || activeChat.providerName || 'Contato'}</span>
@@ -565,9 +581,17 @@ const Chat: React.FC = () => {
                                     return (
                                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end group`}>
                                             {showAvatar && (
-                                                <div className="w-7 h-7 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 shadow-2xs">
-                                                    {(activeChat.otherUserName || 'U').charAt(0).toUpperCase()}
-                                                </div>
+                                                activeChat.otherUserAvatar ? (
+                                                  <img 
+                                                    src={activeChat.otherUserAvatar} 
+                                                    alt={activeChat.otherUserName || 'U'} 
+                                                    className="w-7 h-7 rounded-full object-cover mr-2 shrink-0 border border-slate-200 shadow-2xs" 
+                                                  />
+                                                ) : (
+                                                  <div className="w-7 h-7 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 shadow-2xs">
+                                                      {(activeChat.otherUserName || 'U').charAt(0).toUpperCase()}
+                                                  </div>
+                                                )
                                             )}
                                             <div className={`
                                                 max-w-[85%] md:max-w-[70%] rounded-2xl p-3 shadow-xs transition-shadow

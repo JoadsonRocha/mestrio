@@ -223,6 +223,7 @@ export interface ChatSession {
   adId: string;
   adTitle: string;
   otherUserName?: string;
+  otherUserAvatar?: string;
   providerName?: string;
   clientName?: string;
   lastMessage?: string;
