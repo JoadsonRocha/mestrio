@@ -9,6 +9,7 @@ import { RatingStars, Badge } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { VerifiedBadge } from '../components/VerifiedBadge';
+import { getBusinessStatus } from '../utils/businessHours';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -653,17 +654,30 @@ const ServiceDetail: React.FC = () => {
                         </div>
                         
                         <div className="space-y-3 text-sm text-gray-600 bg-gray-50 p-4 rounded-xl">
+                             {/* Status de Atendimento em Tempo Real (Directorist Style) */}
+                             {(() => {
+                               const bStatus = getBusinessStatus(ad.availability);
+                               return (
+                                 <div className="flex items-center gap-2.5 pb-2.5 border-b border-gray-200/70">
+                                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bStatus.isOpen ? 'bg-emerald-500 ring-4 ring-emerald-100 animate-pulse' : 'bg-gray-400 ring-2 ring-gray-200'}`}></span>
+                                   <span className={`text-xs font-bold ${bStatus.isOpen ? 'text-emerald-700' : 'text-gray-600'}`}>
+                                     {bStatus.statusText}
+                                   </span>
+                                 </div>
+                               );
+                             })()}
+
                              {ad.isCertified && (
                                <div className="flex items-center text-blue-900 font-medium">
                                  <VerifiedBadge size={16} className="mr-3" /> Identidade & Documentos Verificados
-                               </div>
+                                </div>
                              )}
                              <div className="flex items-center"><Clock size={16} className="mr-3 text-indigo-500"/> Responde em poucos minutos</div>
                              <div className="flex items-start"><Calendar size={16} className="mr-3 text-orange-500 mt-0.5"/> <span>{formatAvailability()}</span></div>
                         </div>
 
                         <Link
-                          to={`/profile/${ad.providerId}`}
+                          to={`/profissional/${ad.providerId}`}
                           className="mt-3.5 w-full bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs py-2.5 px-4 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-center transition"
                         >
                           Ver Perfil Completo & Portfólio →
