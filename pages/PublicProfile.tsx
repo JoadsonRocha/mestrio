@@ -277,6 +277,13 @@ const PublicProfile: React.FC = () => {
               </div>
             </div>
 
+            {/* Avaliação Multi-Critérios Consolidada */}
+            {allReviews.length > 0 && (
+              <div>
+                <MultiCriteriaBreakdown reviews={allReviews} overallRating={Number(averageRating)} />
+              </div>
+            )}
+
             {/* Lista de Anúncios */}
             <div>
               <h3 className="font-bold text-gray-900 text-xl mb-6">Serviços Publicados ({ads.length})</h3>
