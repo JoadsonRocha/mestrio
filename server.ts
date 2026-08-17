@@ -88,77 +88,148 @@ async function startServer() {
     res.status(200).json({ ok: true });
   });
 
-  const MODEL = 'llama3-8b-8192';
+  const GROQ_MODELS = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'mixtral-8x7b-32768'];
+
+  // Função auxiliar para chamar a API Groq com fallback automático de modelos
+  async function callGroqChat(apiKey: string, prompt: string): Promise<string | null> {
+    for (const model of GROQ_MODELS) {
+      try {
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            max_tokens: 600,
+          }),
+        });
+
+        if (!r.ok) {
+          console.warn(`[Groq AI] Modelo ${model} falhou com status ${r.status}, tentando próximo...`);
+          continue;
+        }
+
+        const data: any = await r.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (content) return content;
+      } catch (err) {
+        console.warn(`[Groq AI] Erro ao chamar modelo ${model}:`, err);
+      }
+    }
+    return null;
+  }
 
   /**
    * Endpoint de proxy para geração de texto via IA (Groq).
    * Responsável por classificar automaticamente serviços ou criar descrições chamativas.
    */
   app.post('/api/ai', async (req: Request, res: Response) => {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      res.status(500).json({ error: 'Chave da API Groq não configurada no servidor (Railway Env: GROQ_API_KEY).' });
-      return;
-    }
-
     const body = req.body || {};
     const title = String(body.title || '').trim();
     const category = String(body.category || '').trim();
     const keywords = String(body.keywords || '').trim();
-    let prompt = '';
+
+    if (!title) {
+      res.status(400).json({ error: 'Título é obrigatório' });
+      return;
+    }
+
+    const apiKey = process.env.GROQ_API_KEY;
+
+    // Fallback inteligente caso a chave não esteja configurada ou o Groq esteja indisponível
+    const generateLocalDescription = () => {
+      const extra = keywords ? `\n\n📌 **Especialidades & Diferenciais:**\n${keywords.split(/[,;\n]+/).filter(Boolean).map(k => `• ${k.trim()}`).join('\n')}` : '';
+      return `Ofereço serviços profissionais de alta qualidade e com garantia técnica para **${title}**.\n\n` +
+        `✅ Atendimento pontual e transparente;\n` +
+        `✅ Execução limpa, organizada e com ferramentas adequadas;\n` +
+        `✅ Orçamento sem compromisso com excelente custo-benefício.` +
+        extra +
+        `\n\n💬 *Fale comigo agora pelo WhatsApp para tirar dúvidas e agendar seu atendimento!*`;
+    };
 
     if (body.task === 'category') {
-      if (!title) { res.status(400).json({ error: 'Título é obrigatório' }); return; }
-      prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o ID da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly.`;
-    } else {
-      if (!title) { res.status(400).json({ error: 'Título é obrigatório' }); return; }
-      prompt = `Você é um assistente de marketing especialista em classificados de serviços.
-Escreva uma descrição atraente, profissional e formatada (pode usar markdown leve como tópicos) para um prestador de serviços.
+      const categoryMap: Record<string, string> = {
+        'eletric': 'eletricista',
+        'eletro': 'eletricista',
+        'tomada': 'eletricista',
+        'fio': 'eletricista',
+        'cano': 'encanador',
+        'vaza': 'encanador',
+        'pia': 'encanador',
+        'esgoto': 'encanador',
+        'hidraul': 'encanador',
+        'pint': 'pintura',
+        'tinta': 'pintura',
+        'muro': 'pintura',
+        'limp': 'limpeza',
+        'faxin': 'limpeza',
+        'diarista': 'limpeza',
+        'ar ': 'ar-condicionado',
+        'ar-': 'ar-condicionado',
+        'split': 'ar-condicionado',
+        'inverter': 'ar-condicionado',
+        'obra': 'pedreiro',
+        'reforma': 'pedreiro',
+        'piso': 'pedreiro',
+        'porcelanato': 'pedreiro',
+        'movel': 'marcenaria',
+        'móvel': 'marcenaria',
+        'armario': 'marcenaria',
+        'marceneiro': 'marcenaria',
+      };
+
+      if (apiKey) {
+        const prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o slug da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): eletricista, encanador, pintura, limpeza, ar-condicionado, pedreiro, marcenaria, outros.`;
+        const aiCategory = await callGroqChat(apiKey, prompt);
+        if (aiCategory) {
+          res.status(200).json({ category: aiCategory.trim().toLowerCase().replace(/[^a-z-]/g, '') });
+          return;
+        }
+      }
+
+      // Fallback local por palavras-chave no título
+      const lowerTitle = title.toLowerCase();
+      for (const [key, slug] of Object.entries(categoryMap)) {
+        if (lowerTitle.includes(key)) {
+          res.status(200).json({ category: slug });
+          return;
+        }
+      }
+
+      res.status(200).json({ category: 'outros' });
+      return;
+    }
+
+    // Task describe
+    if (apiKey) {
+      const prompt = `Você é um assistente de marketing especialista em anúncios de serviços profissionais (Mestrio).
+Escreva uma descrição atraente, profissional, acolhedora e bem formatada com tópicos/bullet points para o seguinte serviço:
 
 Título do Serviço: ${title}
-Categoria: ${category}
-Palavras-chave/Detalhes extras: ${keywords}
+Categoria: ${category || 'Serviços Gerais'}
+Palavras-chave/Diferenciais do Prestador: ${keywords || 'Pontualidade, Qualidade e Garantia'}
 
-Regras:
-- Use português do Brasil.
-- Máximo de 150 palavras.
-- Foque nos benefícios para o cliente.
-- Inclua uma chamada para ação (CTA) no final.`;
-    }
+Regras Estritas:
+- Escreva em português do Brasil natural e envolvente.
+- Destaque os benefícios e segurança para o cliente contratante.
+- Use tópicos claros com emojis profissionais (ex: ✅, 🛠️, 🛡️).
+- Finalize com uma chamada acolhedora para contato pelo WhatsApp.
+- Não mencione preços fixos se não foram informados.`;
 
-    try {
-      const url = 'https://api.groq.com/openai/v1/chat/completions';
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [{ role: 'user', content: prompt }]
-        }),
-      });
-
-      const data: any = await r.json();
-      const text = data?.choices?.[0]?.message?.content;
-
-      if (!r.ok || text === undefined) {
-        const errMsg = data?.error?.message || data?.error || 'Erro ao gerar conteúdo com a IA do Groq.';
-        console.error('Groq API error:', r.status, errMsg);
-        res.status(r.ok ? 500 : 502).json({ error: errMsg });
+      const aiText = await callGroqChat(apiKey, prompt);
+      if (aiText) {
+        res.status(200).json({ text: aiText.trim() });
         return;
       }
-
-      if (body.task === 'category') {
-        res.status(200).json({ category: text.trim() });
-      } else {
-        res.status(200).json({ text });
-      }
-    } catch (e) {
-      console.error('Groq fetch error:', e);
-      res.status(500).json({ error: 'Erro ao conectar com o serviço de IA do Groq.' });
     }
+
+    // Se não houver API Key ou chamada falhar, retorna o gerador contextualizado
+    res.status(200).json({ text: generateLocalDescription() });
   });
 
   /**
@@ -196,33 +267,15 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves (sem usar blocos d
 JSON puro:`;
 
     try {
-      const url = 'https://api.groq.com/openai/v1/chat/completions';
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [{ role: 'user', content: prompt }]
-        }),
-      });
-
-      if (!r.ok) {
-        console.warn('Groq API retornou status não-OK:', r.status);
-        return res.status(200).json(fallback);
-      }
-
-      const data: any = await r.json();
-      const text = data?.choices?.[0]?.message?.content || '';
+      const text = await callGroqChat(apiKey, prompt);
+      if (!text) return res.status(200).json(fallback);
 
       try {
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedResponse = JSON.parse(cleanText);
         return res.status(200).json(parsedResponse);
       } catch (parseError) {
-        console.error('Erro ao fazer parse do JSON do Groq:', text);
+        console.warn('Fallback: Erro ao fazer parse do JSON do Groq:', text);
         return res.status(200).json(fallback);
       }
     } catch (e) {

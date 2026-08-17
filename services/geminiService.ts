@@ -45,6 +45,16 @@ const request = async (body: unknown, timeoutMs: number = 15000): Promise<AIResp
   }
 };
 
+const fallbackDescription = (title: string, category?: string, keywords?: string): string => {
+  const extra = keywords ? `\n\n📌 **Diferenciais & Especialidades:**\n${keywords.split(/[,;\n]+/).filter(Boolean).map(k => `• ${k.trim()}`).join('\n')}` : '';
+  return `Ofereço serviços profissionais de alta qualidade e com garantia técnica para **${title.trim()}**.\n\n` +
+    `✅ Atendimento com pontualidade e transparência;\n` +
+    `✅ Execução limpa, organizada e com ferramentas adequadas;\n` +
+    `✅ Orçamento sem compromisso e preço justo.` +
+    extra +
+    `\n\n💬 *Fale comigo pelo WhatsApp para tirar dúvidas e agendar o seu atendimento!*`;
+};
+
 /**
  * Gera uma descrição automática para um serviço usando IA, baseando-se no título, categoria e palavras-chave.
  * 
@@ -56,10 +66,13 @@ const request = async (body: unknown, timeoutMs: number = 15000): Promise<AIResp
 export const generateServiceDescription = async (title: string, category: string, keywords: string): Promise<string> => {
   try {
     const data = await request({ task: 'describe', title, category, keywords });
-    return data.text || 'Não foi possível gerar a descrição.';
+    if (data.text && data.text.trim()) {
+      return data.text;
+    }
+    return fallbackDescription(title, category, keywords);
   } catch (error) {
-    console.error("Groq AI Error:", error);
-    return "Erro ao gerar descrição. Tente escrever manualmente.";
+    console.warn("Groq AI Warning [Falling back to template]:", error);
+    return fallbackDescription(title, category, keywords);
   }
 };
 
@@ -77,3 +90,4 @@ export const suggestCategory = async (title: string): Promise<string> => {
     return "";
   }
 };
+
