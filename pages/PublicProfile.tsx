@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
 import { VerifiedBadge } from '../components/VerifiedBadge';
-import { getBusinessStatus } from '../utils/businessHours';
+import { getBusinessStatus, parseAvailabilityString } from '../utils/businessHours';
 import { MultiCriteriaBreakdown } from '../components/MultiCriteriaReviewWidget';
 import { SocialShareModal } from '../components/SocialShareModal';
 
@@ -121,31 +121,9 @@ const PublicProfile: React.FC = () => {
 
   const parseAvailability = (availability?: string): { days: string[]; start: string; end: string } | null => {
     if (!availability) return null;
-    const timeMatch = availability.match(/(\d{1,2}:\d{2})\s*[-àa]\s*(\d{1,2}:\d{2})/i);
-    if (!timeMatch) return null;
-    const start = timeMatch[1].padStart(5, '0');
-    const end = timeMatch[2].padStart(5, '0');
-    const dayPart = availability.replace(timeMatch[0], '');
-    const dayAliases: Record<string, string> = {
-      'seg': 'seg', 'segunda': 'seg', 'segunda-feira': 'seg',
-      'ter': 'ter', 'terça': 'ter', 'terca': 'ter', 'terça-feira': 'ter', 'terca-feira': 'ter',
-      'qua': 'qua', 'quarta': 'qua', 'quarta-feira': 'qua',
-      'qui': 'qui', 'quinta': 'qui', 'quinta-feira': 'qui',
-      'sex': 'sex', 'sexta': 'sex', 'sexta-feira': 'sex',
-      'sab': 'sab', 'sáb': 'sab', 'sábado': 'sab', 'sabado': 'sab',
-      'dom': 'dom', 'domingo': 'dom',
-    };
-    const rawDays = dayPart.split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
-    const days: string[] = [];
-    for (const raw of rawDays) {
-      const normalized = raw.replace(/[áàâã]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íìî]/g, 'i').replace(/[óòôõ]/g, 'o').replace(/[úùû]/g, 'u').replace(/ç/g, 'c');
-      if (dayAliases[normalized]) {
-        const key = dayAliases[normalized];
-        if (!days.includes(key)) days.push(key);
-      }
-    }
-    if (days.length === 0) return { days: [], start, end };
-    return { days, start, end };
+    const av = parseAvailabilityString(availability);
+    if (!av) return null;
+    return { days: av.days, start: av.startStr, end: av.endStr };
   };
 
   const getWeeklySchedule = () => {
