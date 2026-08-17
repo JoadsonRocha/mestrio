@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Send, 
   User as UserIcon, 
@@ -17,13 +17,19 @@ import {
   Download, 
   ExternalLink,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Search,
+  Tag,
+  ShieldCheck,
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { store, supabase, uploadImage } from '../services/store';
 import { useToast } from '../context/ToastContext';
-import { ChatSession, Message } from '../types';
+import { ChatSession, Message, ServiceAd } from '../types';
 import QuoteBuilder from '../components/QuoteBuilder';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 
 const Chat: React.FC = () => {
   const { user, loading } = useAuth();
@@ -35,6 +41,8 @@ const Chat: React.FC = () => {
 
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
+  const [activeAd, setActiveAd] = useState<ServiceAd | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -47,7 +55,7 @@ const Chat: React.FC = () => {
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
-  // Initial load
+  // Initial load de chats
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -79,6 +87,24 @@ const Chat: React.FC = () => {
     };
     loadChats();
   }, [user, routeChatId, navigate]);
+
+  // Carrega os detalhes do anúncio ativo para o mini-card do header
+  useEffect(() => {
+    if (!activeChat?.adId) {
+      setActiveAd(null);
+      return;
+    }
+
+    const loadAdDetails = async () => {
+      try {
+        const ad = await store.getAdById(activeChat.adId);
+        setActiveAd(ad);
+      } catch {
+        setActiveAd(null);
+      }
+    };
+    loadAdDetails();
+  }, [activeChat?.adId]);
 
   // Realtime: recebe novas mensagens em tempo real
   useEffect(() => {
@@ -177,7 +203,6 @@ const Chat: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || !activeChat || !user) return;
 
-    // Limite de 8MB
     if (file.size > 8 * 1024 * 1024) {
       toast('A foto deve ter no máximo 8MB.', 'error');
       return;
@@ -187,7 +212,6 @@ const Chat: React.FC = () => {
     try {
       const publicUrl = await uploadImage(file, 'ad-images');
       if (publicUrl) {
-        // Envia mensagem com tag de foto
         const photoMessage = `[IMG]${publicUrl}[/IMG]`;
         await handleSendMessage(photoMessage);
         toast('Foto enviada com sucesso!', 'success');
@@ -221,6 +245,16 @@ const Chat: React.FC = () => {
 
   if (!user) return null;
 
+  // Filtra conversas por busca
+  const filteredChats = chats.filter(chat => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const otherName = (chat.otherUserName || chat.providerName || chat.clientName || '').toLowerCase();
+    const adTitle = (chat.adTitle || '').toLowerCase();
+    const lastMsg = (chat.lastMessage || '').toLowerCase();
+    return otherName.includes(term) || adTitle.includes(term) || lastMsg.includes(term);
+  });
+
   // Separa as mensagens por dia para exibir marcadores de data
   const groupedMessages = (msgs: Message[]) => {
       const groups: { label: string; messages: Message[] }[] = [];
@@ -244,13 +278,13 @@ const Chat: React.FC = () => {
     '💬 Olá! Gostaria de solicitar um orçamento.',
     '📅 Qual sua disponibilidade para esta semana?',
     '📍 Você atende na minha região / bairro?',
-    '🛠️ Pode fazer uma visita técnica para avaliar o serviço?',
+    '🛠️ Pode fazer uma visita técnica para avaliar?',
     '📸 Enviei fotos do local para você avaliar.',
   ];
 
   const providerQuickReplies = [
     '✅ Olá! Posso te atender com certeza.',
-    '📸 Poderia me enviar uma foto ou vídeo do problema/local?',
+    '📸 Poderia me enviar fotos do problema/local?',
     '📍 Qual o seu bairro/endereço para eu calcular o deslocamento?',
     '📄 Vou preparar uma proposta comercial detalhada para você.',
     '🕒 Qual o melhor horário para eu realizar a visita?',
@@ -259,7 +293,7 @@ const Chat: React.FC = () => {
   const activeQuickReplies = isProviderInThisChat ? providerQuickReplies : clientQuickReplies;
 
   // Helper para renderizar conteúdo da mensagem (texto, imagem ou proposta)
-  const renderMessageContent = (text: string) => {
+  const renderMessageContent = (text: string, isMe: boolean) => {
     // 1. Mensagem com Foto ([IMG]url[/IMG])
     const imgMatch = text.match(/\[IMG\](.*?)\[\/IMG\]/);
     if (imgMatch) {
@@ -269,15 +303,15 @@ const Chat: React.FC = () => {
         <div className="space-y-2">
           <div 
             onClick={() => setLightboxImage(imageUrl)}
-            className="cursor-pointer overflow-hidden rounded-xl border border-black/10 hover:opacity-95 transition group relative"
+            className="cursor-pointer overflow-hidden rounded-xl border border-black/10 hover:opacity-95 transition group relative bg-black/5"
           >
             <img 
               src={imageUrl} 
               alt="Foto enviada no chat" 
-              className="max-h-64 max-w-full object-cover rounded-xl"
+              className="max-h-72 max-w-full object-cover rounded-xl"
             />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
-              <ExternalLink size={14} /> Ampliar
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-2xs">
+              <ExternalLink size={15} /> Clique para Ampliar
             </div>
           </div>
           {remainingText && <p className="text-sm whitespace-pre-wrap break-words">{remainingText}</p>}
@@ -288,151 +322,271 @@ const Chat: React.FC = () => {
     // 2. Mensagem com Proposta Comercial / Orçamento
     if (text.includes('ORÇAMENTO DE PRESTAÇÃO DE SERVIÇOS') || text.includes('Proposta Comercial') || text.includes('VALOR TOTAL:')) {
       return (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold pb-1 border-b border-current/20">
-            <FileText size={14} /> Proposta Comercial
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between pb-2 border-b border-current/20">
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+              <FileText size={15} className={isMe ? 'text-blue-200' : 'text-emerald-600'} /> Proposta Comercial
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              Oficial
+            </span>
           </div>
-          <p className="text-xs whitespace-pre-wrap break-words leading-relaxed font-mono bg-black/5 p-2 rounded-lg">
+          <div className={`p-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap break-words font-mono ${
+            isMe ? 'bg-blue-900/40 text-blue-50 border border-blue-500/30' : 'bg-slate-50 text-slate-800 border border-slate-200'
+          }`}>
             {text}
-          </p>
+          </div>
         </div>
       );
     }
 
     // 3. Mensagem de texto normal
-    return <p className="text-sm whitespace-pre-wrap break-words">{text}</p>;
+    return <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{text}</p>;
   };
 
   return (
-    <div className="flex flex-1 h-full overflow-hidden bg-gray-100">
+    <div className="flex flex-1 h-[calc(100vh-4rem)] overflow-hidden bg-slate-100">
       
-      {/* Sidebar List */}
-      <div className={`w-full md:w-80 bg-white border-r border-gray-200 flex flex-col ${activeChat && 'hidden md:flex'}`}>
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-800">Mensagens</h2>
-          <span className="text-xs font-semibold bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full border border-brand-200">
-            {chats.length} {chats.length === 1 ? 'conversa' : 'conversas'}
-          </span>
+      {/* Sidebar List (Lista de Conversas) */}
+      <div className={`w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col ${activeChat && 'hidden md:flex'}`}>
+        
+        {/* Header da Sidebar com Busca */}
+        <div className="p-3.5 border-b border-slate-200 bg-slate-50 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+              Mensagens
+              <span className="text-xs font-bold bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full border border-brand-200">
+                {chats.length}
+              </span>
+            </h2>
+          </div>
+
+          {/* Input de Busca */}
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por nome, serviço ou texto..."
+              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 outline-none transition shadow-2xs"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto">
-            {chats.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                    <p>Nenhuma conversa iniciada.</p>
+        {/* Lista de Conversas com Avatares e Badges */}
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {filteredChats.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 space-y-2">
+                    <UserIcon size={32} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm font-medium text-slate-600">
+                      {searchTerm ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa iniciada.'}
+                    </p>
+                    <p className="text-xs">
+                      {searchTerm ? 'Tente buscar por outro termo.' : 'Inicie um chat através da página de anúncios.'}
+                    </p>
                 </div>
             ) : (
-                <ul className="divide-y divide-gray-100">
-                    {chats.map(chat => (
+                <ul>
+                    {filteredChats.map(chat => {
+                      const isSelected = activeChat?.id === chat.id;
+                      const displayName = chat.otherUserName || chat.providerName || chat.clientName || 'Usuário';
+                      const initial = displayName.charAt(0).toUpperCase();
+                      const hasUnread = Boolean(chat.unreadCount && chat.unreadCount > 0);
+
+                      return (
                         <li 
                             key={chat.id}
                             onClick={() => handleChatSelect(chat.id)}
-                            className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${activeChat?.id === chat.id ? 'bg-brand-50 border-l-4 border-brand-600' : ''}`}
+                            className={`p-3.5 px-4 hover:bg-slate-50 cursor-pointer transition-all border-l-4 ${
+                              isSelected ? 'bg-brand-50/70 border-brand-600 shadow-2xs' : 'border-transparent'
+                            }`}
                         >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="font-semibold text-gray-900 line-clamp-1 flex items-center">
-                                    {chat.otherUserName || 'Usuário'}
-                                    {chat.unreadCount ? (
-                                        <span className="ml-2 w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" title={`${chat.unreadCount} nova(s) mensagem(ns)`}></span>
-                                    ) : null}
-                                </span>
-                                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
-                                    {new Date(chat.updatedAt).toLocaleDateString([], {hour: '2-digit', minute:'2-digit'})}
-                                </span>
+                            <div className="flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className="relative shrink-0">
+                                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                                        {initial}
+                                    </div>
+                                    {hasUnread && (
+                                        <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse"></span>
+                                    )}
+                                </div>
+
+                                {/* Dados da Conversa */}
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex justify-between items-baseline mb-0.5">
+                                        <span className={`text-sm truncate ${hasUnread ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'}`}>
+                                            {displayName}
+                                        </span>
+                                        <span className="text-[11px] text-slate-400 whitespace-nowrap ml-2">
+                                            {new Date(chat.updatedAt).toLocaleDateString([], {hour: '2-digit', minute:'2-digit'})}
+                                        </span>
+                                    </div>
+
+                                    <p className="text-[11px] text-brand-600 font-semibold truncate mb-0.5">
+                                        {chat.adTitle}
+                                    </p>
+
+                                    <div className="flex items-center justify-between">
+                                        <p className={`text-xs truncate ${hasUnread ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
+                                            {chat.lastMessage?.includes('[IMG]') ? '📸 Foto compartilhada' : (chat.lastMessage || 'Nenhuma mensagem.')}
+                                        </p>
+                                        {hasUnread && (
+                                            <span className="ml-2 px-1.5 py-0.5 bg-emerald-600 text-white text-[10px] font-bold rounded-full shrink-0">
+                                                {chat.unreadCount}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-xs text-brand-600 mb-1 font-medium">{chat.adTitle}</p>
-                            <p className={`text-sm line-clamp-1 ${chat.unreadCount ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                                {chat.lastMessage?.includes('[IMG]') ? '📸 Foto compartilhada' : (chat.lastMessage || 'Nenhuma mensagem.')}
-                            </p>
                         </li>
-                    ))}
+                      );
+                    })}
                 </ul>
             )}
         </div>
       </div>
 
-      {/* Chat Window */}
-      <div className={`flex-1 flex flex-col bg-gray-50 ${!activeChat && 'hidden md:flex'}`}>
+      {/* Chat Window (Área da Conversa) */}
+      <div className={`flex-1 flex flex-col bg-slate-100 ${!activeChat && 'hidden md:flex'}`}>
         {activeChat ? (
             <>
-                {/* Chat Header com Botão de Criar Orçamento */}
-                <div className="p-3.5 px-4 bg-white border-b border-gray-200 shadow-xs flex items-center justify-between">
+                {/* Header Superior com Mini-Card do Anúncio e Ações */}
+                <div className="bg-white border-b border-slate-200 shadow-xs">
+                  {/* Linha 1: Dados do Usuário e Botões Principais */}
+                  <div className="p-3 px-4 flex items-center justify-between">
                     <div className="flex items-center min-w-0">
-                        <button onClick={() => navigate('/dashboard/chat')} className="mr-3 md:hidden text-gray-500 hover:text-gray-800">
-                            <ArrowLeft />
+                        <button 
+                          onClick={() => navigate('/dashboard/chat')} 
+                          className="mr-3 md:hidden text-slate-500 hover:text-slate-800 p-1 rounded-lg hover:bg-slate-100"
+                          title="Voltar para lista de conversas"
+                        >
+                            <ArrowLeft size={20} />
                         </button>
-                        <div className="flex items-center min-w-0">
-                            {activeChat.providerName ? (
-                                <div className="w-10 h-10 bg-brand-600 text-white rounded-full flex items-center justify-center font-bold mr-3 shrink-0 shadow-xs">
-                                    {(activeChat.otherUserName || activeChat.providerName || 'P').charAt(0).toUpperCase()}
-                                </div>
-                            ) : null}
+
+                        <div className="flex items-center min-w-0 gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                                {(activeChat.otherUserName || activeChat.providerName || 'U').charAt(0).toUpperCase()}
+                            </div>
                             <div className="min-w-0">
-                                <h3 className="font-bold text-gray-800 text-sm truncate flex items-center gap-1.5">
-                                    <span>{activeChat.otherUserName || activeChat.providerName || 'Conversa'}</span>
-                                    <span className="text-xs font-normal text-gray-400">({activeChat.adTitle})</span>
+                                <h3 className="font-bold text-slate-900 text-sm truncate flex items-center gap-1.5">
+                                    <span>{activeChat.otherUserName || activeChat.providerName || 'Contato'}</span>
                                 </h3>
-                                <p className="text-[11px] text-gray-500 truncate flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-                                    Chat Ativo no Mestrio
+                                <p className="text-[11px] text-emerald-600 font-semibold truncate flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                                    Ativo no Mestrio
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Botão de Criar Orçamento no Topo */}
+                    {/* Botões de Ação do Header */}
                     <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setShowQuoteModal(true)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 transition shadow-xs shrink-0"
-                          title="Criar proposta comercial e enviar ao cliente"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl flex items-center gap-1.5 transition shadow-xs shrink-0"
+                          title="Criar proposta comercial executiva e enviar ao cliente"
                         >
                           <Calculator size={15} />
                           <span className="hidden sm:inline">Criar Orçamento</span>
                         </button>
                     </div>
+                  </div>
+
+                  {/* Linha 2: Mini-Card de Identificação do Anúncio / Contexto */}
+                  <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {activeAd?.images?.[0] || activeAd?.photos?.[0] ? (
+                        <img 
+                          src={activeAd?.images?.[0] || activeAd?.photos?.[0]} 
+                          alt={activeChat.adTitle} 
+                          className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0 shadow-2xs"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs shrink-0">
+                          <Tag size={14} />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800 truncate leading-tight">
+                          {activeChat.adTitle}
+                        </p>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {activeAd?.price ? `R$ ${activeAd.price} • ${activeAd.location || 'Atendimento local'}` : 'Serviço sob orçamento'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link 
+                      to={`/servico/${activeChat.adId}`}
+                      target="_blank"
+                      className="text-brand-600 hover:text-brand-700 font-bold text-xs whitespace-nowrap hover:underline flex items-center gap-1 shrink-0"
+                    >
+                      Ver Anúncio →
+                    </Link>
+                  </div>
                 </div>
 
-                {/* Messages Area */}
+                {/* Messages Area (Área de Mensagens com Balões Modernos) */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {activeChat.messages.length === 0 && (
-                        <div className="text-center text-gray-400 mt-10 text-sm">
-                            <p>Comece a conversa com o prestador.</p>
-                            <p>Envie dúvidas ou fotos do serviço anunciado.</p>
+                        <div className="text-center text-slate-400 mt-12 space-y-2">
+                            <div className="w-12 h-12 bg-white rounded-2xl shadow-xs border border-slate-200 mx-auto flex items-center justify-center text-brand-600">
+                              <Sparkles size={24} />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-700">Inicie a conversa!</p>
+                            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                              Tire dúvidas sobre o serviço anunciado, envie fotos do local ou solicite uma proposta.
+                            </p>
                         </div>
                     )}
                     
                     {groupedMessages(activeChat.messages).map(group => (
                         <div key={group.label}>
-                            <div className="flex justify-center mb-4">
-                                <span className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded-full font-medium">
+                            <div className="flex justify-center my-3">
+                                <span className="text-[11px] bg-slate-200/80 text-slate-700 px-3 py-0.5 rounded-full font-semibold shadow-2xs">
                                     {group.label}
                                 </span>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-2.5">
                                 {group.messages.map((msg) => {
                                     const isMe = msg.senderId === user.id;
                                     const showAvatar = !isMe;
                                     return (
-                                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end`}>
+                                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end group`}>
                                             {showAvatar && (
-                                                <div className="w-7 h-7 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0">
+                                                <div className="w-7 h-7 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 shadow-2xs">
                                                     {(activeChat.otherUserName || 'U').charAt(0).toUpperCase()}
                                                 </div>
                                             )}
                                             <div className={`
-                                                max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-xs
-                                                ${isMe ? 'bg-brand-600 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}
+                                                max-w-[85%] md:max-w-[70%] rounded-2xl p-3 shadow-xs transition-shadow
+                                                ${isMe 
+                                                  ? 'bg-blue-600 text-white rounded-br-2xs' 
+                                                  : 'bg-white text-slate-800 border border-slate-200/90 rounded-bl-2xs'
+                                                }
                                             `}>
-                                                {renderMessageContent(msg.text)}
-                                                <span className={`text-[10px] flex items-center justify-end mt-1.5 gap-1 ${isMe ? 'text-brand-200' : 'text-gray-400'}`}>
-                                                    {formatTime(msg.timestamp)}
+                                                {renderMessageContent(msg.text, isMe)}
+                                                <div className={`text-[10px] flex items-center justify-end mt-1.5 gap-1 ${
+                                                  isMe ? 'text-blue-100' : 'text-slate-400'
+                                                }`}>
+                                                    <span>{formatTime(msg.timestamp)}</span>
                                                     {isMe && (
                                                         msg.read
-                                                            ? <CheckCheck size={13} className="text-brand-200" />
-                                                            : <Check size={13} className="text-brand-200/70" />
+                                                            ? <CheckCheck size={14} className="text-sky-200" title="Mensagem lida" />
+                                                            : <Check size={14} className="text-blue-200/80" title="Mensagem enviada" />
                                                     )}
-                                                </span>
+                                                </div>
                                             </div>
                                         </div>
                                     )
@@ -444,28 +598,28 @@ const Chat: React.FC = () => {
                 </div>
 
                 {/* Respostas Rápidas (Quick Replies) */}
-                <div className="bg-white border-t border-gray-100 px-4 py-2">
+                <div className="bg-white border-t border-slate-100 px-4 py-2">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-bold text-gray-500 flex items-center gap-1">
-                      <Sparkles size={12} className="text-amber-500" /> Respostas Rápidas:
+                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                      <Sparkles size={13} className="text-amber-500" /> Respostas Rápidas:
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowQuickReplies(prev => !prev)}
-                      className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+                      className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
                     >
                       {showQuickReplies ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                     </button>
                   </div>
 
                   {showQuickReplies && (
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
                       {activeQuickReplies.map((reply, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => handleSendMessage(reply)}
-                          className="px-3 py-1 bg-slate-100 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-slate-700 rounded-full text-xs whitespace-nowrap transition border border-slate-200 shadow-2xs shrink-0"
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-slate-700 rounded-full text-xs whitespace-nowrap transition border border-slate-200 shadow-2xs shrink-0 font-medium active:scale-95"
                         >
                           {reply}
                         </button>
@@ -474,8 +628,8 @@ const Chat: React.FC = () => {
                   )}
                 </div>
 
-                {/* Input Area com Envio de Fotos */}
-                <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="p-3 bg-white border-t border-gray-200">
+                {/* Barra de Digitação Ergonômica */}
+                <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="p-3.5 bg-white border-t border-slate-200">
                     <div className="flex items-center space-x-2">
                         {/* Botão de Envio de Fotos */}
                         <input
@@ -489,10 +643,10 @@ const Chat: React.FC = () => {
                           type="button"
                           disabled={uploadingImage || sending}
                           onClick={() => fileInputRef.current?.click()}
-                          className="p-2 text-gray-500 hover:text-brand-600 hover:bg-gray-100 rounded-full transition disabled:opacity-50"
+                          className="p-2.5 text-slate-500 hover:text-brand-600 hover:bg-slate-100 rounded-full transition disabled:opacity-50 border border-slate-200/60 shadow-2xs"
                           title="Enviar foto do local ou serviço"
                         >
-                          {uploadingImage ? <Loader2 size={20} className="animate-spin text-brand-600" /> : <ImageIcon size={20} />}
+                          {uploadingImage ? <Loader2 size={19} className="animate-spin text-brand-600" /> : <ImageIcon size={19} />}
                         </button>
 
                         <input
@@ -501,12 +655,12 @@ const Chat: React.FC = () => {
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder={uploadingImage ? 'Enviando foto...' : 'Digite sua mensagem...'}
                             disabled={uploadingImage}
-                            className="flex-1 border-gray-300 rounded-full focus:ring-2 focus:ring-brand-500 focus:border-brand-500 px-4 py-2 text-sm border shadow-2xs outline-none"
+                            className="flex-1 border-slate-300 rounded-full focus:ring-2 focus:ring-brand-500 focus:border-transparent px-4 py-2.5 text-sm border shadow-2xs outline-none bg-slate-50 focus:bg-white transition"
                         />
                         <button 
                             type="submit" 
                             disabled={!newMessage.trim() || sending || uploadingImage}
-                            className="bg-brand-600 text-white p-2.5 rounded-full hover:bg-brand-700 disabled:opacity-50 transition shadow-xs"
+                            className="bg-blue-600 text-white p-2.5 px-3.5 rounded-full hover:bg-blue-700 disabled:opacity-50 transition shadow-sm active:scale-95 flex items-center justify-center"
                         >
                             <Send size={18} />
                         </button>
@@ -514,20 +668,22 @@ const Chat: React.FC = () => {
                 </form>
             </>
         ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 space-y-3">
+                <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-xs text-brand-600">
                     <UserIcon size={32} />
                 </div>
-                <p className="text-lg font-medium">Selecione uma conversa</p>
-                <p className="text-sm">Ou inicie um chat através de um anúncio</p>
+                <p className="text-base font-bold text-slate-700">Selecione uma conversa ao lado</p>
+                <p className="text-xs text-slate-500 max-w-sm text-center">
+                  Aqui você conversa diretamente com clientes e prestadores para tirar dúvidas, enviar fotos e combinar orçamentos.
+                </p>
             </div>
         )}
       </div>
 
       {/* Modal de Criar Orçamento Direto no Chat */}
       {showQuoteModal && activeChat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-8 overflow-hidden border border-gray-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full my-8 overflow-hidden border border-slate-200">
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calculator className="text-emerald-400" size={20} />
@@ -555,7 +711,7 @@ const Chat: React.FC = () => {
       {lightboxImage && (
         <div 
           onClick={() => setLightboxImage(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xs animate-fadeIn cursor-pointer"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xs animate-fadeIn cursor-pointer"
         >
           <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl" onClick={e => e.stopPropagation()}>
             <button
