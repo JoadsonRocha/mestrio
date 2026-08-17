@@ -113,8 +113,44 @@ const ServiceDetail: React.FC = () => {
     return WEEKDAY_LABELS[d.getDay()];
   };
 
-  const DAY_NAMES: Record<string, string> = {
-    seg: 'Segunda', ter: 'Terça', qua: 'Quarta', qui: 'Quinta', sex: 'Sexta', sab: 'Sábado', dom: 'Domingo'
+  const ALL_WEEK_DAYS = [
+    { key: 'seg', name: 'Segunda-feira', short: 'Seg', dayIndex: 1 },
+    { key: 'ter', name: 'Terça-feira', short: 'Ter', dayIndex: 2 },
+    { key: 'qua', name: 'Quarta-feira', short: 'Qua', dayIndex: 3 },
+    { key: 'qui', name: 'Quinta-feira', short: 'Qui', dayIndex: 4 },
+    { key: 'sex', name: 'Sexta-feira', short: 'Sex', dayIndex: 5 },
+    { key: 'sab', name: 'Sábado', short: 'Sáb', dayIndex: 6 },
+    { key: 'dom', name: 'Domingo', short: 'Dom', dayIndex: 0 },
+  ];
+
+  const getWeeklySchedule = () => {
+    if (!ad?.availability) return null;
+    const is24h = /24\s*h|24\s*horas/i.test(ad.availability);
+    const todayIndex = new Date().getDay();
+    
+    if (is24h) {
+      return ALL_WEEK_DAYS.map(day => ({
+        ...day,
+        isToday: day.dayIndex === todayIndex,
+        isOpen: true,
+        timeRange: '24 Horas (Atendimento Contínuo)'
+      }));
+    }
+
+    const av = parseAvailability(ad.availability);
+    if (!av) return null;
+
+    const timeFormatted = `${av.start} às ${av.end}`;
+
+    return ALL_WEEK_DAYS.map(day => {
+      const isOpen = av.days.includes(day.key);
+      return {
+        ...day,
+        isToday: day.dayIndex === todayIndex,
+        isOpen,
+        timeRange: isOpen ? timeFormatted : 'Fechado'
+      };
+    });
   };
 
   const formatAvailability = (): string => {
@@ -738,14 +774,48 @@ const ServiceDetail: React.FC = () => {
                                );
                              })()}
 
-                             {ad.isCertified && (
+                    {ad.isCertified && (
                                <div className="flex items-center text-blue-900 font-medium">
                                  <VerifiedBadge size={16} className="mr-3" /> Identidade & Documentos Verificados
                                 </div>
                              )}
-                             <div className="flex items-center"><Clock size={16} className="mr-3 text-indigo-500"/> Responde em poucos minutos</div>
-                             <div className="flex items-start"><Calendar size={16} className="mr-3 text-orange-500 mt-0.5"/> <span>{formatAvailability()}</span></div>
-                        </div>
+                              <div className="flex items-center"><Clock size={16} className="mr-3 text-indigo-500"/> Responde em poucos minutos</div>
+
+                              {/* Tabela de Horários de Atendimento por Dia */}
+                              {(() => {
+                                const weekly = getWeeklySchedule();
+                                if (!weekly) return null;
+                                return (
+                                  <div className="pt-2 border-t border-gray-200/70 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                        <Calendar size={14} className="text-orange-500" /> Horários de Atendimento
+                                      </span>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden text-xs shadow-2xs">
+                                      {weekly.map(({ key, name, isToday, isOpen, timeRange }) => (
+                                        <div 
+                                          key={key}
+                                          className={`flex items-center justify-between px-3 py-2 transition-colors ${
+                                            isToday ? 'bg-orange-50/80 font-bold text-orange-950 border-l-3 border-orange-500' : 'text-gray-700'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-1.5">
+                                            <span>{name}</span>
+                                            {isToday && (
+                                              <span className="text-[10px] px-1.5 py-0.5 bg-orange-500 text-white rounded font-bold">Hoje</span>
+                                            )}
+                                          </div>
+                                          <span className={isOpen ? 'text-gray-900 font-semibold' : 'text-gray-400 font-normal'}>
+                                            {timeRange}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                         </div>
 
                         <div className="pt-2 grid grid-cols-2 gap-2">
                           <button
