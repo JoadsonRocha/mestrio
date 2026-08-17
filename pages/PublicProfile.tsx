@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { store } from '../services/store';
 import { User, ServiceAd } from '../types';
 import { ServiceCard } from '../components/UI';
-import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Award, Share2, Copy, Check, MessageCircle, Globe, ExternalLink } from 'lucide-react';
+import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Award, Share2, Copy, Check, MessageCircle, Globe, ExternalLink, Calendar, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
