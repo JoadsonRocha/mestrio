@@ -12,7 +12,7 @@ export interface BusinessStatus {
   dotColorClass: string;
 }
 
-const DAY_MAP: Record<number, string> = {
+export const DAY_MAP: Record<number, string> = {
   0: 'dom',
   1: 'seg',
   2: 'ter',
@@ -22,22 +22,28 @@ const DAY_MAP: Record<number, string> = {
   6: 'sab',
 };
 
-const DAY_ALIASES: Record<string, string> = {
-  'seg': 'seg', 'segunda': 'seg', 'segunda-feira': 'seg', 'mon': 'seg',
-  'ter': 'ter', 'terça': 'ter', 'terca': 'ter', 'terça-feira': 'ter', 'tue': 'ter',
-  'qua': 'qua', 'quarta': 'qua', 'quarta-feira': 'qua', 'wed': 'qua',
-  'qui': 'qui', 'quinta': 'qui', 'quinta-feira': 'qui', 'thu': 'qui',
-  'sex': 'sex', 'sexta': 'sex', 'sexta-feira': 'sex', 'fri': 'sex',
-  'sab': 'sab', 'sáb': 'sab', 'sábado': 'sab', 'sabado': 'sab', 'sat': 'sab',
-  'dom': 'dom', 'domingo': 'dom', 'sun': 'dom',
+export const WEEK_DAYS_ORDER = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+
+export const DAY_NAMES: Record<string, string> = {
+  seg: 'Segunda',
+  ter: 'Terça',
+  qua: 'Quarta',
+  qui: 'Quinta',
+  sex: 'Sexta',
+  sab: 'Sábado',
+  dom: 'Domingo',
 };
 
-/**
- * Normaliza e extrai blocos de dias e horários de uma string de disponibilidade.
- * Suporta formatos:
- * 1) "Seg, Ter, Qua, 08:00 - 18:00"
- * 2) "Seg: 08:00 - 18:00, Ter: 08:00 - 18:00, Sáb: 08:00 - 12:00"
- */
+const DAY_ALIASES: Record<string, string> = {
+  'seg': 'seg', 'segunda': 'seg', 'segunda-feira': 'seg', 'mon': 'seg', 'monday': 'seg',
+  'ter': 'ter', 'terça': 'ter', 'terca': 'ter', 'terça-feira': 'ter', 'terca-feira': 'ter', 'tue': 'ter', 'tuesday': 'ter',
+  'qua': 'qua', 'quarta': 'qua', 'quarta-feira': 'qua', 'wed': 'qua', 'wednesday': 'qua',
+  'qui': 'qui', 'quinta': 'qui', 'quinta-feira': 'qui', 'thu': 'qui', 'thursday': 'qui',
+  'sex': 'sex', 'sexta': 'sex', 'sexta-feira': 'sex', 'fri': 'sex', 'friday': 'sex',
+  'sab': 'sab', 'sáb': 'sab', 'sábado': 'sab', 'sabado': 'sab', 'sat': 'sab', 'saturday': 'sab',
+  'dom': 'dom', 'domingo': 'dom', 'sun': 'dom', 'sunday': 'dom',
+};
+
 export interface ScheduleBlock {
   days: string[];
   startMinutes: number;
@@ -46,6 +52,142 @@ export interface ScheduleBlock {
   endStr: string;
 }
 
+/**
+ * Normaliza um texto de dia para a chave canônica (seg, ter, qua, qui, sex, sab, dom)
+ */
+function normalizeDayToken(raw: string): string | null {
+  const clean = raw
+    .toLowerCase()
+    .replace(/[áàâã]/g, 'a')
+    .replace(/[éèê]/g, 'e')
+    .replace(/[íìî]/g, 'i')
+    .replace(/[óòôõ]/g, 'o')
+    .replace(/[úùû]/g, 'u')
+    .replace(/ç/g, 'c')
+    .trim();
+
+  return DAY_ALIASES[clean] || null;
+}
+
+/**
+ * Expande intervalos como "seg a sex", "segunda a sexta", "seg - sab"
+ */
+function expandDayRange(startDay: string, endDay: string): string[] {
+  const startIdx = WEEK_DAYS_ORDER.indexOf(startDay);
+  const endIdx = WEEK_DAYS_ORDER.indexOf(endDay);
+  if (startIdx === -1 || endIdx === -1) return [startDay, endDay];
+
+  if (startIdx <= endIdx) {
+    return WEEK_DAYS_ORDER.slice(startIdx, endIdx + 1);
+  } else {
+    // Ex: sab a ter (passando pelo domingo)
+    return [...WEEK_DAYS_ORDER.slice(startIdx), ...WEEK_DAYS_ORDER.slice(0, endIdx + 1)];
+  }
+}
+
+/**
+ * Extrai todos os dias mencionados em uma string, reconhecendo listas e intervalos ("a", "à", "ate", "até", "-").
+ */
+export function extractDaysFromString(dayText: string): string[] {
+  const clean = dayText.toLowerCase().trim();
+  if (!clean) return [];
+
+  // Casos especiais globais
+  if (clean.includes('todos os dias') || clean.includes('diariamente') || clean.includes('segunda a domingo') || clean.includes('seg a dom')) {
+    return ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+  }
+  if (clean.includes('segunda a sexta') || clean.includes('seg a sex') || clean.includes('segunda à sexta') || clean.includes('seg à sex') || clean.includes('seg-sex')) {
+    const base = ['seg', 'ter', 'qua', 'qui', 'sex'];
+    if (clean.includes('sab') || clean.includes('sáb') || clean.includes('sábado')) {
+      base.push('sab');
+    }
+    if (clean.includes('dom') || clean.includes('domingo')) {
+      base.push('dom');
+    }
+    return Array.from(new Set(base));
+  }
+  if (clean.includes('segunda a sabado') || clean.includes('seg a sab') || clean.includes('segunda à sábado') || clean.includes('seg à sáb') || clean.includes('seg-sab')) {
+    return ['seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  }
+
+  // Verifica padrão de intervalo tipo "X a Y" ou "X à Y" ou "X ate Y" ou "X - Y"
+  const rangeMatch = clean.match(/([a-zà-ÿ]+)\s*(?:a|à|ate|até|-)\s*([a-zà-ÿ]+)/i);
+  if (rangeMatch) {
+    const d1 = normalizeDayToken(rangeMatch[1]);
+    const d2 = normalizeDayToken(rangeMatch[2]);
+    if (d1 && d2) {
+      const expanded = expandDayRange(d1, d2);
+      // Pega eventuais outros dias soltos (ex: "seg a sex, sab")
+      const remainder = clean.replace(rangeMatch[0], '');
+      const otherSegments = remainder.split(/[,;:\/\-e\s]+/).filter(Boolean);
+      for (const seg of otherSegments) {
+        const d = normalizeDayToken(seg);
+        if (d && !expanded.includes(d)) expanded.push(d);
+      }
+      return expanded;
+    }
+  }
+
+  // Se não for intervalo, separa por vírgulas, espaços, barras, etc.
+  const rawSegments = clean.split(/[,;:\/\-e\s]+/).filter(Boolean);
+  const days: string[] = [];
+
+  for (const raw of rawSegments) {
+    const canonical = normalizeDayToken(raw);
+    if (canonical && !days.includes(canonical)) {
+      days.push(canonical);
+    }
+  }
+
+  return days;
+}
+
+/**
+ * Normaliza e extrai dias e horários de uma string de disponibilidade.
+ */
+export function parseAvailabilityString(availability?: string): ScheduleBlock | null {
+  if (!availability) return null;
+
+  const clean = availability.trim();
+
+  // Procura padrão de horário tipo 08:00 - 18:00 ou 08h às 18h ou 8:00 às 18:00 ou 08:00 as 18:00
+  const timeMatch = clean.match(/(\d{1,2})[:h]?(\d{2})?\s*[-àa]\s*(\d{1,2})[:h]?(\d{2})?/i);
+  if (!timeMatch) {
+    // Se não tem horário explícito mas cita dias ou comercial
+    if (clean.toLowerCase().includes('comercial') || clean.toLowerCase().includes('seg')) {
+      const days = extractDaysFromString(clean);
+      return {
+        days: days.length > 0 ? days : ['seg', 'ter', 'qua', 'qui', 'sex'],
+        startMinutes: 8 * 60,
+        endMinutes: 18 * 60,
+        startStr: '08:00',
+        endStr: '18:00',
+      };
+    }
+    return null;
+  }
+
+  const startHour = parseInt(timeMatch[1], 10);
+  const startMin = parseInt(timeMatch[2] || '0', 10);
+  const endHour = parseInt(timeMatch[3], 10);
+  const endMin = parseInt(timeMatch[4] || '0', 10);
+
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+
+  const startStr = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
+  const endStr = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+
+  const dayPart = clean.replace(timeMatch[0], '');
+  const days = extractDaysFromString(dayPart);
+
+  return { days, startMinutes, endMinutes, startStr, endStr };
+}
+
+/**
+ * Normaliza e extrai blocos de dias e horários de uma string de disponibilidade.
+ * Suporta múltiplos blocos diários (ex: "Seg: 08:00 - 18:00, Sáb: 08:00 - 12:00")
+ */
 export function parseAllScheduleBlocks(availability?: string): ScheduleBlock[] {
   if (!availability) return [];
   const clean = availability.trim();
@@ -66,53 +208,6 @@ export function parseAllScheduleBlocks(availability?: string): ScheduleBlock[] {
 
   const single = parseAvailabilityString(clean);
   return single ? [single] : [];
-}
-
-/**
- * Normaliza e extrai dias e horários de uma string de disponibilidade.
- */
-export function parseAvailabilityString(availability?: string): ScheduleBlock | null {
-  if (!availability) return null;
-
-  const clean = availability.trim();
-
-  // Procura padrão de horário tipo 08:00 - 18:00 ou 08h às 18h ou 8:00 às 18:00
-  const timeMatch = clean.match(/(\d{1,2})[:h]?(\d{2})?\s*[-àa]\s*(\d{1,2})[:h]?(\d{2})?/i);
-  if (!timeMatch) return null;
-
-  const startHour = parseInt(timeMatch[1], 10);
-  const startMin = parseInt(timeMatch[2] || '0', 10);
-  const endHour = parseInt(timeMatch[3], 10);
-  const endMin = parseInt(timeMatch[4] || '0', 10);
-
-  const startMinutes = startHour * 60 + startMin;
-  const endMinutes = endHour * 60 + endMin;
-
-  const startStr = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
-  const endStr = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
-
-  const dayPart = clean.replace(timeMatch[0], '').toLowerCase();
-  const rawSegments = dayPart.split(/[,;:\/\-e\s]+/).filter(Boolean);
-
-  const days: string[] = [];
-  for (const raw of rawSegments) {
-    const normalized = raw
-      .replace(/[áàâã]/g, 'a')
-      .replace(/[éèê]/g, 'e')
-      .replace(/[íìî]/g, 'i')
-      .replace(/[óòôõ]/g, 'o')
-      .replace(/[úùû]/g, 'u')
-      .replace(/ç/g, 'c');
-
-    if (DAY_ALIASES[normalized]) {
-      const canonical = DAY_ALIASES[normalized];
-      if (!days.includes(canonical)) {
-        days.push(canonical);
-      }
-    }
-  }
-
-  return { days, startMinutes, endMinutes, startStr, endStr };
 }
 
 /**
@@ -147,10 +242,10 @@ export function getBusinessStatus(availability?: string, now = new Date()): Busi
     };
   }
 
-  const lower = availability.toLowerCase();
+  const lower = availability.toLowerCase().trim();
 
   // 1. Sempre Aberto / 24 Horas
-  if (lower.includes('24h') || lower.includes('24 horas') || lower.includes('sempre')) {
+  if (lower.includes('24h') || lower.includes('24 horas') || lower.includes('24 horas (atendimento contínuo)') || lower.includes('sempre')) {
     return {
       isOpen: true,
       statusText: 'Atendimento 24 Horas',
@@ -234,3 +329,4 @@ export function getBusinessStatus(availability?: string, now = new Date()): Busi
     dotColorClass: 'bg-gray-400 ring-gray-200',
   };
 }
+

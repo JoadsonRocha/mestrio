@@ -122,20 +122,48 @@ const Ads: React.FC = () => {
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Megaphone size={28} className="text-gray-400" />
               </div>
-              <p className="text-gray-500">Nenhum anúncio publicado ainda.</p>
-              <p className="text-gray-400 text-sm mt-1">Comece a gerar renda e autonomia. Crie seu primeiro anúncio de serviços gerais agora!</p>
-              <Link to="/create-ad" className="inline-block mt-4 text-brand-600 font-medium hover:underline">Criar meu primeiro anúncio</Link>
+              <p className="text-gray-500 font-medium">Nenhum anúncio publicado ainda.</p>
+              <p className="text-gray-400 text-sm mt-1">Comece a divulgar seus serviços e conquiste novos clientes hoje mesmo!</p>
+              <Link to="/create-ad" className="inline-block mt-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-xs">
+                Criar meu primeiro anúncio
+              </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 p-5">
               {ads.map(ad => (
-                <div key={ad.id} className="relative group">
-                  <ServiceCard ad={ad} compact />
-                  <div className="absolute top-2 left-2 flex space-x-1.5 z-10">
+                <div key={ad.id} className="bg-white rounded-xl border border-gray-200/90 shadow-2xs hover:shadow-xs transition-all overflow-hidden flex flex-col justify-between">
+                  {/* Status de Moderação no topo */}
+                  {ad.status && ad.status !== 'approved' && (
+                    <div className={`px-3 py-1.5 text-xs font-bold flex items-center justify-between border-b ${
+                      ad.status === 'pending' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                      ad.status === 'rejected' ? 'bg-rose-50 text-rose-800 border-rose-200' :
+                      ad.status === 'suspended' ? 'bg-orange-50 text-orange-800 border-orange-200' :
+                      'bg-gray-100 text-gray-700 border-gray-200'
+                    }`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-current"></span>
+                        {ad.status === 'pending' ? 'Em análise de segurança' :
+                         ad.status === 'rejected' ? 'Anúncio rejeitado' :
+                         ad.status === 'suspended' ? 'Anúncio suspenso' : 'Anúncio expirado'}
+                      </span>
+                      {ad.rejectionReason && (
+                        <span className="text-[10px] opacity-80 truncate max-w-[140px]" title={ad.rejectionReason}>
+                          {ad.rejectionReason}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Prévia do Card */}
+                  <div className="flex-1">
+                    <ServiceCard ad={ad} compact />
+                  </div>
+
+                  {/* Barra de Ações Dedicada */}
+                  <div className="bg-gray-50/90 p-2.5 border-t border-gray-100 flex items-center justify-between gap-2">
                     <Link
                       to={`/edit-ad/${ad.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-white/95 text-gray-800 text-xs px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-white font-bold border border-gray-200"
+                      className="flex-1 text-center bg-white hover:bg-gray-100 text-gray-700 text-xs py-1.5 px-2 rounded-lg font-bold border border-gray-200 transition shadow-2xs"
                     >
                       Editar
                     </Link>
@@ -143,39 +171,32 @@ const Ads: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.preventDefault();
-                        e.stopPropagation();
                         setBoostingAd(ad);
                       }}
-                      className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-sm flex items-center font-bold transition-transform active:scale-95"
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center shadow-2xs"
                       title="Destacar no topo da categoria"
                     >
-                      <Rocket size={12} className="mr-1" /> Turbinar
+                      <Rocket size={12} className="mr-1 shrink-0" />
+                      <span>{ad.isPremium ? 'Turbinado' : 'Turbinar'}</span>
                     </button>
 
                     <button
                       onClick={(e) => {
                         e.preventDefault();
-                        e.stopPropagation();
                         handleDelete(ad.id);
                       }}
                       disabled={deletingId === ad.id}
-                      className={`${confirmingId === ad.id ? 'bg-red-600' : 'bg-red-500/95'} text-white text-xs px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-red-600 flex items-center font-bold disabled:opacity-50 transition-colors`}
+                      className={`text-xs py-1.5 px-2.5 rounded-lg font-bold transition flex items-center justify-center shrink-0 ${
+                        confirmingId === ad.id
+                          ? 'bg-rose-600 text-white shadow-2xs'
+                          : 'bg-white hover:bg-rose-50 text-rose-600 border border-gray-200'
+                      }`}
+                      title="Excluir anúncio"
                     >
-                      <Trash2 size={12} className="mr-1" /> {deletingId === ad.id ? 'Excluindo...' : confirmingId === ad.id ? 'Confirmar?' : 'Excluir'}
+                      <Trash2 size={13} className={confirmingId === ad.id ? 'mr-1' : ''} />
+                      {confirmingId === ad.id && (deletingId === ad.id ? '...' : 'Confirmar?')}
                     </button>
                   </div>
-                  {ad.status && ad.status !== 'approved' && (
-                    <div className={`absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded-full shadow font-medium ${
-                      ad.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      ad.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                      ad.status === 'suspended' ? 'bg-orange-100 text-orange-700' :
-                      'bg-gray-200 text-gray-600'
-                    }`}>
-                      {ad.status === 'pending' ? 'Em análise' :
-                       ad.status === 'rejected' ? 'Rejeitado' :
-                       ad.status === 'suspended' ? 'Suspenso' : 'Expirado'}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
