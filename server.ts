@@ -392,7 +392,59 @@ JSON puro:`;
       res.status(404).end();
     });
 
-    app.use(express.static(distDir, { maxAge: 0 }));
+    // Helper para servir HTML com Open Graph dinâmico (para WhatsApp, Facebook, Telegram, etc.)
+    async function serveHtmlWithOgTags(req: Request, res: Response) {
+      const indexPath = path.join(distDir, 'index.html');
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).send('Not found');
+      }
+
+      let html = fs.readFileSync(indexPath, 'utf-8');
+      const urlPath = req.path;
+
+      try {
+        if (urlPath.startsWith('/profissional/')) {
+          const userId = urlPath.split('/profissional/')[1]?.split('/')[0];
+          if (userId) {
+            const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            if (supabaseUrl && serviceKey) {
+              const supabase = createClient(supabaseUrl, serviceKey);
+              const { data: prof } = await supabase.from('profiles').select('name, bio, avatar').eq('id', userId).maybeSingle();
+              if (prof) {
+                const title = `${prof.name} | Profissional no Mestrio`;
+                const desc = prof.bio ? prof.bio.replace(/<[^>]*>?/gm, '').substring(0, 160) : `Confira os serviços, avaliações e portfólio de ${prof.name} no Mestrio.`;
+                const image = prof.avatar || 'https://via.placeholder.com/600x315';
+
+                const ogTags = `
+                  <title>${title}</title>
+                  <meta name="description" content="${desc}" />
+                  <meta property="og:title" content="${title}" />
+                  <meta property="og:description" content="${desc}" />
+                  <meta property="og:image" content="${image}" />
+                  <meta property="og:image:width" content="600" />
+                  <meta property="og:image:height" content="600" />
+                  <meta property="og:type" content="profile" />
+                  <meta name="twitter:card" content="summary_large_image" />
+                  <meta name="twitter:title" content="${title}" />
+                  <meta name="twitter:description" content="${desc}" />
+                  <meta name="twitter:image" content="${image}" />
+                `;
+
+                html = html.replace(/<title>.*?<\/title>/i, ogTags);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao injetar OG tags dinâmicas:', err);
+      }
+
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.send(html);
+    }
 
     // SPA fallback
     app.get('*', (req: Request, res: Response, next: NextFunction) => {
@@ -405,10 +457,7 @@ JSON puro:`;
         return;
       }
 
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      res.sendFile(path.join(distDir, 'index.html'));
+      serveHtmlWithOgTags(req, res);
     });
   }
 

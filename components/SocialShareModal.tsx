@@ -8,6 +8,7 @@ interface SocialShareModalProps {
   title: string;
   url?: string;
   description?: string;
+  imageUrl?: string;
 }
 
 export const SocialShareModal: React.FC<SocialShareModalProps> = ({
@@ -15,7 +16,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   onClose,
   title,
   url,
-  description
+  description,
+  imageUrl
 }) => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -106,15 +108,23 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100 animate-scaleUp">
         
-        {/* Header */}
+        {/* Header com Avatar / Foto do Usuário */}
         <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-400/30 flex items-center justify-center text-brand-400">
-              <Share2 size={16} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Compartilhar Anúncio</h3>
-              <p className="text-[11px] text-slate-400 truncate max-w-[240px]">{title}</p>
+          <div className="flex items-center gap-3">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={title}
+                className="w-10 h-10 rounded-full object-cover border-2 border-brand-400 shadow-sm shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-brand-500/20 border border-brand-400/30 flex items-center justify-center text-brand-400 shrink-0">
+                <Share2 size={16} />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-white truncate">{title}</h3>
+              <p className="text-[11px] text-slate-400 truncate">Compartilhar no WhatsApp e redes</p>
             </div>
           </div>
           <button

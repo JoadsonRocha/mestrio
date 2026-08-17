@@ -37,8 +37,27 @@ const PublicProfile: React.FC = () => {
         setProfile(p);
         
         if (p) {
-            const userAds = await store.getAds({ providerId: id });
-            setAds(userAds);
+          // Atualiza tags de Open Graph e título no head para navegadores e compartilhamento
+          document.title = `${p.name} | Profissional Mestrio`;
+          const setMetaTag = (attr: string, key: string, content: string) => {
+            let el = document.querySelector(`meta[${attr}="${key}"]`);
+            if (!el) {
+              el = document.createElement('meta');
+              el.setAttribute(attr, key);
+              document.head.appendChild(el);
+            }
+            el.setAttribute('content', content);
+          };
+
+          if (p.avatar) {
+            setMetaTag('property', 'og:image', p.avatar);
+            setMetaTag('name', 'twitter:image', p.avatar);
+          }
+          setMetaTag('property', 'og:title', `${p.name} - Profissional no Mestrio`);
+          setMetaTag('property', 'og:description', p.bio || 'Confira os serviços, avaliações e portfólio deste profissional no Mestrio.');
+
+          const userAds = await store.getAds({ providerId: id });
+          setAds(userAds);
         }
       } catch (e) {
         console.error(e);
@@ -325,6 +344,7 @@ const PublicProfile: React.FC = () => {
           onClose={() => setShowSocialShare(false)}
           title={`Perfil de ${profile.name} no Mestrio`}
           description={profile.bio || 'Confira os serviços, avaliações e portfólio deste profissional!'}
+          imageUrl={profile.avatar}
         />
       )}
     </div>
