@@ -1347,7 +1347,6 @@ DROP POLICY IF EXISTS "Leitura pública de perfis" ON profiles;
 CREATE POLICY "Leitura pública de perfis" ON profiles
   FOR SELECT USING (true);
 
-
-
-
+-- Coluna para redes sociais no perfil
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS social_links JSONB DEFAULT '{}'::jsonb;
 

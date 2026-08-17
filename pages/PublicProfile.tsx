@@ -19,37 +19,14 @@ const PublicProfile: React.FC = () => {
   const [ads, setAds] = useState<ServiceAd[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBusinessCard, setShowBusinessCard] = useState(false);
+  const [showSocialShare, setShowSocialShare] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleShareProfile = async () => {
-    if (!profile) return;
-    const shareUrl = window.location.href;
-    const shareText = `Confira o perfil profissional de ${profile.name} no Mestrio: serviços, avaliações e portfólio!`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${profile.name} - Profissional Mestrio`,
-          text: shareText,
-          url: shareUrl,
-        });
-        return;
-      } catch (err) {
-        // Fallback se cancelar ou não suportar
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopiedLink(true);
-      toast('Link do perfil copiado para a área de transferência!', 'success');
-      setTimeout(() => setCopiedLink(false), 3000);
-    } catch {
-      toast('Não foi possível copiar o link.', 'error');
-    }
+  const handleShareProfile = () => {
+    setShowSocialShare(true);
   };
 
   useEffect(() => {
@@ -225,7 +202,6 @@ const PublicProfile: React.FC = () => {
                 <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-sm">
                     {profile.bio || "Este profissional ainda não adicionou uma biografia."}
                 </p>
-
                 {profile.isCertified && (
                   <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3.5 flex items-center gap-3">
                     <VerifiedBadge size="md" className="shrink-0" />
@@ -236,26 +212,86 @@ const PublicProfile: React.FC = () => {
                   </div>
                 )}
 
+                {/* Redes Sociais & Links Oficiais */}
+                {(profile.instagram || profile.facebook || profile.linkedin || profile.youtube || profile.tiktok || profile.website) && (
+                  <div className="pt-3 border-t border-gray-100 space-y-2">
+                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+                      <Globe size={13} className="text-brand-600" /> Redes Sociais & Links
+                    </h4>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {profile.instagram && (
+                        <a
+                          href={profile.instagram.startsWith('http') ? profile.instagram : `https://instagram.com/${profile.instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                        >
+                          📸 Instagram
+                        </a>
+                      )}
+                      {profile.facebook && (
+                        <a
+                          href={profile.facebook.startsWith('http') ? profile.facebook : `https://facebook.com/${profile.facebook}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                        >
+                          🌐 Facebook
+                        </a>
+                      )}
+                      {profile.linkedin && (
+                        <a
+                          href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                        >
+                          💼 LinkedIn
+                        </a>
+                      )}
+                      {profile.youtube && (
+                        <a
+                          href={profile.youtube.startsWith('http') ? profile.youtube : `https://youtube.com/${profile.youtube}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                        >
+                          ▶️ YouTube
+                        </a>
+                      )}
+                      {profile.tiktok && (
+                        <a
+                          href={profile.tiktok.startsWith('http') ? profile.tiktok : `https://tiktok.com/@${profile.tiktok.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                        >
+                          🎵 TikTok
+                        </a>
+                      )}
+                      {profile.website && (
+                        <a
+                          href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
+                        >
+                          🔗 Site / Portfólio
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Compartilhamento Rápido */}
                 <div className="pt-3 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 mb-2">Divulgue este perfil:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={handleShareProfile}
-                      className="w-full py-2 px-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 flex items-center justify-center gap-1.5 transition"
-                    >
-                      {copiedLink ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                      {copiedLink ? 'Copiado!' : 'Copiar Link'}
-                    </button>
-                    <a
-                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Olá! Confira o perfil e serviços de ${profile.name} no Mestrio: ${window.location.href}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-700 flex items-center justify-center gap-1.5 transition text-center"
-                    >
-                      <MessageCircle size={14} /> WhatsApp
-                    </a>
-                  </div>
+                  <button
+                    onClick={handleShareProfile}
+                    className="w-full py-2.5 px-3 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl text-xs font-bold text-brand-700 flex items-center justify-center gap-2 transition shadow-xs"
+                  >
+                    <Share2 size={15} /> Compartilhar nas Redes Sociais
+                  </button>
                 </div>
             </div>
         </aside>
@@ -312,6 +348,16 @@ const PublicProfile: React.FC = () => {
           isOpen={showBusinessCard}
           onClose={() => setShowBusinessCard(false)}
           user={profile}
+        />
+      )}
+
+      {/* Modal de Compartilhamento Social */}
+      {profile && (
+        <SocialShareModal
+          isOpen={showSocialShare}
+          onClose={() => setShowSocialShare(false)}
+          title={`Perfil de ${profile.name} no Mestrio`}
+          description={profile.bio || 'Confira os serviços, avaliações e portfólio deste profissional!'}
         />
       )}
     </div>
