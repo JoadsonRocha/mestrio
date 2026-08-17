@@ -121,6 +121,7 @@ export const QuoteBuilder: React.FC = () => {
   const [historyFilter, setHistoryFilter] = useState<string>('all');
   const [historySearch, setHistorySearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'document' | 'whatsapp'>('document');
 
   // Carregar histórico de orçamentos salvos
   const loadSavedQuotes = async () => {
@@ -419,46 +420,44 @@ export const QuoteBuilder: React.FC = () => {
     }
   };
 
-  // Montar Texto Formatado para WhatsApp e Área de Transferência
+  // Montar Texto Formatado para WhatsApp e Área de Transferência (Humanizado e Profissional)
   const generateFormattedQuoteText = () => {
     const pName = providerName || 'Profissional Mestrio';
     const cleanPhone = clientPhone.replace(/\D/g, '');
+    const clientGreeting = clientName ? `Olá, *${clientName}*! Tudo bem?` : `Olá! Tudo bem?`;
 
-    let text = `📄 *ORÇAMENTO DE PRESTAÇÃO DE SERVIÇOS*\n`;
-    text += `🔢 *Nº:* ${quoteNumber}\n`;
-    text += `👤 *Prestador:* ${pName}\n`;
-    if (providerPhone) text += `📞 *Contato:* ${providerPhone}\n`;
+    let text = `${clientGreeting}\n\n`;
+    text += `Segue a proposta comercial para o seu atendimento:\n\n`;
+    text += `📄 *PROPOSTA / ORÇAMENTO* (${quoteNumber})\n`;
+    text += `🛠️ *Serviço:* ${title || 'Prestação de Serviços'}\n`;
+    if (category) text += `🏷️ *Especialidade:* ${category}\n`;
+    text += `👤 *Profissional:* ${pName}\n`;
+    if (providerPhone) text += `📞 *WhatsApp:* ${providerPhone}\n`;
     if (providerPixKey) text += `🔑 *Chave PIX:* ${providerPixKey}\n`;
-    text += `-----------------------------------\n`;
-    if (clientName) text += `📋 *Cliente:* ${clientName}\n`;
-    if (clientAddress) text += `📍 *Local:* ${clientAddress}\n`;
-    text += `🏷️ *Categoria:* ${category}\n`;
-    text += `📌 *Assunto:* ${title}\n`;
-    text += `-----------------------------------\n\n`;
-
-    text += `🛠️ *ITENS & SERVIÇOS INCLUSOS:*\n`;
+    if (clientAddress) text += `📍 *Local de Execução:* ${clientAddress}\n`;
+    text += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📦 *ITENS & ESCOPO DO SERVIÇO:*\n`;
     items.forEach((item, idx) => {
-      text += `${idx + 1}. [${getItemTypeLabel(item.type)}] ${item.description}\n`;
-      text += `   ↳ ${item.quantity} ${item.unit} x ${formatCurrency(item.unitPrice)} = *${formatCurrency(item.quantity * item.unitPrice)}*\n`;
+      text += `\n${idx + 1}. *${item.description}*\n`;
+      text += `   ↳ ${item.quantity} ${item.unit} x ${formatCurrency(item.unitPrice)} = *${formatCurrency(item.quantity * item.unitPrice)}*`;
     });
 
-    text += `\n-----------------------------------\n`;
-    text += `Subtotal: ${formatCurrency(subtotal)}\n`;
-    if (discountValue > 0) {
-      text += `Desconto: - ${formatCurrency(discountAmount)}\n`;
-    }
-    if (travelFee > 0) {
-      text += `Taxa Deslocamento: + ${formatCurrency(travelFee)}\n`;
+    text += `\n\n━━━━━━━━━━━━━━━━━━━━\n`;
+    if (discountValue > 0 || travelFee > 0) {
+      text += `Subtotal: ${formatCurrency(subtotal)}\n`;
+      if (discountValue > 0) text += `Desconto: - ${formatCurrency(discountAmount)}\n`;
+      if (travelFee > 0) text += `Deslocamento/Visita: + ${formatCurrency(travelFee)}\n`;
     }
     text += `💰 *VALOR TOTAL: ${formatCurrency(totalAmount)}*\n`;
-    text += `-----------------------------------\n`;
-    text += `⏱️ *Prazo de Execução:* ${estimatedDays}\n`;
-    text += `📅 *Validade da Proposta:* ${validityDays}\n`;
-    text += `💳 *Forma de Pagamento:* ${paymentTerms}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    text += `⏱️ *Prazo de Execução:* ${estimatedDays || 'A combinar'}\n`;
+    text += `📅 *Validade da Proposta:* ${validityDays || '15 dias'}\n`;
+    text += `💳 *Condição de Pagamento:* ${paymentTerms || 'A combinar'}\n`;
     if (warranty) text += `🛡️ *Garantia:* ${warranty}\n`;
     if (notes) text += `📌 *Observações:* ${notes}\n`;
 
-    text += `\n_Emitido através da plataforma Mestrio - www.mestrio.com.br_`;
+    text += `\nFico à total disposição para tirar qualquer dúvida e agendarmos o início do serviço!\n\n`;
+    text += `_Emitido via Mestrio • Plataforma de Serviços_`;
 
     return { text, cleanPhone };
   };
@@ -1213,74 +1212,187 @@ export const QuoteBuilder: React.FC = () => {
 
           </div>
 
-          {/* LADO DIREITO: Pré-visualização do Documento & Download/Exportação (5 Colunas) */}
+          {/* LADO DIREITO: Pré-visualização Executiva do Documento & Ações (5 Colunas) */}
           <div className="lg:col-span-5 space-y-3">
             
-            <div className="bg-slate-900 text-white rounded-xl p-4 md:p-5 shadow-lg border border-slate-800 space-y-4 sticky top-4">
+            <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden sticky top-4">
               
-              {/* Header do Box */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              {/* Header do Box com Seletor de Modo */}
+              <div className="bg-slate-900 text-white p-3 sm:p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                  <h3 className="font-bold text-xs text-slate-100">Documento de Proposta Comercial</h3>
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
+                  <div>
+                    <h3 className="font-bold text-xs text-white">Proposta Comercial</h3>
+                    <p className="text-[10px] text-slate-400 font-mono">{quoteNumber}</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold border border-blue-500/30">
-                  {quoteNumber}
-                </span>
+
+                {/* Abas: Documento Visual vs WhatsApp */}
+                <div className="flex rounded-lg bg-slate-800 p-0.5 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('document')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition ${
+                      previewMode === 'document' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    📄 Documento
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('whatsapp')}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition ${
+                      previewMode === 'whatsapp' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    💬 WhatsApp
+                  </button>
+                </div>
               </div>
 
-              {/* Prévia Formatada dos Dados */}
-              <div className="bg-slate-950 rounded-lg p-3 font-mono text-[11px] text-slate-300 space-y-1.5 max-h-60 overflow-y-auto whitespace-pre-wrap border border-slate-800 leading-relaxed shadow-inner">
-                {generateFormattedQuoteText().text}
-              </div>
+              {/* Corpo da Prévia */}
+              <div className="p-4 max-h-[460px] overflow-y-auto space-y-3.5 bg-slate-50/50">
+                {previewMode === 'document' ? (
+                  /* Prévia Visual Estilo Folha Executiva / Papel Timbrado */
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-2xs space-y-3 text-gray-800">
+                    {/* Cabeçalho do Prestador */}
+                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-brand-600 bg-brand-50 px-2 py-0.5 rounded">
+                          {category || 'Serviços Especializados'}
+                        </span>
+                        <h4 className="font-black text-sm text-gray-900 mt-1">{providerName || 'Profissional Mestrio'}</h4>
+                        {providerPhone && <p className="text-[11px] text-gray-500">📞 {providerPhone}</p>}
+                        {providerPixKey && <p className="text-[11px] text-emerald-700 font-mono">🔑 PIX: {providerPixKey}</p>}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-gray-400 font-mono block">Data de Emissão</span>
+                        <span className="text-xs font-bold text-gray-700">{new Date().toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    </div>
 
-              {/* Totalizador Destacado Compacto */}
-              <div className="pt-1.5 border-t border-slate-800 space-y-1">
-                <div className="flex justify-between text-[11px] text-slate-400">
-                  <span>Subtotal ({items.length} itens):</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                {discountValue > 0 && (
-                  <div className="flex justify-between text-[11px] text-red-400 font-semibold">
-                    <span>Desconto ({discountType === 'percent' ? `${discountValue}%` : 'Fixo'}):</span>
-                    <span>- {formatCurrency(discountAmount)}</span>
+                    {/* Dados do Cliente e Assunto */}
+                    <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Cliente:</span>
+                        <span className="font-bold text-gray-900">{clientName || 'Cliente'}</span>
+                      </div>
+                      {clientAddress && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Local:</span>
+                          <span className="text-gray-700 text-right">{clientAddress}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-1 border-t border-gray-200/60">
+                        <span className="text-gray-500">Assunto:</span>
+                        <span className="font-semibold text-brand-700 text-right">{title || 'Proposta de Serviço'}</span>
+                      </div>
+                    </div>
+
+                    {/* Tabela dos Itens */}
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Itens & Serviços</p>
+                      <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+                        {items.map((item, idx) => (
+                          <div key={item.id || idx} className="p-2 bg-white flex items-center justify-between text-xs">
+                            <div className="pr-2">
+                              <span className="font-bold text-gray-900 block">{item.description}</span>
+                              <span className="text-[10px] text-gray-400">
+                                {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
+                              </span>
+                            </div>
+                            <span className="font-black text-gray-900 shrink-0">
+                              {formatCurrency(item.quantity * item.unitPrice)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resumo Financeiro */}
+                    <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 space-y-1.5">
+                      <div className="flex justify-between text-xs text-emerald-950">
+                        <span>Subtotal:</span>
+                        <span className="font-semibold">{formatCurrency(subtotal)}</span>
+                      </div>
+                      {discountValue > 0 && (
+                        <div className="flex justify-between text-xs text-red-600 font-semibold">
+                          <span>Desconto ({discountType === 'percent' ? `${discountValue}%` : 'Fixo'}):</span>
+                          <span>- {formatCurrency(discountAmount)}</span>
+                        </div>
+                      )}
+                      {travelFee > 0 && (
+                        <div className="flex justify-between text-xs text-blue-700">
+                          <span>Taxa Deslocamento:</span>
+                          <span>+ {formatCurrency(travelFee)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2 border-t border-emerald-200">
+                        <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">Valor Total:</span>
+                        <span className="text-base font-black text-emerald-700">{formatCurrency(totalAmount)}</span>
+                      </div>
+                    </div>
+
+                    {/* Condições Comerciais */}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                      <div className="p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <span className="text-gray-400 block text-[10px]">Prazo de Execução</span>
+                        <span className="font-bold text-gray-800">{estimatedDays || 'A combinar'}</span>
+                      </div>
+                      <div className="p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <span className="text-gray-400 block text-[10px]">Forma de Pagamento</span>
+                        <span className="font-bold text-gray-800 truncate block">{paymentTerms || 'A combinar'}</span>
+                      </div>
+                    </div>
+
+                    {warranty && (
+                      <p className="text-[11px] text-gray-600 bg-amber-50/60 border border-amber-200/60 p-2 rounded-lg">
+                        🛡️ <strong>Garantia:</strong> {warranty}
+                      </p>
+                    )}
+
+                    {/* Assinatura do Prestador */}
+                    {providerSignature && (
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-gray-400 block">Assinado Digitalmente por:</span>
+                          <span className="text-xs font-bold text-gray-800">{providerName}</span>
+                        </div>
+                        <img src={providerSignature} alt="Assinatura" className="h-7 object-contain" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Mensagem Formatada para WhatsApp */
+                  <div className="bg-slate-900 text-slate-200 rounded-xl p-3.5 font-sans text-xs whitespace-pre-wrap leading-relaxed border border-slate-800 shadow-inner">
+                    {generateFormattedQuoteText().text}
                   </div>
                 )}
-                {travelFee > 0 && (
-                  <div className="flex justify-between text-[11px] text-blue-300">
-                    <span>Taxa Deslocamento:</span>
-                    <span>+ {formatCurrency(travelFee)}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-1.5 border-t border-slate-800">
-                  <span className="text-xs font-bold text-slate-300">VALOR TOTAL:</span>
-                  <span className="text-xl font-black text-amber-400">{formatCurrency(totalAmount)}</span>
-                </div>
               </div>
 
-              {/* Botões de Exportação / Download (Refinados) */}
-              <div className="space-y-1.5 pt-1">
+              {/* Botões de Exportação / Download */}
+              <div className="p-4 bg-white border-t border-gray-100 space-y-2">
                 
                 {/* Botão WhatsApp Principal */}
                 <button
                   onClick={handleSendWhatsApp}
-                  className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95"
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-95"
                 >
-                  <Send size={14} /> Enviar Orçamento no WhatsApp
+                  <Send size={15} /> Enviar Proposta no WhatsApp
                 </button>
 
                 {/* Grade de Exportação PDF / DOCX */}
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleExportPDF}
-                    className="py-2 bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs border border-red-500/30"
+                    className="py-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-red-200"
                   >
                     <Download size={13} /> Baixar PDF
                   </button>
 
                   <button
                     onClick={handleExportDOCX}
-                    className="py-2 bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs border border-blue-500/30"
+                    className="py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-blue-200"
                   >
                     <FileText size={13} /> Baixar Word (.docx)
                   </button>
@@ -1298,33 +1410,31 @@ export const QuoteBuilder: React.FC = () => {
                       toast('Erro ao emitir recibo em PDF.', 'error');
                     }
                   }}
-                  className="w-full py-1.5 bg-teal-600/90 hover:bg-teal-600 text-white font-semibold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs border border-teal-500/30"
+                  className="w-full py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-teal-200"
                 >
                   <Receipt size={13} /> Emitir Recibo & Quitação (PDF)
                 </button>
 
                 {/* Copiar Texto & Imprimir */}
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100">
                   <button
                     onClick={handleCopy}
-                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-lg transition flex items-center justify-center gap-1 border border-slate-700"
+                    className="py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-lg transition flex items-center justify-center gap-1 border border-gray-200"
                   >
-                    {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                    {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                     <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
                   </button>
 
                   <button
                     onClick={handlePrint}
-                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-lg transition flex items-center justify-center gap-1 border border-slate-700"
+                    className="py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-lg transition flex items-center justify-center gap-1 border border-gray-200"
                   >
                     <Printer size={13} /> Imprimir
                   </button>
                 </div>
-
               </div>
 
             </div>
-
           </div>
 
         </div>
