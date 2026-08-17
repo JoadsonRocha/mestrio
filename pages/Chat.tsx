@@ -345,13 +345,13 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-1 h-[calc(100vh-4rem)] overflow-hidden bg-slate-100">
+    <div className="flex flex-1 h-full w-full overflow-hidden bg-slate-100 rounded-2xl border border-slate-200/80 shadow-2xs">
       
-      {/* Sidebar List (Lista de Conversas) */}
-      <div className={`w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col ${activeChat && 'hidden md:flex'}`}>
+      {/* Sidebar List (Lista de Usuários / Conversas) */}
+      <div className={`w-full sm:w-80 md:w-80 lg:w-80 shrink-0 bg-white border-r border-slate-200 flex flex-col h-full ${activeChat ? 'hidden sm:flex' : 'flex'}`}>
         
         {/* Header da Sidebar com Busca */}
-        <div className="p-3.5 border-b border-slate-200 bg-slate-50 space-y-2.5">
+        <div className="p-3.5 border-b border-slate-200 bg-slate-50 space-y-2.5 shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
               Mensagens
@@ -457,7 +457,7 @@ const Chat: React.FC = () => {
       </div>
 
       {/* Chat Window (Área da Conversa) */}
-      <div className={`flex-1 flex flex-col bg-slate-100 ${!activeChat && 'hidden md:flex'}`}>
+      <div className={`flex-1 flex flex-col bg-slate-100 min-w-0 h-full ${!activeChat ? 'hidden sm:flex' : 'flex'}`}>
         {activeChat ? (
             <>
                 {/* Header Superior com Mini-Card do Anúncio e Ações */}

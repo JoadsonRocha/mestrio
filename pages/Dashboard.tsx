@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
           </aside>
 
           {/* Área Principal do Conteúdo */}
-          <div className={`lg:col-span-3 h-full min-h-0 ${location.pathname === '/dashboard' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          <div className={`lg:col-span-3 h-full min-h-0 ${location.pathname.startsWith('/dashboard/chat') || location.pathname === '/dashboard' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             <Outlet />
           </div>
         </div>
