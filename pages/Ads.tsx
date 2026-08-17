@@ -129,9 +129,19 @@ const Ads: React.FC = () => {
                 <div key={ad.id} className="relative group">
                   <ServiceCard ad={ad} compact />
                   <div className="absolute top-2 left-2 flex space-x-2 z-10">
-                    <Link to={`/edit-ad/${ad.id}`} className="bg-white/95 text-gray-800 text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-white font-bold border border-gray-200">Editar</Link>
+                    <Link
+                      to={`/edit-ad/${ad.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-white/95 text-gray-800 text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-white font-bold border border-gray-200"
+                    >
+                      Editar
+                    </Link>
                     <button
-                      onClick={(e) => { e.preventDefault(); handleDelete(ad.id); }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(ad.id);
+                      }}
                       disabled={deletingId === ad.id}
                       className={`${confirmingId === ad.id ? 'bg-red-600' : 'bg-red-500/95'} text-white text-xs px-3 py-1.5 rounded-lg shadow-sm hover:bg-red-600 flex items-center font-bold disabled:opacity-50 transition-colors`}
                     >

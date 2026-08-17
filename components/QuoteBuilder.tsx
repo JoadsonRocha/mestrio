@@ -343,11 +343,14 @@ export const QuoteBuilder: React.FC = () => {
     }
 
     setIsGeneratingAI(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch('/api/ai/estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problem: problemDescription }),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error('Falha ao conectar com a IA');
@@ -387,6 +390,7 @@ export const QuoteBuilder: React.FC = () => {
       console.error(e);
       toast('Erro ao gerar com IA. Você pode preencher os itens manualmente.', 'error');
     } finally {
+      clearTimeout(timeoutId);
       setIsGeneratingAI(false);
     }
   };

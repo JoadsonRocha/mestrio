@@ -1168,4 +1168,120 @@ CREATE INDEX IF NOT EXISTS idx_appointments_provider_status ON appointments (pro
 -- Otimiza consultas do chat indexando sessões de mensagens ordenadas por data de envio
 CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages (session_id, created_at DESC);
 
+-- ==========================================
+-- ⚡ DEMANDAS & ORÇAMENTOS COMERCIAIS (ROADMAP) ⚡
+-- ==========================================
+
+-- Tabela de Pedidos de Serviço / Demandas (Job Requests)
+CREATE TABLE IF NOT EXISTS job_requests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  client_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  client_name TEXT NOT NULL,
+  client_avatar TEXT,
+  client_phone TEXT,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL,
+  location TEXT NOT NULL,
+  budget NUMERIC(12,2),
+  urgency TEXT DEFAULT 'this_week' CHECK (urgency IN ('urgent', 'this_week', 'flexible')),
+  photos JSONB DEFAULT '[]'::jsonb,
+  preferred_contact_method TEXT DEFAULT 'whatsapp' CHECK (preferred_contact_method IN ('whatsapp', 'chat', 'phone')),
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'closed')),
+  proposals_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE job_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Qualquer um visualiza pedidos de serviços abertos" ON job_requests;
+CREATE POLICY "Qualquer um visualiza pedidos de serviços abertos" ON job_requests
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Clientes criam seus pedidos de serviços" ON job_requests;
+CREATE POLICY "Clientes criam seus pedidos de serviços" ON job_requests
+  FOR INSERT WITH CHECK (auth.uid() = client_id);
+
+DROP POLICY IF EXISTS "Clientes gerenciam seus pedidos de serviços" ON job_requests;
+CREATE POLICY "Clientes gerenciam seus pedidos de serviços" ON job_requests
+  FOR ALL USING (auth.uid() = client_id);
+
+-- Tabela de Propostas para Pedidos de Serviços (Quote Proposals)
+CREATE TABLE IF NOT EXISTS quote_proposals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  job_request_id UUID REFERENCES job_requests(id) ON DELETE CASCADE,
+  provider_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  provider_name TEXT NOT NULL,
+  provider_avatar TEXT,
+  client_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  estimated_price NUMERIC(12,2) NOT NULL,
+  estimated_days INTEGER DEFAULT 1,
+  description TEXT NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE quote_proposals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Participantes visualizam propostas de serviços" ON quote_proposals;
+CREATE POLICY "Participantes visualizam propostas de serviços" ON quote_proposals
+  FOR SELECT USING (auth.uid() = provider_id OR auth.uid() = client_id);
+
+DROP POLICY IF EXISTS "Prestadores enviam propostas" ON quote_proposals;
+CREATE POLICY "Prestadores enviam propostas" ON quote_proposals
+  FOR INSERT WITH CHECK (auth.uid() = provider_id);
+
+DROP POLICY IF EXISTS "Participantes atualizam propostas" ON quote_proposals;
+CREATE POLICY "Participantes atualizam propostas" ON quote_proposals
+  FOR UPDATE USING (auth.uid() = provider_id OR auth.uid() = client_id);
+
+-- Tabela de Orçamentos Comerciais Detalhados (Detailed Quotes)
+CREATE TABLE IF NOT EXISTS detailed_quotes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quote_number TEXT NOT NULL,
+  provider_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  provider_name TEXT NOT NULL,
+  provider_document TEXT,
+  provider_phone TEXT,
+  provider_email TEXT,
+  provider_pix_key TEXT,
+  provider_city TEXT,
+  client_name TEXT NOT NULL,
+  client_document TEXT,
+  client_phone TEXT,
+  client_email TEXT,
+  client_address TEXT,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  problem_description TEXT,
+  items JSONB DEFAULT '[]'::jsonb,
+  subtotal NUMERIC(12,2) DEFAULT 0,
+  discount_type TEXT DEFAULT 'fixed',
+  discount_value NUMERIC(12,2) DEFAULT 0,
+  travel_fee NUMERIC(12,2) DEFAULT 0,
+  total_amount NUMERIC(12,2) DEFAULT 0,
+  estimated_days TEXT,
+  validity_days TEXT,
+  payment_terms TEXT,
+  notes TEXT,
+  warranty TEXT,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'approved', 'rejected', 'completed')),
+  provider_signature TEXT,
+  client_signature TEXT,
+  signed_at TIMESTAMP WITH TIME ZONE,
+  paid_at TIMESTAMP WITH TIME ZONE,
+  receipt_number TEXT,
+  payment_method TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE detailed_quotes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Prestadores gerenciam seus orçamentos detalhados" ON detailed_quotes;
+CREATE POLICY "Prestadores gerenciam seus orçamentos detalhados" ON detailed_quotes
+  FOR ALL USING (auth.uid() = provider_id)
+  WITH CHECK (auth.uid() = provider_id);
+
+
 

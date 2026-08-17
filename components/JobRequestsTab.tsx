@@ -114,6 +114,8 @@ export const JobRequestsTab: React.FC = () => {
       return;
     }
     setIsEnhancingAI(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -123,7 +125,8 @@ export const JobRequestsTab: React.FC = () => {
           title: title || 'Serviço residencial',
           category: category || 'Geral',
           context: description || 'Preciso de um profissional experiente.'
-        })
+        }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (data && data.text) {
@@ -134,6 +137,7 @@ export const JobRequestsTab: React.FC = () => {
       console.error(e);
       toast('Não foi possível conectar com o assistente IA no momento.', 'info');
     } finally {
+      clearTimeout(timeoutId);
       setIsEnhancingAI(false);
     }
   };

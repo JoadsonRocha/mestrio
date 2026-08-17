@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface VerifiedBadgeProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | number;
@@ -9,8 +9,8 @@ interface VerifiedBadgeProps {
 }
 
 /**
- * VerifiedBadge - Selo de verificação azul oficial estilo Instagram / Meta / Twitter.
- * Possui formato de roseta octogonal estilizada com check branco centralizado e gradiente azul vibrante (#0095f6 a #1877f2).
+ * VerifiedBadge - Selo de verificação azul oficial do Mestrio.
+ * Possui formato de roseta estilizada com check branco centralizado e gradiente azul vibrante (#0095f6 a #1877f2).
  */
 export const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({
   size = 'sm',
@@ -19,6 +19,9 @@ export const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({
   text = 'Verificado',
   tooltip = 'Profissional Verificado & Documentado',
 }) => {
+  const rawId = useId();
+  const gradId = `mestrio-badge-grad-${rawId.replace(/:/g, '')}`;
+
   const getDimension = () => {
     if (typeof size === 'number') return size;
     switch (size) {
@@ -49,18 +52,17 @@ export const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({
         aria-label={tooltip}
       >
         <defs>
-          <linearGradient id="igVerifiedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#0095f6" />
             <stop offset="50%" stopColor="#1877f2" />
             <stop offset="100%" stopColor="#0c63e4" />
           </linearGradient>
         </defs>
         
-        {/* Roseta de 8 pontas estilo Instagram */}
+        {/* Roseta de verificação oficial simétrica de 12 pontas */}
         <path
           d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.438-1.53-.023-3.21-1.229-4.14-1.206-.93-2.885-.86-4.015.17-1.13-1.03-2.809-1.1-4.015-.17-1.206.93-1.667 2.61-1.229 4.14C8.635 9.55 7.76 10.92 7.76 12.5s.875 2.95 2.148 3.6c-.438 1.53.023 3.21 1.229 4.14 1.206.93 2.885.86 4.015-.17 1.13 1.03 2.809 1.1 4.015.17 1.206-.93 1.667-2.61 1.229-4.14 1.273-.65 2.148-2.02 2.148-3.6z"
-          transform="translate(-3.1, -1.8) scale(1.26)"
-          fill="url(#igVerifiedGrad)"
+          fill={`url(#${gradId})`}
         />
         
         {/* Check centralizado branco */}

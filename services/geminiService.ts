@@ -18,18 +18,31 @@ interface AIResponse {
  * @returns Uma Promise com a resposta tipada `AIResponse`.
  * @throws Dispara um erro caso a chamada falhe (status HTTP != 2xx).
  */
-const request = async (body: unknown): Promise<AIResponse> => {
-  const res = await fetch(AI_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data: AIResponse = await res.json();
-  if (!res.ok) {
-    logSecurityWarning('ai.request_failed', 'Falha na chamada da IA', { status: res.status, body });
-    throw new Error(data.error || 'Erro no serviço de IA.');
+const request = async (body: unknown, timeoutMs: number = 15000): Promise<AIResponse> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(AI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data: AIResponse = await res.json();
+    if (!res.ok) {
+      logSecurityWarning('ai.request_failed', 'Falha na chamada da IA', { status: res.status, body });
+      throw new Error(data.error || 'Erro no serviço de IA.');
+    }
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Tempo limite de resposta da IA excedido.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data;
 };
 
 /**
