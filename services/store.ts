@@ -84,10 +84,15 @@ class Store {
       tags: data.tags || []
     });
 
+    const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+    const providerName = sanitizeText(profile?.name || data.provider_name || 'Profissional');
+    const providerAvatar = profile?.avatar || data.provider_avatar || undefined;
+    const isCertified = Boolean(profile?.is_certified ?? data.is_certified ?? false);
+
     return {
       id: data.id,
       providerId: data.provider_id,
-      providerName: sanitizeText(data.profiles?.name || 'Profissional'),
+      providerName,
       title: sanitizeText(data.title),
       description: sanitizeHtmlLike(data.description),
       category: data.category,
@@ -110,8 +115,8 @@ class Store {
       whatsapp: sanitizePhone(data.whatsapp || ''),
       availability: data.availability,
       tags: (data.tags || []).map((tag: string) => sanitizeText(tag)),
-      providerAvatar: data.profiles?.avatar || undefined,
-      isCertified: data.profiles?.is_certified || false,
+      providerAvatar,
+      isCertified,
       status: data.status || 'approved',
       expiresAt: data.expires_at,
       rejectionReason: data.rejection_reason,
@@ -142,7 +147,7 @@ class Store {
    * @returns Uma Promise contendo o array de anúncios formatados.
    */
   async getAds(params?: GetAdsParams): Promise<ServiceAd[]> {
-    let query = supabase.from('service_ads').select('*, profiles(name, avatar, is_certified)');
+    let query = supabase.from('service_ads').select('*, profiles!provider_id(name, avatar, is_certified)');
 
     // Sem providerId = consulta pública: apenas anúncios aprovados e não expirados.
     const isPublic = !params?.providerId;
@@ -200,8 +205,23 @@ class Store {
       fallbackQuery = fallbackQuery.range(from, to).order('created_at', { ascending: false });
 
       const fallbackRes = await fallbackQuery;
-      if (!fallbackRes.error) {
+      if (!fallbackRes.error && fallbackRes.data) {
         data = fallbackRes.data;
+        const providerIds = Array.from(new Set(data.map((ad: any) => ad.provider_id).filter(Boolean)));
+        if (providerIds.length > 0) {
+          try {
+            const { data: profs } = await supabase.from('profiles').select('id, name, avatar, is_certified').in('id', providerIds);
+            if (profs) {
+              const profMap = new Map(profs.map((p: any) => [p.id, p]));
+              data = data.map((ad: any) => ({
+                ...ad,
+                profiles: profMap.get(ad.provider_id)
+              }));
+            }
+          } catch {
+            // Silently maintain fallback
+          }
+        }
       } else {
         console.warn("Store Warning [getAds fallback]: Using offline mock or fallback state because the database has not been fully configured/fetched.", fallbackRes.error);
         return [];
