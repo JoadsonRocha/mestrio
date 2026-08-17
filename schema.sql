@@ -1278,10 +1278,64 @@ CREATE TABLE IF NOT EXISTS detailed_quotes (
 
 ALTER TABLE detailed_quotes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Prestadores gerenciam seus orçamentos detalhados" ON detailed_quotes;
-CREATE POLICY "Prestadores gerenciam seus orçamentos detalhados" ON detailed_quotes
-  FOR ALL USING (auth.uid() = provider_id)
-  WITH CHECK (auth.uid() = provider_id);
+-- ============================================================================
+-- TABELA DE AVALIAÇÕES COM MULTI-CRITÉRIOS (DIRECTORIST PATTERN)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ad_id UUID NOT NULL REFERENCES service_ads(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  author_name TEXT NOT NULL,
+  rating NUMERIC(2,1) NOT NULL CHECK (rating >= 1.0 AND rating <= 5.0),
+  punctuality SMALLINT DEFAULT 5 CHECK (punctuality >= 1 AND punctuality <= 5),
+  quality SMALLINT DEFAULT 5 CHECK (quality >= 1 AND quality <= 5),
+  fair_price SMALLINT DEFAULT 5 CHECK (fair_price >= 1 AND fair_price <= 5),
+  communication SMALLINT DEFAULT 5 CHECK (communication >= 1 AND communication <= 5),
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Adicionar colunas caso a tabela já exista
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS punctuality SMALLINT DEFAULT 5;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS quality SMALLINT DEFAULT 5;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS fair_price SMALLINT DEFAULT 5;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS communication SMALLINT DEFAULT 5;
+
+CREATE INDEX IF NOT EXISTS idx_reviews_ad_id ON reviews(ad_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_author_id ON reviews(author_id);
+
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Leitura pública de avaliações" ON reviews;
+CREATE POLICY "Leitura pública de avaliações" ON reviews
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Usuários autenticados podem avaliar" ON reviews;
+CREATE POLICY "Usuários autenticados podem avaliar" ON reviews
+  FOR INSERT WITH CHECK (auth.uid() = author_id);
+
+-- Recalcular média de estrelas e total de avaliações do anúncio de forma segura
+CREATE OR REPLACE FUNCTION recalculate_ad_rating(ad_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_avg NUMERIC(3,2);
+  v_count INTEGER;
+BEGIN
+  SELECT COALESCE(AVG(rating), 0), COUNT(id)
+  INTO v_avg, v_count
+  FROM reviews
+  WHERE reviews.ad_id = recalculate_ad_rating.ad_id;
+
+  UPDATE service_ads
+  SET rating = ROUND(v_avg, 1),
+      review_count = v_count
+  WHERE id = recalculate_ad_rating.ad_id;
+END;
+$$;
 
 
 

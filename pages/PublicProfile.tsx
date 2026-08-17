@@ -10,6 +10,7 @@ import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { getBusinessStatus } from '../utils/businessHours';
+import { MultiCriteriaBreakdown } from '../components/MultiCriteriaReviewWidget';
 
 const PublicProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -110,6 +111,7 @@ const PublicProfile: React.FC = () => {
       : '0.0';
       
   const totalReviews = ads.reduce((acc, ad) => acc + ad.reviewCount, 0);
+  const allReviews = ads.flatMap(ad => ad.reviews || []);
 
   // Projetos Antes/Depois do perfil ou amostra profissional
   const beforeAfterProjects: BeforeAfterProject[] = profile.beforeAfterProjects && profile.beforeAfterProjects.length > 0
