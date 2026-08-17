@@ -514,6 +514,162 @@ const DashboardHome: React.FC = () => {
             </div>
           </div>
 
+          {/* QUADRO DE GESTÃO DE SERVIÇOS (KANBAN PIPELINE DO PRESTADOR) */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="font-extrabold text-gray-900 text-base flex items-center gap-2">
+                  <Briefcase size={18} className="text-brand-600" />
+                  <span>Pipeline de Atendimentos & Serviços</span>
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">Acompanhe seus clientes desde o primeiro contato até a conclusão do pagamento</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <RouterLink
+                  to="/dashboard/quote-builder"
+                  className="bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs"
+                >
+                  <Calculator size={13} className="mr-1" /> Criar Orçamento
+                </RouterLink>
+              </div>
+            </div>
+
+            {/* As 4 Colunas do Kanban */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 pt-1">
+              
+              {/* Coluna 1: Novos Contatos & Pedidos */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span> 1. Novos Pedidos
+                    </span>
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                      {openJobRequests.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {openJobRequests.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 text-center py-4">Sem novos pedidos</p>
+                    ) : (
+                      openJobRequests.slice(0, 2).map(req => (
+                        <div key={req.id} className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs text-xs space-y-1">
+                          <p className="font-bold text-slate-900 truncate">{req.title}</p>
+                          <p className="text-[11px] text-slate-500 truncate">{req.category} • {req.location || 'Local a combinar'}</p>
+                          <div className="pt-1 flex justify-end">
+                            <RouterLink to="/dashboard/job-requests" className="text-[10px] font-bold text-brand-600 hover:underline">
+                              Ver Detalhes →
+                            </RouterLink>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna 2: Orçamentos Enviados */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span> 2. Orçamentos
+                    </span>
+                    <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                      {quotes.filter(q => q.status === 'sent' || q.status === 'draft').length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {quotes.filter(q => q.status === 'sent' || q.status === 'draft').length === 0 ? (
+                      <p className="text-[11px] text-slate-400 text-center py-4">Nenhum orçamento pendente</p>
+                    ) : (
+                      quotes.filter(q => q.status === 'sent' || q.status === 'draft').slice(0, 2).map(q => (
+                        <div key={q.id} className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs text-xs space-y-1">
+                          <div className="flex justify-between items-start">
+                            <p className="font-bold text-slate-900 truncate">{q.clientName || 'Cliente'}</p>
+                            <span className="text-[10px] font-extrabold text-emerald-600">R$ {q.totalAmount.toFixed(2)}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 truncate">{q.title}</p>
+                          <div className="pt-1 flex justify-end">
+                            <RouterLink to="/dashboard/quote-builder" className="text-[10px] font-bold text-amber-600 hover:underline">
+                              Abrir Orçamento →
+                            </RouterLink>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna 3: Em Andamento / Agendados */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span> 3. Em Execução
+                    </span>
+                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
+                      {upcomingAppointments.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {upcomingAppointments.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 text-center py-4">Sem visitas agendadas</p>
+                    ) : (
+                      upcomingAppointments.slice(0, 2).map(app => (
+                        <div key={app.id} className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs text-xs space-y-1">
+                          <p className="font-bold text-slate-900 truncate">{app.clientName || 'Cliente'}</p>
+                          <p className="text-[11px] text-indigo-600 font-semibold truncate">
+                            📅 {new Date(app.date).toLocaleDateString('pt-BR')} às {app.time}
+                          </p>
+                          <div className="pt-1 flex justify-end">
+                            <RouterLink to="/dashboard/appointments" className="text-[10px] font-bold text-indigo-600 hover:underline">
+                              Gerenciar →
+                            </RouterLink>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna 4: Concluídos & Faturados */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> 4. Concluídos
+                    </span>
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      {completedAppointments.length + approvedQuotes.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {completedAppointments.length + approvedQuotes.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 text-center py-4">Conclua serviços para ver aqui</p>
+                    ) : (
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs text-xs space-y-1">
+                        <p className="font-bold text-slate-900">Total Faturado no App</p>
+                        <p className="text-sm font-extrabold text-emerald-600">
+                          R$ {totalEarned.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-[10px] text-slate-400">{completedAppointments.length} serviços finalizados</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           {/* OPORTUNIDADES DO MURAL DE PEDIDOS (DEMANDAS DOS CLIENTES) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-2xs">
             <div className="flex items-center justify-between mb-4">

@@ -410,6 +410,46 @@ const PublicProfile: React.FC = () => {
         </div>
       </div>
 
+      {/* Barra Fixa de Contato no Celular (Mobile Sticky Bar) */}
+      {user?.id !== profile.id && ads.length > 0 && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 px-4 flex items-center justify-between gap-3 shadow-2xl">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <img 
+              src={profile.avatar || "https://via.placeholder.com/150"} 
+              alt={profile.name}
+              className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" 
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-900 truncate">{profile.name}</p>
+              <p className="text-[11px] text-emerald-600 font-semibold truncate">● Ativo no Mestrio</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {profile.phone && (
+              <a
+                href={`https://wa.me/55${profile.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${profile.name}! Encontrei seu perfil no Mestrio e gostaria de solicitar um orçamento.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
+              >
+                <MessageCircle size={17} />
+                <span>WhatsApp</span>
+              </a>
+            )}
+
+            <button
+              onClick={() => handleStartChat(ads[0].id)}
+              className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
+            >
+              <MessageSquare size={17} />
+              <span>Chat</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cartão de Visitas Digital */}
       {profile && (
         <DigitalBusinessCardModal
           isOpen={showBusinessCard}
@@ -418,6 +458,7 @@ const PublicProfile: React.FC = () => {
         />
       )}
 
+      {/* Modal de Compartilhamento Social */}
       {profile && (
         <SocialShareModal
           isOpen={showSocialShare}
