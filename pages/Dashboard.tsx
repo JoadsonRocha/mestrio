@@ -48,12 +48,13 @@ const Dashboard: React.FC = () => {
     },
     { to: '/dashboard/appointments', label: 'Meus Agendamentos', icon: Calendar },
     { to: '/dashboard/job-requests', label: isClient ? 'Solicitar Serviço' : 'Mural de Pedidos', icon: Briefcase },
-    ...(isClient 
-      ? [{ to: '/dashboard/favorites', label: 'Favoritos', icon: Heart }] 
-      : [
+    { to: '/dashboard/favorites', label: 'Favoritos', icon: Heart },
+    ...(!isClient 
+      ? [
           { to: '/dashboard/ads', label: 'Meus Anúncios', icon: Megaphone },
           { to: '/dashboard/quote-builder', label: 'Gerador de Orçamentos IA', icon: Calculator }
-        ]),
+        ]
+      : []),
   ];
 
   const getItemClass = (to: string) => {

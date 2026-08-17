@@ -30,6 +30,20 @@ export interface User {
   referredBy?: string;
   referralCredits?: number;
   referralCashEarnings?: number;
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+  youtube?: string;
+  tiktok?: string;
+  website?: string;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    linkedin?: string;
+    youtube?: string;
+    tiktok?: string;
+    website?: string;
+  };
   beforeAfterProjects?: BeforeAfterProject[];
   createdAt?: string;
 }

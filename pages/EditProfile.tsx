@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, User as UserIcon, MapPin, Phone, FileText, Save, ArrowLeft, Loader2, LocateFixed, Shield } from 'lucide-react';
+import { Camera, User as UserIcon, MapPin, Phone, FileText, Save, ArrowLeft, Loader2, LocateFixed, Shield, Globe, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { store, uploadImage, AVATARS_BUCKET } from '../services/store';
 import { useToast } from '../context/ToastContext';
@@ -19,7 +19,13 @@ const EditProfile: React.FC = () => {
     bio: '',
     location: '',
     phone: '',
-    avatar: ''
+    avatar: '',
+    instagram: '',
+    facebook: '',
+    linkedin: '',
+    youtube: '',
+    tiktok: '',
+    website: ''
   });
 
   // KYC Verification State
@@ -69,7 +75,13 @@ const EditProfile: React.FC = () => {
       bio: user.bio || '',
       location: user.location || '',
       phone: user.phone || '',
-      avatar: user.avatar || ''
+      avatar: user.avatar || '',
+      instagram: user.instagram || user.socialLinks?.instagram || '',
+      facebook: user.facebook || user.socialLinks?.facebook || '',
+      linkedin: user.linkedin || user.socialLinks?.linkedin || '',
+      youtube: user.youtube || user.socialLinks?.youtube || '',
+      tiktok: user.tiktok || user.socialLinks?.tiktok || '',
+      website: user.website || user.socialLinks?.website || ''
     });
   }, [user, navigate]);
 
@@ -267,6 +279,109 @@ const EditProfile: React.FC = () => {
                       className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                       placeholder="(11) 99999-9999"
                     />
+                  </div>
+                </div>
+
+                {/* Seção de Redes Sociais & Links Profissionais */}
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Globe size={18} className="text-brand-600" />
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">Redes Sociais & Links</h3>
+                      <p className="text-xs text-gray-500">Adicione seus perfis para dar mais credibilidade aos clientes</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {/* Instagram */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        📸 Instagram
+                      </label>
+                      <input
+                        type="text"
+                        name="instagram"
+                        value={formData.instagram}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"
+                        placeholder="@seuperfil ou link"
+                      />
+                    </div>
+
+                    {/* Facebook */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        🌐 Facebook
+                      </label>
+                      <input
+                        type="text"
+                        name="facebook"
+                        value={formData.facebook}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"
+                        placeholder="facebook.com/seuperfil"
+                      />
+                    </div>
+
+                    {/* LinkedIn */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        💼 LinkedIn
+                      </label>
+                      <input
+                        type="text"
+                        name="linkedin"
+                        value={formData.linkedin}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"
+                        placeholder="linkedin.com/in/seuperfil"
+                      />
+                    </div>
+
+                    {/* YouTube */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        ▶️ YouTube / Vídeos
+                      </label>
+                      <input
+                        type="text"
+                        name="youtube"
+                        value={formData.youtube}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"
+                        placeholder="youtube.com/@seu-canal"
+                      />
+                    </div>
+
+                    {/* TikTok */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        🎵 TikTok
+                      </label>
+                      <input
+                        type="text"
+                        name="tiktok"
+                        value={formData.tiktok}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"
+                        placeholder="@seutiktok"
+                      />
+                    </div>
+
+                    {/* Website */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        🔗 Website / Portfólio
+                      </label>
+                      <input
+                        type="text"
+                        name="website"
+                        value={formData.website}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"
+                        placeholder="https://seusite.com.br"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

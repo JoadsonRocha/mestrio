@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck, ExternalLink, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
 import { store } from '../services/store';
@@ -106,9 +106,14 @@ export const Navbar: React.FC = () => {
 
             {user ? (
               <div className="relative ml-3 flex items-center space-x-3">
+                {/* Ícone de favoritos */}
+                <Link to="/dashboard/favorites" className="text-gray-500 hover:text-rose-600 transition-colors relative p-1" title="Meus Favoritos">
+                  <Heart className="w-5 h-5" />
+                </Link>
+
                 {/* Ícone de chat com badge */}
-                <Link to="/dashboard/chat" className={`${isChatActive ? 'text-brand-600' : 'text-gray-500 hover:text-brand-600'} relative`} title="Mensagens">
-                  <MessageSquare className="w-6 h-6" />
+                <Link to="/dashboard/chat" className={`${isChatActive ? 'text-brand-600' : 'text-gray-500 hover:text-brand-600'} relative p-1`} title="Mensagens">
+                  <MessageSquare className="w-5 h-5" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-3 w-3">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -163,6 +168,13 @@ export const Navbar: React.FC = () => {
                         >
                           <LayoutDashboard className="w-4 h-4 text-gray-400" />
                           Meu Painel
+                        </button>
+                        <button
+                          onClick={() => handleNav('/dashboard/favorites')}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left"
+                        >
+                          <Heart className="w-4 h-4 text-rose-500" />
+                          Favoritos
                         </button>
                         {user.role === 'PROVIDER' && (
                           <button
@@ -252,6 +264,11 @@ export const Navbar: React.FC = () => {
                 {unreadCount > 0 && (
                   <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">{unreadCount}</span>
                 )}
+              </Link>
+            )}
+            {user && (
+              <Link onClick={() => setIsOpen(false)} to="/dashboard/favorites" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-brand-300 hover:text-brand-700">
+                Favoritos
               </Link>
             )}
             {user && (

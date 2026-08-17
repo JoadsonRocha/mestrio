@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye, Sparkles } from 'lucide-react';
+import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye, Sparkles, Share2 } from 'lucide-react';
 import { store } from '../services/store';
 import { ServiceAd, Review } from '../types';
 import { RatingStars, Badge } from '../components/UI';
@@ -12,6 +12,7 @@ import { getBusinessStatus } from '../utils/businessHours';
 import { MultiCriteriaBreakdown, MultiCriteriaRatingInput, ReviewCriteriaBadges } from '../components/MultiCriteriaReviewWidget';
 import { ReviewCriteria } from '../types';
 import { getCategoryAttributes } from '../utils/categoryAttributes';
+import { SocialShareModal } from '../components/SocialShareModal';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,9 @@ const ServiceDetail: React.FC = () => {
   const [isScheduling, setIsScheduling] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [scheduleError, setScheduleError] = useState('');
+
+  // Share Modal State
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Lightbox State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -405,7 +409,15 @@ const ServiceDetail: React.FC = () => {
                       <Badge variant="primary">{ad.category}</Badge>
                       {ad.isPremium && <Badge variant="secondary">Destaque</Badge>}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setShowShareModal(true)}
+                        className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border border-white/20"
+                        title="Compartilhar nas redes sociais"
+                      >
+                        <Share2 size={15} /> Compartilhar
+                      </button>
+
                       <button
                         onClick={handleToggleFavorite}
                         className={`pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow ${
@@ -415,7 +427,7 @@ const ServiceDetail: React.FC = () => {
                         }`}
                       >
                         <Heart size={15} className={isFav ? 'fill-white' : ''} />
-                        {isFav ? 'Salvo nos Favoritos' : 'Favoritar Anúncio'}
+                        {isFav ? 'Salvo nos Favoritos' : 'Favoritar'}
                       </button>
 
                       <button
@@ -715,12 +727,21 @@ const ServiceDetail: React.FC = () => {
                              <div className="flex items-start"><Calendar size={16} className="mr-3 text-orange-500 mt-0.5"/> <span>{formatAvailability()}</span></div>
                         </div>
 
-                        <Link
-                          to={`/profissional/${ad.providerId}`}
-                          className="mt-3.5 w-full bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs py-2.5 px-4 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-center transition"
-                        >
-                          Ver Perfil Completo & Portfólio →
-                        </Link>
+                        <div className="pt-2 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowShareModal(true)}
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs py-2 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 transition"
+                          >
+                            <Share2 size={14} /> Compartilhar
+                          </button>
+                          <Link
+                            to={`/profissional/${ad.providerId}`}
+                            className="w-full bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs py-2 px-3 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-center transition truncate"
+                          >
+                            Ver Perfil →
+                          </Link>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -964,6 +985,14 @@ const ServiceDetail: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Compartilhamento nas Redes Sociais */}
+      <SocialShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={ad?.title || 'Anúncio Mestrio'}
+        description={ad?.description}
+      />
     </div>
   );
 };

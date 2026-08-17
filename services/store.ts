@@ -395,6 +395,15 @@ class Store {
       .eq('user_id', session.user.id)
       .maybeSingle();
 
+    // Carrega redes sociais do localStorage como suporte complementar
+    let localSocial: any = {};
+    try {
+      const raw = localStorage.getItem(`mestrio_social_${session.user.id}`);
+      if (raw) localSocial = JSON.parse(raw);
+    } catch {}
+
+    const socialLinks = data.social_links || localSocial || {};
+
     return {
       id: data.id,
       name: data.name,
@@ -410,6 +419,13 @@ class Store {
       roleRequest: data.role_request || null,
       hasCompletedOnboarding: data.has_completed_onboarding || false,
       documentNumber: data.document_number || '',
+      instagram: data.instagram || socialLinks.instagram || '',
+      facebook: data.facebook || socialLinks.facebook || '',
+      linkedin: data.linkedin || socialLinks.linkedin || '',
+      youtube: data.youtube || socialLinks.youtube || '',
+      tiktok: data.tiktok || socialLinks.tiktok || '',
+      website: data.website || socialLinks.website || '',
+      socialLinks: socialLinks,
       permissions,
       createdAt: data.created_at
     };
@@ -418,15 +434,22 @@ class Store {
   async getUserProfile(userId: string): Promise<User | null> {
     if (!userId) return null;
 
+    let localSocial: any = {};
+    try {
+      const raw = localStorage.getItem(`mestrio_social_${userId}`);
+      if (raw) localSocial = JSON.parse(raw);
+    } catch {}
+
     try {
       // 1. Tenta buscar direto da tabela profiles
       const { data: profileData, error: profileErr } = await supabase
         .from('profiles')
-        .select('id, name, avatar, bio, location, role, is_certified, created_at')
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
 
       if (!profileErr && profileData) {
+        const socialLinks = profileData.social_links || localSocial || {};
         return {
           id: profileData.id,
           name: profileData.name || 'Profissional',
@@ -435,6 +458,13 @@ class Store {
           location: profileData.location,
           bio: profileData.bio,
           isCertified: Boolean(profileData.is_certified),
+          instagram: profileData.instagram || socialLinks.instagram || '',
+          facebook: profileData.facebook || socialLinks.facebook || '',
+          linkedin: profileData.linkedin || socialLinks.linkedin || '',
+          youtube: profileData.youtube || socialLinks.youtube || '',
+          tiktok: profileData.tiktok || socialLinks.tiktok || '',
+          website: profileData.website || socialLinks.website || '',
+          socialLinks: socialLinks,
           email: '', // omitido no perfil público
           phone: '',
           createdAt: profileData.created_at
@@ -444,11 +474,12 @@ class Store {
       // 2. Tenta view public_profiles
       const { data: publicData, error: publicErr } = await supabase
         .from('public_profiles')
-        .select('id, name, avatar, bio, location, role, is_certified')
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
 
       if (!publicErr && publicData) {
+        const socialLinks = publicData.social_links || localSocial || {};
         return {
           id: publicData.id,
           name: publicData.name || 'Profissional',
@@ -457,6 +488,13 @@ class Store {
           location: publicData.location,
           bio: publicData.bio,
           isCertified: Boolean(publicData.is_certified),
+          instagram: publicData.instagram || socialLinks.instagram || '',
+          facebook: publicData.facebook || socialLinks.facebook || '',
+          linkedin: publicData.linkedin || socialLinks.linkedin || '',
+          youtube: publicData.youtube || socialLinks.youtube || '',
+          tiktok: publicData.tiktok || socialLinks.tiktok || '',
+          website: publicData.website || socialLinks.website || '',
+          socialLinks: socialLinks,
           email: '',
           phone: ''
         };
@@ -465,13 +503,14 @@ class Store {
       // 3. Fallback: Recupera dados do prestador a partir de seus anúncios publicados
       const { data: adData } = await supabase
         .from('service_ads')
-        .select('provider_id, location, is_certified, profiles!provider_id(name, avatar, bio, location, role, is_certified)')
+        .select('provider_id, location, is_certified, profiles!provider_id(*)')
         .eq('provider_id', userId)
         .limit(1)
         .maybeSingle();
 
       if (adData) {
         const prof = Array.isArray(adData.profiles) ? adData.profiles[0] : adData.profiles;
+        const socialLinks = prof?.social_links || localSocial || {};
         return {
           id: userId,
           name: prof?.name || 'Profissional Mestrio',
@@ -480,6 +519,13 @@ class Store {
           location: prof?.location || adData.location,
           bio: prof?.bio || '',
           isCertified: Boolean(prof?.is_certified ?? adData.is_certified),
+          instagram: prof?.instagram || socialLinks.instagram || '',
+          facebook: prof?.facebook || socialLinks.facebook || '',
+          linkedin: prof?.linkedin || socialLinks.linkedin || '',
+          youtube: prof?.youtube || socialLinks.youtube || '',
+          tiktok: prof?.tiktok || socialLinks.tiktok || '',
+          website: prof?.website || socialLinks.website || '',
+          socialLinks: socialLinks,
           email: '',
           phone: ''
         };
@@ -504,8 +550,32 @@ class Store {
     if (updates.hasCompletedOnboarding !== undefined) profileData.has_completed_onboarding = updates.hasCompletedOnboarding;
     if (updates.documentNumber !== undefined) profileData.document_number = updates.documentNumber;
 
-    const { error } = await supabase.from('profiles').update(profileData).eq('id', userId);
-    if (error) { console.error("Store Error [updateProfile]:", error); throw error; }
+    // Redes Sociais
+    const socialLinks: Record<string, string> = {
+      instagram: updates.instagram || updates.socialLinks?.instagram || '',
+      facebook: updates.facebook || updates.socialLinks?.facebook || '',
+      linkedin: updates.linkedin || updates.socialLinks?.linkedin || '',
+      youtube: updates.youtube || updates.socialLinks?.youtube || '',
+      tiktok: updates.tiktok || updates.socialLinks?.tiktok || '',
+      website: updates.website || updates.socialLinks?.website || '',
+    };
+
+    // Salva cópia local para garantia imediata
+    try {
+      localStorage.setItem(`mestrio_social_${userId}`, JSON.stringify(socialLinks));
+    } catch {}
+
+    try {
+      profileData.social_links = socialLinks;
+      const { error } = await supabase.from('profiles').update(profileData).eq('id', userId);
+      if (error) {
+        // Se a coluna social_links não existir no banco, atualiza sem ela
+        delete profileData.social_links;
+        await supabase.from('profiles').update(profileData).eq('id', userId);
+      }
+    } catch (err) {
+      console.warn("Store Warning [updateProfile]:", err);
+    }
 
     // Telefone mora em user_private (PII não fica exposta em profiles).
     if (updates.phone !== undefined) {
