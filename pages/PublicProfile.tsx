@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { store } from '../services/store';
-import { User, ServiceAd, BeforeAfterProject } from '../types';
+import { User, ServiceAd } from '../types';
 import { ServiceCard } from '../components/UI';
-import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Sparkles, Award, Share2, Copy, Check, MessageCircle, Globe, ExternalLink } from 'lucide-react';
+import { MessageSquare, MapPin, Star, CheckCircle2, User as UserIcon, QrCode, Award, Share2, Copy, Check, MessageCircle, Globe, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { DigitalBusinessCardModal } from '../components/DigitalBusinessCardModal';
-import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { getBusinessStatus } from '../utils/businessHours';
 import { MultiCriteriaBreakdown } from '../components/MultiCriteriaReviewWidget';
@@ -90,20 +89,6 @@ const PublicProfile: React.FC = () => {
       
   const totalReviews = ads.reduce((acc, ad) => acc + ad.reviewCount, 0);
   const allReviews = ads.flatMap(ad => ad.reviews || []);
-
-  // Projetos Antes/Depois do perfil ou amostra profissional
-  const beforeAfterProjects: BeforeAfterProject[] = profile.beforeAfterProjects && profile.beforeAfterProjects.length > 0
-    ? profile.beforeAfterProjects
-    : [
-        {
-          id: 'proj-1',
-          title: 'Transformação & Acabamento Residencial',
-          description: 'Execução de reparo completo, preparação de superfície e acabamento com garantia técnica.',
-          beforeImage: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&auto=format&fit=crop&q=80',
-          afterImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-          category: 'Reforma & Manutenção'
-        }
-      ];
 
   return (
     <div className="flex-1 bg-gray-50 pb-12">
@@ -298,24 +283,6 @@ const PublicProfile: React.FC = () => {
 
         {/* Ads & Portfolio Showcase */}
         <main className="md:w-2/3 space-y-8">
-            {/* Galeria de Resultados Antes & Depois */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-xl flex items-center gap-2">
-                    <Sparkles size={20} className="text-amber-500" /> Resultados & Transformações (Antes/Depois)
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Arraste o slider para comparar o estado inicial e o resultado final do serviço.</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                {beforeAfterProjects.map(proj => (
-                  <BeforeAfterSlider key={proj.id} project={proj} />
-                ))}
-              </div>
-            </div>
-
             {/* Avaliação Multi-Critérios Consolidada */}
             {allReviews.length > 0 && (
               <div>
