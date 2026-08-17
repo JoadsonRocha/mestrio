@@ -1676,3 +1676,5 @@ export const QuoteBuilder: React.FC = () => {
     </div>
   );
 };
+
+export default QuoteBuilder;

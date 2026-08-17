@@ -109,9 +109,92 @@ const PublicProfile: React.FC = () => {
   const totalReviews = ads.reduce((acc, ad) => acc + ad.reviewCount, 0);
   const allReviews = ads.flatMap(ad => ad.reviews || []);
 
+  const ALL_WEEK_DAYS = [
+    { key: 'seg', name: 'Segunda-feira', short: 'Seg', dayIndex: 1 },
+    { key: 'ter', name: 'Terça-feira', short: 'Ter', dayIndex: 2 },
+    { key: 'qua', name: 'Quarta-feira', short: 'Qua', dayIndex: 3 },
+    { key: 'qui', name: 'Quinta-feira', short: 'Qui', dayIndex: 4 },
+    { key: 'sex', name: 'Sexta-feira', short: 'Sex', dayIndex: 5 },
+    { key: 'sab', name: 'Sábado', short: 'Sáb', dayIndex: 6 },
+    { key: 'dom', name: 'Domingo', short: 'Dom', dayIndex: 0 },
+  ];
+
+  const parseAvailability = (availability?: string): { days: string[]; start: string; end: string } | null => {
+    if (!availability) return null;
+    const timeMatch = availability.match(/(\d{1,2}:\d{2})\s*[-àa]\s*(\d{1,2}:\d{2})/i);
+    if (!timeMatch) return null;
+    const start = timeMatch[1].padStart(5, '0');
+    const end = timeMatch[2].padStart(5, '0');
+    const dayPart = availability.replace(timeMatch[0], '');
+    const dayAliases: Record<string, string> = {
+      'seg': 'seg', 'segunda': 'seg', 'segunda-feira': 'seg',
+      'ter': 'ter', 'terça': 'ter', 'terca': 'ter', 'terça-feira': 'ter', 'terca-feira': 'ter',
+      'qua': 'qua', 'quarta': 'qua', 'quarta-feira': 'qua',
+      'qui': 'qui', 'quinta': 'qui', 'quinta-feira': 'qui',
+      'sex': 'sex', 'sexta': 'sex', 'sexta-feira': 'sex',
+      'sab': 'sab', 'sáb': 'sab', 'sábado': 'sab', 'sabado': 'sab',
+      'dom': 'dom', 'domingo': 'dom',
+    };
+    const rawDays = dayPart.split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
+    const days: string[] = [];
+    for (const raw of rawDays) {
+      const normalized = raw.replace(/[áàâã]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íìî]/g, 'i').replace(/[óòôõ]/g, 'o').replace(/[úùû]/g, 'u').replace(/ç/g, 'c');
+      if (dayAliases[normalized]) {
+        const key = dayAliases[normalized];
+        if (!days.includes(key)) days.push(key);
+      }
+    }
+    if (days.length === 0) return { days: [], start, end };
+    return { days, start, end };
+  };
+
+  const getWeeklySchedule = () => {
+    const rawAvailability = ads[0]?.availability || (profile as any)?.availability;
+    const todayIndex = new Date().getDay();
+
+    if (!rawAvailability) {
+      return ALL_WEEK_DAYS.map(day => ({
+        ...day,
+        isToday: day.dayIndex === todayIndex,
+        isOpen: day.dayIndex >= 1 && day.dayIndex <= 5,
+        timeRange: day.dayIndex >= 1 && day.dayIndex <= 5 ? '08:00 às 18:00' : 'Fechado'
+      }));
+    }
+
+    const is24h = /24\s*h|24\s*horas/i.test(rawAvailability);
+    if (is24h) {
+      return ALL_WEEK_DAYS.map(day => ({
+        ...day,
+        isToday: day.dayIndex === todayIndex,
+        isOpen: true,
+        timeRange: '24 Horas (Atendimento Contínuo)'
+      }));
+    }
+
+    const av = parseAvailability(rawAvailability);
+    if (!av) {
+      return ALL_WEEK_DAYS.map(day => ({
+        ...day,
+        isToday: day.dayIndex === todayIndex,
+        isOpen: day.dayIndex >= 1 && day.dayIndex <= 5,
+        timeRange: day.dayIndex >= 1 && day.dayIndex <= 5 ? '08:00 às 18:00' : 'Fechado'
+      }));
+    }
+
+    const timeFormatted = `${av.start} às ${av.end}`;
+    return ALL_WEEK_DAYS.map(day => {
+      const isOpen = av.days.includes(day.key);
+      return {
+        ...day,
+        isToday: day.dayIndex === todayIndex,
+        isOpen,
+        timeRange: isOpen ? timeFormatted : 'Fechado'
+      };
+    });
+  };
+
   return (
-    <div className="flex-1 bg-gray-50 pb-12">
-      {/* Cover and Profile Header */}
+    <div className="flex-1 bg-gray-50 pb-16">
       <div className="bg-white border-b border-gray-200">
         <div className="h-32 md:h-48 bg-gradient-to-r from-brand-600 to-brand-400"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -119,7 +202,7 @@ const PublicProfile: React.FC = () => {
                 <div className="relative inline-block self-start md:self-auto">
                   <img 
                       src={profile.avatar || "https://via.placeholder.com/150"} 
-                      alt={profile.name}
+                      alt={profile.name} 
                       loading="lazy"
                       decoding="async"
                       className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg object-cover bg-white"
@@ -142,13 +225,13 @@ const PublicProfile: React.FC = () => {
                         )}
                     </div>
                     <div className="flex flex-wrap items-center mt-2 text-sm text-gray-600 gap-4">
-                        {/* Status de Atendimento em Tempo Real (Directorist Style) */}
                         {(() => {
-                            const primaryAvailability = ads[0]?.availability;
-                            const bStatus = getBusinessStatus(primaryAvailability);
+                            const bStatus = getBusinessStatus(ads[0]?.availability);
                             return (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${bStatus.colorClass}`}>
-                                    <span className={`w-2 h-2 rounded-full shrink-0 ${bStatus.isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                                <span className={`flex items-center font-semibold text-xs px-2.5 py-1 rounded-full ${
+                                    bStatus.isOpen ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    <span className={`w-2 h-2 rounded-full mr-1.5 ${bStatus.isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
                                     {bStatus.statusText}
                                 </span>
                             );
@@ -170,7 +253,6 @@ const PublicProfile: React.FC = () => {
                     <button
                         onClick={handleShareProfile}
                         className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-semibold py-2 px-3.5 rounded-lg shadow-2xs transition-colors flex items-center text-sm"
-                        title="Compartilhar link do perfil"
                     >
                         {copiedLink ? <Check size={16} className="mr-1.5 text-emerald-600" /> : <Share2 size={16} className="mr-1.5 text-gray-500" />}
                         {copiedLink ? 'Link Copiado!' : 'Compartilhar'}
@@ -179,7 +261,6 @@ const PublicProfile: React.FC = () => {
                     <button
                         onClick={() => setShowBusinessCard(true)}
                         className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold py-2 px-4 rounded-lg shadow-2xs transition-colors flex items-center text-sm"
-                        title="Ver e compartilhar cartão de visitas digital"
                     >
                         <QrCode size={16} className="mr-2 text-purple-600" /> Cartão Digital
                     </button>
@@ -197,138 +278,138 @@ const PublicProfile: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 flex flex-col md:flex-row gap-8">
-        
-        {/* Sidebar Info */}
-        <aside className="md:w-1/3 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24 space-y-4">
-                <h3 className="font-bold text-gray-900 text-lg mb-2">Sobre o profissional</h3>
-                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-sm">
-                    {profile.bio || "Este profissional ainda não adicionou uma biografia."}
-                </p>
-                {profile.isCertified && (
-                  <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3.5 flex items-center gap-3">
-                    <VerifiedBadge size="md" className="shrink-0" />
-                    <div>
-                      <h4 className="text-xs font-bold text-blue-950">Profissional Verificado Mestrio</h4>
-                      <p className="text-[11px] text-blue-700">Documentação e identidade validadas oficialmente pela plataforma.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Redes Sociais & Links Oficiais */}
-                {(profile.instagram || profile.facebook || profile.linkedin || profile.youtube || profile.tiktok || profile.website) && (
-                  <div className="pt-3 border-t border-gray-100 space-y-2">
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
-                      <Globe size={13} className="text-brand-600" /> Redes Sociais & Links
-                    </h4>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {profile.instagram && (
-                        <a
-                          href={profile.instagram.startsWith('http') ? profile.instagram : `https://instagram.com/${profile.instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                        >
-                          📸 Instagram
-                        </a>
-                      )}
-                      {profile.facebook && (
-                        <a
-                          href={profile.facebook.startsWith('http') ? profile.facebook : `https://facebook.com/${profile.facebook}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                        >
-                          🌐 Facebook
-                        </a>
-                      )}
-                      {profile.linkedin && (
-                        <a
-                          href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                        >
-                          💼 LinkedIn
-                        </a>
-                      )}
-                      {profile.youtube && (
-                        <a
-                          href={profile.youtube.startsWith('http') ? profile.youtube : `https://youtube.com/${profile.youtube}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                        >
-                          ▶️ YouTube
-                        </a>
-                      )}
-                      {profile.tiktok && (
-                        <a
-                          href={profile.tiktok.startsWith('http') ? profile.tiktok : `https://tiktok.com/@${profile.tiktok.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                        >
-                          🎵 TikTok
-                        </a>
-                      )}
-                      {profile.website && (
-                        <a
-                          href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-2xs"
-                        >
-                          🔗 Site / Portfólio
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Compartilhamento Rápido */}
-                <div className="pt-3 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 mb-2">Divulgue este perfil:</p>
-                  <button
-                    onClick={handleShareProfile}
-                    className="w-full py-2.5 px-3 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl text-xs font-bold text-brand-700 flex items-center justify-center gap-2 transition shadow-xs"
-                  >
-                    <Share2 size={15} /> Compartilhar nas Redes Sociais
-                  </button>
-                </div>
-            </div>
-        </aside>
-
-        {/* Ads & Portfolio Showcase */}
-        <main className="md:w-2/3 space-y-8">
-            {/* Avaliação Multi-Critérios Consolidada */}
-            {allReviews.length > 0 && (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/80 p-6 md:p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-7 space-y-6">
               <div>
-                <MultiCriteriaBreakdown reviews={allReviews} overallRating={Number(averageRating)} />
+                <h3 className="font-bold text-gray-900 text-xl flex items-center gap-2 mb-3">
+                  Sobre o profissional
+                </h3>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base font-normal">
+                  {profile.bio || "Este profissional ainda não adicionou uma biografia."}
+                </p>
               </div>
-            )}
 
-            {/* Lista de Anúncios */}
-            <div>
-              <h3 className="font-bold text-gray-900 text-xl mb-6">Serviços Publicados ({ads.length})</h3>
-              
-              {ads.length === 0 ? (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
-                      Nenhum anúncio publicado no momento.
+              {profile.isCertified && (
+                <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-4 flex items-center gap-3.5">
+                  <VerifiedBadge size="md" className="shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-950">Profissional Verificado Oficial Mestrio</h4>
+                    <p className="text-xs text-blue-700">Documentação e identidade validadas oficialmente pela equipe de segurança da plataforma.</p>
                   </div>
-              ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {ads.map(ad => (
-                          <ServiceCard key={ad.id} ad={ad} compact />
-                      ))}
+                </div>
+              )}
+
+              {(profile.instagram || profile.facebook || profile.linkedin || profile.youtube || profile.tiktok || profile.website) && (
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <Globe size={14} className="text-brand-600" /> Redes Sociais & Links Oficiais
+                  </h4>
+                  <div className="flex flex-wrap gap-2.5">
+                    {profile.instagram && (
+                      <a href={profile.instagram.startsWith('http') ? profile.instagram : `https://instagram.com/${profile.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">📸 Instagram</a>
+                    )}
+                    {profile.facebook && (
+                      <a href={profile.facebook.startsWith('http') ? profile.facebook : `https://facebook.com/${profile.facebook}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">🌐 Facebook</a>
+                    )}
+                    {profile.linkedin && (
+                      <a href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">💼 LinkedIn</a>
+                    )}
+                    {profile.youtube && (
+                      <a href={profile.youtube.startsWith('http') ? profile.youtube : `https://youtube.com/${profile.youtube}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">▶️ YouTube</a>
+                    )}
+                    {profile.tiktok && (
+                      <a href={profile.tiktok.startsWith('http') ? profile.tiktok : `https://tiktok.com/@${profile.tiktok.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">🎵 TikTok</a>
+                    )}
+                    {profile.website && (
+                      <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">🔗 Site / Portfólio</a>
+                    )}
                   </div>
+                </div>
               )}
             </div>
-        </main>
+
+            <div className="lg:col-span-5 bg-slate-50 p-5 rounded-xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                    <Calendar size={16} className="text-orange-500" /> Horários de Atendimento
+                  </h4>
+                  {(() => {
+                    const bStatus = getBusinessStatus(ads[0]?.availability);
+                    return (
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        bStatus.isOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {bStatus.isOpen ? '● Aberto agora' : '● Fechado'}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden text-xs shadow-2xs">
+                  {getWeeklySchedule().map(({ key, name, isToday, isOpen, timeRange }) => (
+                    <div 
+                      key={key}
+                      className={`flex items-center justify-between px-3.5 py-2 transition-colors ${
+                        isToday ? 'bg-orange-50/80 font-bold text-orange-950 border-l-3 border-orange-500' : 'text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>{name}</span>
+                        {isToday && (
+                          <span className="text-[10px] px-1.5 py-0.2 bg-orange-500 text-white rounded font-bold">Hoje</span>
+                        )}
+                      </div>
+                      <span className={isOpen ? 'text-slate-900 font-semibold' : 'text-slate-400 font-normal'}>
+                        {timeRange}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={handleShareProfile}
+                  className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm"
+                >
+                  <Share2 size={16} /> Compartilhar este Perfil nas Redes Sociais
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {allReviews.length > 0 && (
+          <div>
+            <MultiCriteriaBreakdown reviews={allReviews} overallRating={Number(averageRating)} />
+          </div>
+        )}
+
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-bold text-gray-900 text-2xl">
+              Serviços & Anúncios Publicados ({ads.length})
+            </h3>
+          </div>
+          
+          {ads.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center text-gray-500 space-y-2">
+                  <p className="text-base font-medium text-gray-700">Nenhum serviço anunciado no momento.</p>
+                  <p className="text-xs text-gray-400">Este profissional ainda não possui anúncios ativos cadastrados.</p>
+              </div>
+          ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {ads.map(ad => (
+                      <ServiceCard key={ad.id} ad={ad} />
+                  ))}
+              </div>
+          )}
+        </div>
       </div>
 
-      {/* Modal de Cartão de Visitas Digital */}
       {profile && (
         <DigitalBusinessCardModal
           isOpen={showBusinessCard}
@@ -337,7 +418,6 @@ const PublicProfile: React.FC = () => {
         />
       )}
 
-      {/* Modal de Compartilhamento Social */}
       {profile && (
         <SocialShareModal
           isOpen={showSocialShare}

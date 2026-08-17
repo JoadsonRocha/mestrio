@@ -28,7 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import { store, supabase, uploadImage } from '../services/store';
 import { useToast } from '../context/ToastContext';
 import { ChatSession, Message, ServiceAd } from '../types';
-import QuoteBuilder from '../components/QuoteBuilder';
+import { QuoteBuilder } from '../components/QuoteBuilder';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 
 const Chat: React.FC = () => {
