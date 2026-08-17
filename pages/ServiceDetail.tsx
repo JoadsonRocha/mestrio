@@ -150,6 +150,26 @@ const ServiceDetail: React.FC = () => {
       if (id) {
           const found = await store.getAdById(id);
           setAd(found || undefined);
+          if (found) {
+            document.title = `${found.title} | Mestrio`;
+            const setMetaTag = (attr: string, key: string, content: string) => {
+              let el = document.querySelector(`meta[${attr}="${key}"]`);
+              if (!el) {
+                el = document.createElement('meta');
+                el.setAttribute(attr, key);
+                document.head.appendChild(el);
+              }
+              el.setAttribute('content', content);
+            };
+
+            const photo = found.photos?.[0] || (found as any).image_url || found.providerAvatar;
+            if (photo) {
+              setMetaTag('property', 'og:image', photo);
+              setMetaTag('name', 'twitter:image', photo);
+            }
+            setMetaTag('property', 'og:title', `${found.title} | Mestrio`);
+            setMetaTag('property', 'og:description', found.description || 'Confira os detalhes e solicite este serviço no Mestrio.');
+          }
           if (user && found) {
             const fav = await store.isFavorite(user.id, found.id);
             setIsFav(fav);
@@ -992,6 +1012,7 @@ const ServiceDetail: React.FC = () => {
         onClose={() => setShowShareModal(false)}
         title={ad?.title || 'Anúncio Mestrio'}
         description={ad?.description}
+        imageUrl={ad?.photos?.[0] || (ad as any)?.image_url || ad?.providerAvatar}
       />
     </div>
   );

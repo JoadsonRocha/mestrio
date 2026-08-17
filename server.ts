@@ -401,43 +401,98 @@ JSON puro:`;
 
       let html = fs.readFileSync(indexPath, 'utf-8');
       const urlPath = req.path;
+      const host = req.get('x-forwarded-host') || req.get('host') || 'mestrio-production.up.railway.app';
+      const protocol = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
+      const baseUrl = `${protocol}://${host}`;
 
       try {
-        if (urlPath.startsWith('/profissional/')) {
-          const userId = urlPath.split('/profissional/')[1]?.split('/')[0];
-          if (userId) {
-            const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
-            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-            if (supabaseUrl && serviceKey) {
-              const supabase = createClient(supabaseUrl, serviceKey);
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (supabaseUrl && serviceKey) {
+          const supabase = createClient(supabaseUrl, serviceKey);
+
+          let pageTitle = 'Mestrio - Serviços Gerais em Domicílio';
+          let pageDesc = 'Conectando clientes aos melhores prestadores de serviços da sua região.';
+          let pageImage = `${baseUrl}/favicon.png`;
+          let pageType = 'website';
+          let canonicalUrl = `${baseUrl}${urlPath}`;
+
+          // 1. Caso seja Perfil de Profissional (/profissional/:id)
+          if (urlPath.startsWith('/profissional/')) {
+            const userId = urlPath.split('/profissional/')[1]?.split('/')[0]?.split('?')[0];
+            if (userId) {
               const { data: prof } = await supabase.from('profiles').select('name, bio, avatar').eq('id', userId).maybeSingle();
               if (prof) {
-                const title = `${prof.name} | Profissional no Mestrio`;
-                const desc = prof.bio ? prof.bio.replace(/<[^>]*>?/gm, '').substring(0, 160) : `Confira os serviços, avaliações e portfólio de ${prof.name} no Mestrio.`;
-                const image = prof.avatar || 'https://via.placeholder.com/600x315';
+                pageTitle = `${prof.name} | Profissional no Mestrio`;
+                pageDesc = prof.bio 
+                  ? prof.bio.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim().substring(0, 180) 
+                  : `Confira os serviços, avaliações e portfólio de ${prof.name} no Mestrio.`;
+                pageImage = prof.avatar || pageImage;
+                pageType = 'profile';
+              }
+            }
+          } 
+          // 2. Caso seja Anúncio de Serviço (/servico/:id)
+          else if (urlPath.startsWith('/servico/')) {
+            const adId = urlPath.split('/servico/')[1]?.split('/')[0]?.split('?')[0];
+            if (adId) {
+              const { data: ad } = await supabase
+                .from('service_ads')
+                .select('title, description, photos, image_url, price, location, profiles:provider_id(name, avatar)')
+                .eq('id', adId)
+                .maybeSingle();
 
-                const ogTags = `
-                  <title>${title}</title>
-                  <meta name="description" content="${desc}" />
-                  <meta property="og:title" content="${title}" />
-                  <meta property="og:description" content="${desc}" />
-                  <meta property="og:image" content="${image}" />
-                  <meta property="og:image:width" content="600" />
-                  <meta property="og:image:height" content="600" />
-                  <meta property="og:type" content="profile" />
-                  <meta name="twitter:card" content="summary_large_image" />
-                  <meta name="twitter:title" content="${title}" />
-                  <meta name="twitter:description" content="${desc}" />
-                  <meta name="twitter:image" content="${image}" />
-                `;
-
-                html = html.replace(/<title>.*?<\/title>/i, ogTags);
+              if (ad) {
+                pageTitle = `${ad.title} | Mestrio`;
+                const profData = Array.isArray(ad.profiles) ? ad.profiles[0] : ad.profiles;
+                const providerName = profData?.name ? ` por ${profData.name}` : '';
+                const priceText = ad.price ? ` - A partir de R$ ${ad.price}` : '';
+                pageDesc = ad.description 
+                  ? `${ad.description.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim().substring(0, 150)}${priceText}${providerName}`
+                  : `Contrate ${ad.title}${providerName} com segurança e garantia no Mestrio.`;
+                
+                // Pega foto do anúncio ou avatar do prestador
+                const firstPhoto = (Array.isArray(ad.photos) && ad.photos.length > 0) ? ad.photos[0] : (ad.image_url || profData?.avatar);
+                if (firstPhoto) pageImage = firstPhoto;
+                pageType = 'article';
               }
             }
           }
+
+          // Garante que a URL da imagem seja absoluta
+          if (pageImage && !pageImage.startsWith('http://') && !pageImage.startsWith('https://')) {
+            pageImage = pageImage.startsWith('/') ? `${baseUrl}${pageImage}` : `${baseUrl}/${pageImage}`;
+          }
+
+          // Remove tags antigas para evitar duplicidade no parser de robôs do WhatsApp/Facebook
+          html = html.replace(/<title>[\s\S]*?<\/title>/gi, '');
+          html = html.replace(/<meta\s+(name|property)=["'](description|og:[^"']+|twitter:[^"']+)["'][^>]*>/gi, '');
+
+          const newMetaTags = `
+    <title>${pageTitle}</title>
+    <meta name="description" content="${pageDesc}" />
+    <link rel="canonical" href="${canonicalUrl}" />
+    <meta property="og:site_name" content="Mestrio" />
+    <meta property="og:title" content="${pageTitle}" />
+    <meta property="og:description" content="${pageDesc}" />
+    <meta property="og:image" content="${pageImage}" />
+    <meta property="og:image:secure_url" content="${pageImage}" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="800" />
+    <meta property="og:image:height" content="800" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:type" content="${pageType}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${pageTitle}" />
+    <meta name="twitter:description" content="${pageDesc}" />
+    <meta name="twitter:image" content="${pageImage}" />
+`;
+
+          html = html.replace(/<head>/i, `<head>${newMetaTags}`);
         }
       } catch (err) {
-        console.warn('Erro ao injetar OG tags dinâmicas:', err);
+        console.warn('Erro ao processar OG tags dinâmicas:', err);
       }
 
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
