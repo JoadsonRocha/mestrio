@@ -1278,6 +1278,46 @@ CREATE TABLE IF NOT EXISTS detailed_quotes (
 
 ALTER TABLE detailed_quotes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Prestadores gerenciam seus próprios orçamentos detalhados" ON detailed_quotes;
+CREATE POLICY "Prestadores gerenciam seus próprios orçamentos detalhados" ON detailed_quotes
+  FOR ALL USING (auth.uid() = provider_id OR is_admin_allowed('view_metrics'));
+
+-- Tabela de Horários e Agenda do Profissional (Professional Schedules)
+CREATE TABLE IF NOT EXISTS professional_schedules (
+  provider_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  work_days JSONB DEFAULT '["seg", "ter", "qua", "qui", "sex"]'::jsonb,
+  start_time TEXT DEFAULT '08:00',
+  end_time TEXT DEFAULT '18:00',
+  break_start TEXT DEFAULT '12:00',
+  break_end TEXT DEFAULT '13:00',
+  auto_approve BOOLEAN DEFAULT false,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE professional_schedules ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Horários são públicos para consulta" ON professional_schedules;
+CREATE POLICY "Horários são públicos para consulta" ON professional_schedules
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Prestadores gerenciam seus próprios horários" ON professional_schedules;
+CREATE POLICY "Prestadores gerenciam seus próprios horários" ON professional_schedules
+  FOR ALL USING (auth.uid() = provider_id);
+
+-- Publicações Realtime para Demandas e Propostas
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE job_requests;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE quote_proposals;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+
 -- ============================================================================
 -- TABELA DE AVALIAÇÕES COM MULTI-CRITÉRIOS (DIRECTORIST PATTERN)
 -- ============================================================================

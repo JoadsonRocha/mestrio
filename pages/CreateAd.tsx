@@ -178,18 +178,56 @@ const CreateAd: React.FC = () => {
     )
   }
 
-  // Redirect if user is CLIENT
+  // Redirect or show pending state if user is CLIENT
   if (user.role === 'CLIENT') {
+    const isPendingProvider = user.roleRequest === 'PROVIDER';
+
     return (
-        <div className="flex-1 flex items-center justify-center bg-gray-50 px-4">
-            <div className="text-center max-w-md">
-                <h2 className="text-2xl font-bold mb-4 text-gray-800">Acesso Restrito</h2>
-                <p className="mb-6 text-gray-600">Sua conta atual é de Cliente. Para criar anúncios e oferecer serviços, você precisa de uma conta de Profissional.</p>
-                <button onClick={() => navigate('/')} className="bg-brand-600 text-white px-6 py-2 rounded-md">Voltar ao Início</button>
+      <div className="flex-1 flex items-center justify-center bg-gray-50 py-12 px-4">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-lg w-full text-center">
+          <div className="w-16 h-16 bg-blue-50 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-5">
+            {isPendingProvider ? <Clock className="w-8 h-8 animate-pulse text-brand-600" /> : <Info className="w-8 h-8 text-brand-600" />}
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-3 text-gray-900">
+            {isPendingProvider ? 'Cadastro de Profissional em Análise' : 'Deseja oferecer seus serviços no Mestrio?'}
+          </h2>
+          
+          <p className="mb-6 text-gray-600 leading-relaxed text-sm">
+            {isPendingProvider
+              ? 'Recebemos sua solicitação para se tornar um prestador no Mestrio! Nossa moderação está validando seu cadastro para garantir total segurança e confiabilidade na plataforma. Em breve você poderá publicar seus anúncios.'
+              : 'Sua conta atual está configurada como Cliente contratante. Para criar anúncios públicos de serviços e receber solicitações, você pode solicitar a ativação do perfil profissional.'}
+          </p>
+
+          {isPendingProvider && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left text-xs text-amber-800 flex items-start gap-3">
+              <Sparkles className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <span className="font-semibold block mb-1">Dica para agilizar sua aprovação:</span>
+                Mantenha seu perfil completo com foto, biografia detalhada e número de WhatsApp atualizado no seu painel.
+              </div>
             </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button 
+              onClick={() => navigate('/perfil/editar')} 
+              className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
+            >
+              Completar Meu Perfil
+            </button>
+            <button 
+              onClick={() => navigate('/')} 
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+            >
+              Voltar ao Início
+            </button>
+          </div>
         </div>
-    )
+      </div>
+    );
   }
+
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {

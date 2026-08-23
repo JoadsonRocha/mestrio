@@ -55,3 +55,28 @@ export function sanitizePhone(value: string): string {
   return String(value).replace(/\D/g, '').slice(0, 15);
 }
 
+/**
+ * Sanitiza e valida URLs externas (redes sociais, sites de portfólio, links de imagens).
+ * Bloqueia protocolos perigosos como javascript:, data: ou vbscript:, prevenindo Stored XSS.
+ */
+export function sanitizeUrl(value: string): string {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  
+  // Rejeita esquemas maliciosos
+  if (/^(javascript:|data:|vbscript:)/i.test(trimmed)) {
+    return '';
+  }
+
+  // Se for uma URL sem protocolo relativo mas com domínio (ex: instagram.com/user)
+  if (!/^https?:\/\//i.test(trimmed) && !/^(mailto:|tel:)/i.test(trimmed)) {
+    if (trimmed.startsWith('/') || trimmed.startsWith('.')) {
+      return ''; // Não permite caminhos relativos arbitrários em links externos
+    }
+    return `https://${trimmed}`;
+  }
+
+  return trimmed;
+}
+
+

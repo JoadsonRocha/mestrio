@@ -182,14 +182,21 @@ export const QuoteBuilder: React.FC = () => {
     setItems(prev =>
       prev.map(item => {
         if (item.id === id) {
-          const updated = { ...item, [field]: value };
-          updated.totalPrice = updated.quantity * updated.unitPrice;
+          let finalValue = value;
+          if (field === 'quantity') {
+            finalValue = Math.max(0.01, Number(value) || 1);
+          } else if (field === 'unitPrice') {
+            finalValue = Math.max(0, Number(value) || 0);
+          }
+          const updated = { ...item, [field]: finalValue };
+          updated.totalPrice = Math.round((updated.quantity * updated.unitPrice) * 100) / 100;
           return updated;
         }
         return item;
       })
     );
   };
+
 
   // Construir objeto do orçamento atual
   const getCurrentQuoteObject = (): DetailedQuote => {

@@ -1399,14 +1399,49 @@ class Store {
   private JOB_REQUESTS_KEY = 'mestrio_job_requests';
   private QUOTES_KEY = 'mestrio_quote_proposals';
 
+  private mapJobRequest(data: any): JobRequest {
+    return {
+      id: data.id,
+      clientId: data.client_id,
+      clientName: sanitizeText(data.client_name || 'Cliente'),
+      clientAvatar: data.client_avatar,
+      clientPhone: data.client_phone,
+      title: sanitizeText(data.title),
+      description: sanitizeHtmlLike(data.description),
+      category: data.category,
+      location: sanitizeText(data.location),
+      budget: data.budget ? Number(data.budget) : undefined,
+      urgency: data.urgency || 'this_week',
+      photos: Array.isArray(data.photos) ? data.photos : [],
+      preferredContactMethod: data.preferred_contact_method || 'whatsapp',
+      status: data.status || 'open',
+      proposalsCount: Number(data.proposals_count || 0),
+      createdAt: data.created_at || new Date().toISOString()
+    };
+  }
+
   async getJobRequests(): Promise<JobRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('job_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const list = data.map(this.mapJobRequest);
+        localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(list));
+        return list;
+      }
+      if (error) console.warn("Store Warning [getJobRequests] Supabase:", error.message);
+    } catch (e) {
+      console.warn("Store Warning [getJobRequests] fallback to local:", e);
+    }
+
     try {
       const stored = localStorage.getItem(this.JOB_REQUESTS_KEY);
       if (stored) {
         const list: JobRequest[] = JSON.parse(stored);
-        const cleaned = list.filter(item => !item.id.startsWith('jr-1') && !item.id.startsWith('jr-2') && item.clientName !== 'Ana Souza' && item.clientName !== 'Carlos Eduardo');
-        localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(cleaned));
-        return cleaned;
+        return list.filter(item => !item.id.startsWith('jr-1') && !item.id.startsWith('jr-2') && item.clientName !== 'Ana Souza' && item.clientName !== 'Carlos Eduardo');
       }
       return [];
     } catch (e) {
@@ -1415,11 +1450,51 @@ class Store {
   }
 
   async createJobRequest(req: Omit<JobRequest, 'id' | 'createdAt' | 'status' | 'proposalsCount'>): Promise<JobRequest> {
+    const title = sanitizeText(req.title);
+    const description = sanitizeHtmlLike(req.description);
+    const location = sanitizeText(req.location);
+
+    try {
+      const { data, error } = await supabase
+        .from('job_requests')
+        .insert([{
+          client_id: req.clientId,
+          client_name: sanitizeText(req.clientName),
+          client_avatar: req.clientAvatar,
+          client_phone: req.clientPhone,
+          title,
+          description,
+          category: req.category,
+          location,
+          budget: req.budget,
+          urgency: req.urgency || 'this_week',
+          photos: req.photos || [],
+          preferred_contact_method: req.preferredContactMethod || 'whatsapp',
+          status: 'open',
+          proposals_count: 0
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        const mapped = this.mapJobRequest(data);
+        const list = await this.getJobRequests();
+        const updatedList = [mapped, ...list.filter(j => j.id !== mapped.id)];
+        localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(updatedList));
+        return mapped;
+      }
+      if (error) console.warn("Store Warning [createJobRequest] Supabase:", error.message);
+    } catch (e) {
+      console.warn("Store Warning [createJobRequest] fallback to local:", e);
+    }
+
+    // Fallback Local
     const list = await this.getJobRequests();
     const newReq: JobRequest = {
       ...req,
-      title: sanitizeText(req.title),
-      description: sanitizeHtmlLike(req.description),
+      title,
+      description,
+      location,
       id: `jr-${Date.now()}`,
       status: 'open',
       proposalsCount: 0,
@@ -1431,6 +1506,12 @@ class Store {
   }
 
   async updateJobRequestStatus(id: string, status: JobRequest['status']): Promise<void> {
+    try {
+      await supabase.from('job_requests').update({ status }).eq('id', id);
+    } catch (e) {
+      console.warn("Store Warning [updateJobRequestStatus]:", e);
+    }
+
     const list = await this.getJobRequests();
     const item = list.find(r => r.id === id);
     if (item) {
@@ -1440,12 +1521,51 @@ class Store {
   }
 
   async deleteJobRequest(id: string): Promise<void> {
+    try {
+      await supabase.from('job_requests').delete().eq('id', id);
+    } catch (e) {
+      console.warn("Store Warning [deleteJobRequest]:", e);
+    }
+
     const list = await this.getJobRequests();
     const filtered = list.filter(r => r.id !== id);
     localStorage.setItem(this.JOB_REQUESTS_KEY, JSON.stringify(filtered));
   }
 
+  private mapQuoteProposal(data: any): QuoteProposal {
+    return {
+      id: data.id,
+      jobRequestId: data.job_request_id,
+      adId: data.ad_id,
+      providerId: data.provider_id,
+      providerName: sanitizeText(data.provider_name || 'Profissional'),
+      providerAvatar: data.provider_avatar,
+      clientId: data.client_id,
+      estimatedPrice: Number(data.estimated_price || 0),
+      estimatedDays: Number(data.estimated_days || 1),
+      description: sanitizeHtmlLike(data.description),
+      status: data.status || 'pending',
+      createdAt: data.created_at || new Date().toISOString()
+    };
+  }
+
   async getQuoteProposals(jobRequestId?: string, providerId?: string): Promise<QuoteProposal[]> {
+    try {
+      let query = supabase.from('quote_proposals').select('*');
+      if (jobRequestId) query = query.eq('job_request_id', jobRequestId);
+      if (providerId) query = query.eq('provider_id', providerId);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(this.mapQuoteProposal);
+        localStorage.setItem(this.QUOTES_KEY, JSON.stringify(list));
+        return list;
+      }
+      if (error) console.warn("Store Warning [getQuoteProposals] Supabase:", error.message);
+    } catch (e) {
+      console.warn("Store Warning [getQuoteProposals] fallback to local:", e);
+    }
+
     try {
       const stored = localStorage.getItem(this.QUOTES_KEY);
       const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
@@ -1460,6 +1580,37 @@ class Store {
   }
 
   async createQuoteProposal(proposal: Omit<QuoteProposal, 'id' | 'createdAt' | 'status'>): Promise<QuoteProposal> {
+    try {
+      const { data, error } = await supabase
+        .from('quote_proposals')
+        .insert([{
+          job_request_id: proposal.jobRequestId,
+          provider_id: proposal.providerId,
+          provider_name: sanitizeText(proposal.providerName),
+          provider_avatar: proposal.providerAvatar,
+          client_id: proposal.clientId,
+          estimated_price: proposal.estimatedPrice,
+          estimated_days: proposal.estimatedDays,
+          description: sanitizeHtmlLike(proposal.description),
+          status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        const mapped = this.mapQuoteProposal(data);
+        const stored = localStorage.getItem(this.QUOTES_KEY);
+        const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
+        list.unshift(mapped);
+        localStorage.setItem(this.QUOTES_KEY, JSON.stringify(list));
+        return mapped;
+      }
+      if (error) console.warn("Store Warning [createQuoteProposal] Supabase:", error.message);
+    } catch (e) {
+      console.warn("Store Warning [createQuoteProposal] fallback to local:", e);
+    }
+
+    // Fallback local
     const stored = localStorage.getItem(this.QUOTES_KEY);
     const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
     const newQuote: QuoteProposal = {
@@ -1483,6 +1634,12 @@ class Store {
   }
 
   async updateQuoteStatus(id: string, status: QuoteProposal['status']): Promise<void> {
+    try {
+      await supabase.from('quote_proposals').update({ status }).eq('id', id);
+    } catch (e) {
+      console.warn("Store Warning [updateQuoteStatus]:", e);
+    }
+
     const stored = localStorage.getItem(this.QUOTES_KEY);
     const list: QuoteProposal[] = stored ? JSON.parse(stored) : [];
     const item = list.find(q => q.id === id);
@@ -1495,7 +1652,64 @@ class Store {
   // --- DETAILED COMMERCIAL QUOTES (DOCUMENTS / PDF / DOCX) ---
   private DETAILED_QUOTES_KEY = 'mestrio_detailed_quotes';
 
+  private mapDetailedQuote(data: any): DetailedQuote {
+    return {
+      id: data.id,
+      quoteNumber: data.quote_number || `ORC-${new Date().getFullYear()}-001`,
+      providerId: data.provider_id,
+      providerName: sanitizeText(data.provider_name || 'Profissional'),
+      providerDocument: data.provider_document,
+      providerPhone: data.provider_phone,
+      providerEmail: data.provider_email,
+      providerPixKey: data.provider_pix_key,
+      providerCity: data.provider_city,
+      clientName: sanitizeText(data.client_name || 'Cliente'),
+      clientDocument: data.client_document,
+      clientPhone: data.client_phone,
+      clientEmail: data.client_email,
+      clientAddress: data.client_address,
+      title: sanitizeText(data.title || 'Proposta Comercial'),
+      category: data.category || 'Geral',
+      problemDescription: data.problem_description,
+      items: Array.isArray(data.items) ? data.items : [],
+      subtotal: Number(data.subtotal || 0),
+      discountType: data.discount_type || 'fixed',
+      discountValue: Number(data.discount_value || 0),
+      travelFee: Number(data.travel_fee || 0),
+      totalAmount: Number(data.total_amount || 0),
+      estimatedDays: data.estimated_days || '1 a 2 dias',
+      validityDays: data.validity_days || '15 dias',
+      paymentTerms: data.payment_terms || '',
+      notes: data.notes,
+      warranty: data.warranty,
+      status: data.status || 'draft',
+      providerSignature: data.provider_signature,
+      clientSignature: data.client_signature,
+      signedAt: data.signed_at,
+      paidAt: data.paid_at,
+      receiptNumber: data.receipt_number,
+      paymentMethod: data.payment_method,
+      createdAt: data.created_at || new Date().toISOString(),
+      updatedAt: data.updated_at || new Date().toISOString(),
+    };
+  }
+
   async getDetailedQuotes(providerId?: string): Promise<DetailedQuote[]> {
+    try {
+      let query = supabase.from('detailed_quotes').select('*');
+      if (providerId) query = query.eq('provider_id', providerId);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(this.mapDetailedQuote);
+        localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(list));
+        return list;
+      }
+      if (error) console.warn("Store Warning [getDetailedQuotes] Supabase:", error.message);
+    } catch (e) {
+      console.warn("Store Warning [getDetailedQuotes] fallback to local:", e);
+    }
+
     try {
       const stored = localStorage.getItem(this.DETAILED_QUOTES_KEY);
       const list: DetailedQuote[] = stored ? JSON.parse(stored) : [];
@@ -1504,14 +1718,11 @@ class Store {
       }
       return list;
     } catch (e) {
-      console.warn('Store Warning [getDetailedQuotes]:', e);
       return [];
     }
   }
 
   async saveDetailedQuote(quote: DetailedQuote): Promise<DetailedQuote> {
-    const list = await this.getDetailedQuotes();
-    const existingIndex = list.findIndex(q => q.id === quote.id);
     const updatedQuote: DetailedQuote = {
       ...quote,
       clientName: sanitizeText(quote.clientName),
@@ -1519,23 +1730,100 @@ class Store {
       updatedAt: new Date().toISOString(),
     };
 
+    try {
+      const payload: any = {
+        quote_number: updatedQuote.quoteNumber,
+        provider_id: updatedQuote.providerId,
+        provider_name: updatedQuote.providerName,
+        provider_document: updatedQuote.providerDocument,
+        provider_phone: updatedQuote.providerPhone,
+        provider_email: updatedQuote.providerEmail,
+        provider_pix_key: updatedQuote.providerPixKey,
+        provider_city: updatedQuote.providerCity,
+        client_name: updatedQuote.clientName,
+        client_document: updatedQuote.clientDocument,
+        client_phone: updatedQuote.clientPhone,
+        client_email: updatedQuote.clientEmail,
+        client_address: updatedQuote.clientAddress,
+        title: updatedQuote.title,
+        category: updatedQuote.category,
+        problem_description: updatedQuote.problemDescription,
+        items: updatedQuote.items,
+        subtotal: updatedQuote.subtotal,
+        discount_type: updatedQuote.discountType,
+        discount_value: updatedQuote.discountValue,
+        travel_fee: updatedQuote.travelFee,
+        total_amount: updatedQuote.totalAmount,
+        estimated_days: updatedQuote.estimatedDays,
+        validity_days: updatedQuote.validityDays,
+        payment_terms: updatedQuote.paymentTerms,
+        notes: updatedQuote.notes,
+        warranty: updatedQuote.warranty,
+        status: updatedQuote.status,
+        provider_signature: updatedQuote.providerSignature,
+        client_signature: updatedQuote.clientSignature,
+        signed_at: updatedQuote.signedAt,
+        paid_at: updatedQuote.paidAt,
+        receipt_number: updatedQuote.receiptNumber,
+        payment_method: updatedQuote.paymentMethod,
+        updated_at: updatedQuote.updatedAt
+      };
+
+      // Se for um UUID válido do Supabase, faz upsert
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatedQuote.id);
+      if (isUuid) {
+        payload.id = updatedQuote.id;
+      }
+
+      const { data, error } = await supabase
+        .from('detailed_quotes')
+        .upsert(payload)
+        .select()
+        .single();
+
+      if (!error && data) {
+        const saved = this.mapDetailedQuote(data);
+        const list = await this.getDetailedQuotes();
+        const updatedList = [saved, ...list.filter(q => q.id !== saved.id)];
+        localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(updatedList));
+        return saved;
+      }
+      if (error) console.warn("Store Warning [saveDetailedQuote] Supabase:", error.message);
+    } catch (e) {
+      console.warn("Store Warning [saveDetailedQuote] fallback to local:", e);
+    }
+
+    // Fallback Local
+    const list = await this.getDetailedQuotes();
+    const existingIndex = list.findIndex(q => q.id === quote.id);
     if (existingIndex >= 0) {
       list[existingIndex] = updatedQuote;
     } else {
       list.unshift(updatedQuote);
     }
-
     localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(list));
     return updatedQuote;
   }
 
   async deleteDetailedQuote(id: string): Promise<void> {
+    try {
+      await supabase.from('detailed_quotes').delete().eq('id', id);
+    } catch (e) {
+      console.warn("Store Warning [deleteDetailedQuote]:", e);
+    }
+
     const list = await this.getDetailedQuotes();
     const filtered = list.filter(q => q.id !== id);
     localStorage.setItem(this.DETAILED_QUOTES_KEY, JSON.stringify(filtered));
   }
 
   async updateDetailedQuoteStatus(id: string, status: QuoteStatus): Promise<void> {
+    try {
+      await supabase.from('detailed_quotes').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+    } catch (e) {
+      console.warn("Store Warning [updateDetailedQuoteStatus]:", e);
+    }
+
     const list = await this.getDetailedQuotes();
     const item = list.find(q => q.id === id);
     if (item) {
@@ -1550,11 +1838,35 @@ class Store {
 
   async getProfessionalSchedule(providerId: string): Promise<ProfessionalSchedule> {
     try {
+      const { data, error } = await supabase
+        .from('professional_schedules')
+        .select('*')
+        .eq('provider_id', providerId)
+        .maybeSingle();
+
+      if (!error && data) {
+        const schedule: ProfessionalSchedule = {
+          providerId: data.provider_id,
+          workDays: Array.isArray(data.work_days) ? data.work_days : ['seg', 'ter', 'qua', 'qui', 'sex'],
+          startTime: data.start_time || '08:00',
+          endTime: data.end_time || '18:00',
+          breakStart: data.break_start || '12:00',
+          breakEnd: data.break_end || '13:00',
+          autoApprove: Boolean(data.auto_approve)
+        };
+        localStorage.setItem(this.getSchedKey(providerId), JSON.stringify(schedule));
+        return schedule;
+      }
+    } catch (e) {
+      console.warn("Store Warning [getProfessionalSchedule] Supabase:", e);
+    }
+
+    try {
       const stored = localStorage.getItem(this.getSchedKey(providerId));
       if (stored) return JSON.parse(stored);
       return {
         providerId,
-        workDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+        workDays: ['seg', 'ter', 'qua', 'qui', 'sex'],
         startTime: '08:00',
         endTime: '18:00',
         breakStart: '12:00',
@@ -1564,7 +1876,7 @@ class Store {
     } catch (e) {
       return {
         providerId,
-        workDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+        workDays: ['seg', 'ter', 'qua', 'qui', 'sex'],
         startTime: '08:00',
         endTime: '18:00',
       };
@@ -1572,8 +1884,26 @@ class Store {
   }
 
   async saveProfessionalSchedule(schedule: ProfessionalSchedule): Promise<void> {
+    try {
+      await supabase
+        .from('professional_schedules')
+        .upsert({
+          provider_id: schedule.providerId,
+          work_days: schedule.workDays,
+          start_time: schedule.startTime,
+          end_time: schedule.endTime,
+          break_start: schedule.breakStart,
+          break_end: schedule.breakEnd,
+          auto_approve: schedule.autoApprove,
+          updated_at: new Date().toISOString()
+        });
+    } catch (e) {
+      console.warn("Store Warning [saveProfessionalSchedule] Supabase:", e);
+    }
+
     localStorage.setItem(this.getSchedKey(schedule.providerId), JSON.stringify(schedule));
   }
+
 
   // --- MARKET STANDARD FEATURES: AUDIT LOGS ---
   private AUDIT_KEY = 'mestrio_audit_logs';

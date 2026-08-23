@@ -1,4 +1,5 @@
 import { logSecurityWarning } from './audit';
+import { supabase } from './store';
 
 const AI_ENDPOINT = '/api/ai';
 
@@ -23,9 +24,19 @@ const request = async (body: unknown, timeoutMs: number = 15000): Promise<AIResp
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    
+    // Anexa token JWT da sessão se houver usuário autenticado
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+    } catch {}
+
     const res = await fetch(AI_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -35,6 +46,7 @@ const request = async (body: unknown, timeoutMs: number = 15000): Promise<AIResp
       throw new Error(data.error || 'Erro no serviço de IA.');
     }
     return data;
+
   } catch (error: any) {
     if (error.name === 'AbortError') {
       throw new Error('Tempo limite de resposta da IA excedido.');

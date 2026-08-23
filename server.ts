@@ -153,42 +153,66 @@ async function startServer() {
     };
 
     if (body.task === 'category') {
+      // Mapeia termos para as slugs oficiais do Mestrio (electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly)
       const categoryMap: Record<string, string> = {
-        'eletric': 'eletricista',
-        'eletro': 'eletricista',
-        'tomada': 'eletricista',
-        'fio': 'eletricista',
-        'cano': 'encanador',
-        'vaza': 'encanador',
-        'pia': 'encanador',
-        'esgoto': 'encanador',
-        'hidraul': 'encanador',
-        'pint': 'pintura',
-        'tinta': 'pintura',
-        'muro': 'pintura',
-        'limp': 'limpeza',
-        'faxin': 'limpeza',
-        'diarista': 'limpeza',
-        'ar ': 'ar-condicionado',
-        'ar-': 'ar-condicionado',
-        'split': 'ar-condicionado',
-        'inverter': 'ar-condicionado',
-        'obra': 'pedreiro',
-        'reforma': 'pedreiro',
-        'piso': 'pedreiro',
-        'porcelanato': 'pedreiro',
-        'movel': 'marcenaria',
-        'móvel': 'marcenaria',
-        'armario': 'marcenaria',
-        'marceneiro': 'marcenaria',
+        'eletric': 'electrician',
+        'eletro': 'electrician',
+        'tomada': 'electrician',
+        'fio': 'electrician',
+        'disjuntor': 'electrician',
+        'cano': 'plumber',
+        'vaza': 'plumber',
+        'pia': 'plumber',
+        'esgoto': 'plumber',
+        'hidraul': 'plumber',
+        'desentup': 'plumber',
+        'torneira': 'plumber',
+        'pint': 'painter',
+        'tinta': 'painter',
+        'muro': 'painter',
+        'massa': 'painter',
+        'verniz': 'painter',
+        'limp': 'cleaning',
+        'faxin': 'cleaning',
+        'diarista': 'cleaning',
+        'higieniz': 'cleaning',
+        'ar ': 'handyman',
+        'ar-': 'handyman',
+        'split': 'handyman',
+        'inverter': 'handyman',
+        'obra': 'handyman',
+        'reforma': 'handyman',
+        'piso': 'handyman',
+        'porcelanato': 'handyman',
+        'marido': 'handyman',
+        'reparo': 'handyman',
+        'conserto': 'handyman',
+        'mudan': 'moving',
+        'carreto': 'moving',
+        'frete': 'moving',
+        'transporte': 'moving',
+        'jardim': 'gardener',
+        'grama': 'gardener',
+        'poda': 'gardener',
+        'planta': 'gardener',
+        'movel': 'assembly',
+        'móvel': 'assembly',
+        'armario': 'assembly',
+        'guarda-roupa': 'assembly',
+        'montad': 'assembly',
+        'montag': 'assembly',
       };
 
       if (apiKey) {
-        const prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o slug da categoria mais provável desta lista (se nenhuma se encaixar, retorne 'outros'): eletricista, encanador, pintura, limpeza, ar-condicionado, pedreiro, marcenaria, outros.`;
+        const prompt = `Analise o título deste serviço: "${title}". Retorne APENAS o slug oficial mais provável desta lista exata (sem pontuação extra): electrician, plumber, painter, cleaning, handyman, moving, gardener, assembly, others`;
         const aiCategory = await callGroqChat(apiKey, prompt);
         if (aiCategory) {
-          res.status(200).json({ category: aiCategory.trim().toLowerCase().replace(/[^a-z-]/g, '') });
-          return;
+          const cleanSlug = aiCategory.trim().toLowerCase().replace(/[^a-z-]/g, '');
+          const validSlugs = ['electrician', 'plumber', 'painter', 'cleaning', 'handyman', 'moving', 'gardener', 'assembly', 'others'];
+          if (validSlugs.includes(cleanSlug)) {
+            res.status(200).json({ category: cleanSlug });
+            return;
+          }
         }
       }
 
@@ -201,7 +225,7 @@ async function startServer() {
         }
       }
 
-      res.status(200).json({ category: 'outros' });
+      res.status(200).json({ category: 'handyman' });
       return;
     }
 
@@ -231,6 +255,7 @@ Regras Estritas:
     // Se não houver API Key ou chamada falhar, retorna o gerador contextualizado
     res.status(200).json({ text: generateLocalDescription() });
   });
+
 
   /**
    * Endpoint do Smart Estimator.
