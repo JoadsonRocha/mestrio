@@ -410,6 +410,40 @@ JSON puro:`;
       fallthrough: false,
     }));
 
+    // Manifest handlers with proper Content-Type
+    app.get(['/manifest.webmanifest', '/manifest.json'], (req: Request, res: Response) => {
+      const webmanifestPath = path.join(distDir, 'manifest.webmanifest');
+      const jsonPath = path.join(distDir, 'manifest.json');
+      res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      if (fs.existsSync(webmanifestPath)) {
+        return res.sendFile(webmanifestPath);
+      } else if (fs.existsSync(jsonPath)) {
+        return res.sendFile(jsonPath);
+      }
+      res.status(404).end();
+    });
+
+    // Robots.txt
+    app.get('/robots.txt', (req: Request, res: Response) => {
+      const robotsPath = path.join(distDir, 'robots.txt');
+      if (fs.existsSync(robotsPath)) {
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return res.sendFile(robotsPath);
+      }
+      res.status(404).end();
+    });
+
+    // Sitemap.xml
+    app.get('/sitemap.xml', (req: Request, res: Response) => {
+      const sitemapPath = path.join(distDir, 'sitemap.xml');
+      if (fs.existsSync(sitemapPath)) {
+        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+        return res.sendFile(sitemapPath);
+      }
+      res.status(404).end();
+    });
+
     // Favicon handler
     app.get('/favicon.ico', (req: Request, res: Response) => {
       const icoPath = path.join(distDir, 'favicon.ico');
@@ -421,6 +455,12 @@ JSON puro:`;
       }
       res.status(404).end();
     });
+
+    // Serve other root static files
+    app.use(express.static(distDir, {
+      maxAge: '1d',
+      index: false,
+    }));
 
     // Helper para servir HTML com Open Graph dinâmico (para WhatsApp, Facebook, Telegram, etc.)
     async function serveHtmlWithOgTags(req: Request, res: Response) {
@@ -537,7 +577,7 @@ JSON puro:`;
       if (req.path.startsWith('/api/')) return next();
 
       const ext = path.extname(req.path);
-      if (ext && ['.js', '.css', '.map', '.woff', '.woff2', '.ttf', '.png', '.jpg', '.svg', '.ico'].includes(ext)) {
+      if (ext && ['.js', '.css', '.map', '.woff', '.woff2', '.ttf', '.png', '.jpg', '.svg', '.ico', '.json', '.webmanifest', '.txt', '.xml'].includes(ext)) {
         res.status(404).json({ error: 'Asset não encontrado. Faça um hard reload (Ctrl+Shift+R).' });
         return;
       }

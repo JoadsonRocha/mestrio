@@ -1,0 +1,32 @@
+{
+  "name": "Mestrio - Serviços Gerais em Domicílio",
+  "short_name": "Mestrio",
+  "description": "Conectando clientes aos melhores prestadores de serviços da sua região com agilidade e segurança.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar Serviços",
+      "short_name": "Buscar",
+      "description": "Encontre profissionais qualificados perto de você",
+      "url": "/search"
+    },
+    {
+      "name": "Anunciar Serviço",
+      "short_name": "Anunciar",
+      "description": "Cadastre seu serviço gratuitamente",
+      "url": "/create-ad"
+    }
+  ]
+}
