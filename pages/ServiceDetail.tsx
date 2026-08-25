@@ -176,7 +176,7 @@ const ServiceDetail: React.FC = () => {
               el.setAttribute('content', content);
             };
 
-            const photo = found.photos?.[0] || (found as any).image_url || found.providerAvatar;
+            const photo = found.images?.[0] || found.photos?.[0] || found.image_url || found.imageUrl || found.providerAvatar;
             if (photo) {
               setMetaTag('property', 'og:image', photo);
               setMetaTag('name', 'twitter:image', photo);
@@ -1091,7 +1091,7 @@ const ServiceDetail: React.FC = () => {
         onClose={() => setShowShareModal(false)}
         title={ad?.title || 'Anúncio Mestrio'}
         description={ad?.description}
-        imageUrl={ad?.photos?.[0] || (ad as any)?.image_url || ad?.providerAvatar}
+        imageUrl={ad?.images?.[0] || ad?.photos?.[0] || ad?.image_url || ad?.imageUrl || ad?.providerAvatar}
       />
     </div>
   );

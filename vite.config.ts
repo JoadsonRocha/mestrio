@@ -14,6 +14,19 @@ export default defineConfig(() => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+              'vendor-leaflet': ['leaflet', 'react-leaflet'],
+              'vendor-docs': ['jspdf', 'jspdf-autotable', 'docx', 'mammoth'],
+              'vendor-supabase': ['@supabase/supabase-js'],
+            }
+          }
+        }
       }
     };
 });

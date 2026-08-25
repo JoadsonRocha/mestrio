@@ -607,8 +607,8 @@ const Chat: React.FC = () => {
                                                     <span>{formatTime(msg.timestamp)}</span>
                                                     {isMe && (
                                                         msg.read
-                                                            ? <CheckCheck size={14} className="text-sky-200" title="Mensagem lida" />
-                                                            : <Check size={14} className="text-blue-200/80" title="Mensagem enviada" />
+                                                            ? <span title="Mensagem lida"><CheckCheck size={14} className="text-sky-200" /></span>
+                                                            : <span title="Mensagem enviada"><Check size={14} className="text-blue-200/80" /></span>
                                                     )}
                                                 </div>
                                             </div>

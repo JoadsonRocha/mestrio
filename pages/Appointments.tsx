@@ -90,7 +90,7 @@ const Appointments: React.FC = () => {
       await store.updateAppointmentStatus(app.id, 'completed');
       setAppointments(prev => prev.map(a => a.id === app.id ? { ...a, status: 'completed' } : a));
       setReviewingApp(app);
-      setReviewRating(5);
+      setReviewCriteria({ punctuality: 5, quality: 5, fairPrice: 5, communication: 5 });
       setReviewComment('');
       setReviewError('');
     } catch (e) {
@@ -162,7 +162,12 @@ const Appointments: React.FC = () => {
               <Star size={13} className="mr-1 text-yellow-500" /> Serviço concluído
             </span>
             <button
-              onClick={() => { setReviewingApp(app); setReviewRating(5); setReviewComment(''); setReviewError(''); }}
+              onClick={() => {
+                setReviewingApp(app);
+                setReviewCriteria({ punctuality: 5, quality: 5, fairPrice: 5, communication: 5 });
+                setReviewComment('');
+                setReviewError('');
+              }}
               className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center transition-colors"
             >
               <Star size={16} className="mr-1" /> Avaliar serviço

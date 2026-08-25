@@ -74,10 +74,15 @@ async function startServer() {
 
   app.use(rateLimit);
 
-  // Security headers compatible with AI Studio preview frames
+  // Production-grade security headers
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Permissions-Policy', 'geolocation=(self), camera=(), microphone=()');
+    if (process.env.NODE_ENV === 'production' || req.secure || req.get('x-forwarded-proto') === 'https') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
     next();
   });
 
@@ -541,10 +546,32 @@ JSON puro:`;
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // Global error handler middleware
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('[Server Error]', err);
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.' });
+  });
+
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Mestrio server rodando na porta ${PORT}`);
     ensureStorageBuckets();
   });
+
+  const gracefulShutdown = (signal: string) => {
+    console.log(`[Server] Recebido sinal ${signal}. Finalizando conexões graciosamente...`);
+    server.close(() => {
+      console.log('[Server] Servidor Express finalizado com sucesso.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.error('[Server] Timeout no encerramento gracioso. Forçando encerramento.');
+      process.exit(1);
+    }, 10000).unref();
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 startServer();

@@ -1,0 +1,16 @@
+# Robots.txt for Mestrio
+User-agent: *
+Allow: /
+Allow: /search
+Allow: /categoria/
+Allow: /service/
+Allow: /profissional/
+Allow: /terms
+Allow: /privacy
+
+# Disallow private user and owner dashboards
+Disallow: /dashboard/
+Disallow: /owner/
+Disallow: /api/
+
+Sitemap: https://mestrio-production.up.railway.app/sitemap.xml

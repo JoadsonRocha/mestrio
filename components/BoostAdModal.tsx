@@ -47,7 +47,7 @@ export const BoostAdModal: React.FC<BoostAdModalProps> = ({
     try {
       // Ativa o destaque no anúncio
       await store.updateAd(ad.id, {
-        is_premium: true,
+        isPremium: true,
       });
       toast(`🚀 Anúncio "${ad.title}" turbinado com sucesso! Ele já está em destaque no topo das buscas.`, 'success');
       onSuccess();

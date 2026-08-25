@@ -162,6 +162,9 @@ export interface ServiceAd {
   rating: number;
   reviewCount: number;
   reviews: Review[];
+  photos?: string[];
+  imageUrl?: string;
+  image_url?: string;
   isPremium?: boolean;
   createdAt: string;
   whatsapp: string;
