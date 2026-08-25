@@ -75,6 +75,7 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
   const isOwnerRoute = location.pathname.startsWith('/owner');
+  const isLoginRoute = location.pathname.startsWith('/login');
 
   useEffect(() => {
     const found = PAGE_TITLES.find(p => p.match.test(location.pathname));
@@ -130,7 +131,7 @@ const MainLayout: React.FC = () => {
         </ErrorBoundary>
         </Suspense>
       </main>
-      {!isDashboardRoute && !isOwnerRoute && <Footer />}
+      {!isDashboardRoute && !isOwnerRoute && !isLoginRoute && <Footer />}
     </div>
   );
 };

@@ -22,7 +22,6 @@ import {
   Loader2, 
   Check, 
   Sparkles,
-  HelpCircle,
   X
 } from 'lucide-react';
 import { validateEmail, validatePassword } from '../utils/security';
@@ -47,7 +46,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
-  // Modal / Estado de recuperação de senha
+  // Modal de recuperação de senha
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [sendingReset, setSendingReset] = useState(false);
@@ -57,7 +56,6 @@ const Login: React.FC = () => {
   const { toast } = useToast();
   const { user, login, register, loading: authLoading } = useAuth();
 
-  // Sincroniza parâmetros de URL com o estado da página
   useEffect(() => {
     if (searchParams.get('tab') === 'register' || searchParams.get('mode') === 'register') {
       setIsRegistering(true);
@@ -69,10 +67,10 @@ const Login: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
-          <p className="text-sm font-medium text-gray-500">Carregando...</p>
+      <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-7 h-7 animate-spin text-brand-600" />
+          <p className="text-xs font-medium text-gray-500">Carregando...</p>
         </div>
       </div>
     );
@@ -82,7 +80,7 @@ const Login: React.FC = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Cálculos de força de senha interativa
+  // Cálculos de força de senha
   const hasMinLength = password.length >= 8;
   const hasUpperCase = /[A-Z]/.test(password);
   const hasNumber = /\d/.test(password);
@@ -110,7 +108,6 @@ const Login: React.FC = () => {
     e.preventDefault();
     setErrorMsg('');
 
-    // Validação de E-mail
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
       setErrorMsg(emailValidation.message || 'Por favor, insira um e-mail válido.');
@@ -118,7 +115,6 @@ const Login: React.FC = () => {
       return;
     }
 
-    // Validação de Senha básica
     if (!password) {
       setErrorMsg('Por favor, informe sua senha.');
       return;
@@ -131,7 +127,7 @@ const Login: React.FC = () => {
       }
 
       if (!acceptTerms) {
-        setErrorMsg('Você precisa concordar com os Termos de Uso e Política de Privacidade para continuar.');
+        setErrorMsg('Você precisa concordar com os Termos de Uso.');
         return;
       }
 
@@ -156,7 +152,7 @@ const Login: React.FC = () => {
         toast('🎉 Cadastro realizado com sucesso!', 'success');
         
         if (role === UserRole.PROVIDER) {
-          toast('Complete as informações do seu perfil para anunciar seus serviços.', 'info');
+          toast('Complete seu perfil para anunciar seus serviços.', 'info');
           navigate('/profile/edit');
         } else {
           navigate('/dashboard');
@@ -207,112 +203,106 @@ const Login: React.FC = () => {
       toast('Enviamos o link de recuperação para seu e-mail!', 'success');
     } catch (err: any) {
       console.error(err);
-      toast('Não foi possível enviar o e-mail de recuperação. Verifique o endereço digitado.', 'error');
+      toast('Não foi possível enviar o e-mail de recuperação. Verifique o endereço.', 'error');
     } finally {
       setSendingReset(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
-      {/* Container Principal Centralizado com Layout Dividido */}
-      <div className="max-w-5xl w-full mx-auto bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
+    <div className="flex-1 flex items-center justify-center p-3 sm:p-4 lg:p-6 bg-slate-50 min-h-[calc(100vh-4rem)]">
+      {/* Container Principal Compacto e Sem Overflow */}
+      <div className="max-w-4xl w-full mx-auto bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
         
-        {/* ============================================================ */}
-        {/* COLUNA ESQUERDA: Showcase & Benefícios do Mestrio (lg:col-span-5) */}
-        {/* ============================================================ */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900 text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
-          {/* Elementos visuais decorativos de fundo */}
-          <div className="absolute top-0 right-0 -mt-16 -mr-16 w-56 h-56 bg-brand-500/20 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-60 h-60 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
+        {/* COLUNA ESQUERDA: Showcase Compacto (Oculto em telas muito pequenas ou exibido com altura harmoniosa) */}
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900 text-white p-6 sm:p-7 flex-col justify-between relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-44 h-44 bg-brand-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-44 h-44 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="relative z-10">
-            {/* Logo do Mestrio */}
-            <Link to="/" className="inline-flex items-center gap-2 group mb-8">
-              <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5" />
+            {/* Logo */}
+            <Link to="/" className="inline-flex items-center gap-2 group mb-5">
+              <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shadow-md shadow-brand-500/30 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-4 h-4" />
               </div>
-              <span className="text-2xl font-black tracking-tight text-white">Mestrio</span>
+              <span className="text-xl font-black tracking-tight text-white">Mestrio</span>
             </Link>
 
-            {/* Badge de Lançamento */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-400/30 text-brand-300 text-xs font-semibold mb-6">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>100% Gratuito &bull; Sem Taxas de Adesão</span>
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/20 border border-brand-400/30 text-brand-300 text-[11px] font-semibold mb-4">
+              <Zap className="w-3 h-3 text-amber-400" />
+              <span>Sem Taxas de Adesão</span>
             </div>
 
-            {/* Título & Descrição */}
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug mb-4">
+            <h1 className="text-xl font-extrabold text-white tracking-tight leading-snug mb-3">
               {isRegistering 
-                ? 'Junte-se à maior rede de serviços locais da sua região.' 
-                : 'Acesse seu painel e impulsione suas conexões.'}
+                ? 'Conecte-se aos melhores serviços locais.' 
+                : 'Acesse seu painel no Mestrio.'}
             </h1>
             
-            <p className="text-slate-300 text-sm leading-relaxed mb-8">
-              Conectamos clientes que precisam de soluções rápidas a profissionais autônomos verificados e qualificados.
+            <p className="text-slate-300 text-xs leading-relaxed mb-5">
+              Soluções rápidas e profissionais autônomos verificados na sua região.
             </p>
 
-            {/* Lista de Diferenciais / Vantagens */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
-                <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <ShieldCheck className="w-4 h-4" />
+            {/* Diferenciais Compactos */}
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-2.5 bg-white/5 border border-white/10 rounded-xl p-2.5 backdrop-blur-xs">
+                <div className="w-6 h-6 rounded-md bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Profissionais Verificados</h4>
-                  <p className="text-xs text-slate-300 mt-0.5">Avaliações 100% reais de clientes auditados e histórico comprovado.</p>
+                  <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Profissionais Verificados</h4>
+                  <p className="text-[11px] text-slate-300">Avaliações 100% reais e histórico auditado.</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
-                <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <MapPin className="w-4 h-4" />
+              <div className="flex items-start gap-2.5 bg-white/5 border border-white/10 rounded-xl p-2.5 backdrop-blur-xs">
+                <div className="w-6 h-6 rounded-md bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Busca por Proximidade</h4>
-                  <p className="text-xs text-slate-300 mt-0.5">Encontre prestadores no seu bairro com cálculo de distância em tempo real.</p>
+                  <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Busca por Proximidade</h4>
+                  <p className="text-[11px] text-slate-300">Prestadores no seu bairro com cálculo de distância.</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 bg-white/5 border border-white/10 rounded-2xl p-3.5 backdrop-blur-xs">
-                <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <Zap className="w-4 h-4 text-amber-400" />
+              <div className="flex items-start gap-2.5 bg-white/5 border border-white/10 rounded-xl p-2.5 backdrop-blur-xs">
+                <div className="w-6 h-6 rounded-md bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Contato Direto no WhatsApp</h4>
-                  <p className="text-xs text-slate-300 mt-0.5">Orçamentos rápidos sem burocracia ou taxas de intermediação.</p>
+                  <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Contato via WhatsApp</h4>
+                  <p className="text-[11px] text-slate-300">Orçamentos diretos sem intermediação burocrática.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Rodapé da Coluna Esquerda com Prova Social */}
-          <div className="relative z-10 pt-8 border-t border-white/10 mt-8 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-amber-400">
-              <Star className="w-4 h-4 fill-amber-400" />
-              <Star className="w-4 h-4 fill-amber-400" />
-              <Star className="w-4 h-4 fill-amber-400" />
-              <Star className="w-4 h-4 fill-amber-400" />
-              <Star className="w-4 h-4 fill-amber-400" />
-              <span className="text-xs font-bold text-white ml-1.5">4.9 / 5.0</span>
+          {/* Prova Social */}
+          <div className="relative z-10 pt-4 border-t border-white/10 mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-0.5 text-amber-400 text-xs">
+              <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <span className="font-bold text-white ml-1 text-[11px]">4.9</span>
             </div>
-            <span className="text-xs text-slate-400">+1.200 serviços realizados</span>
+            <span className="text-[11px] text-slate-400">+1.200 serviços</span>
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* COLUNA DIREITA: Formulário Interativo de Login / Cadastro (lg:col-span-7) */}
-        {/* ============================================================ */}
-        <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
+        {/* COLUNA DIREITA: Formulário Compacto */}
+        <div className="lg:col-span-7 p-5 sm:p-7 flex flex-col justify-center">
           
-          {/* Seletor Segmentado de Abas (Entrar / Criar Conta) */}
-          <div className="flex p-1.5 bg-slate-100 rounded-2xl mb-8 max-w-sm mx-auto w-full">
+          {/* Seletor Segmentado de Abas */}
+          <div className="flex p-1 bg-slate-100 rounded-xl mb-4 max-w-xs mx-auto w-full">
             <button
               type="button"
               onClick={() => handleTabChange(false)}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-200 ${
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
                 !isRegistering 
-                  ? 'bg-white text-brand-700 shadow-xs shadow-slate-200' 
+                  ? 'bg-white text-brand-700 shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -321,9 +311,9 @@ const Login: React.FC = () => {
             <button
               type="button"
               onClick={() => handleTabChange(true)}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-200 ${
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
                 isRegistering 
-                  ? 'bg-white text-brand-700 shadow-xs shadow-slate-200' 
+                  ? 'bg-white text-brand-700 shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -331,112 +321,87 @@ const Login: React.FC = () => {
             </button>
           </div>
 
-          {/* Cabeçalho do Formulário */}
-          <div className="mb-6 text-center sm:text-left">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-              {isRegistering ? 'Crie sua conta no Mestrio' : 'Bem-vindo de volta!'}
+          {/* Cabeçalho */}
+          <div className="mb-3 text-center sm:text-left">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              {isRegistering ? 'Crie sua conta no Mestrio' : 'Acesse sua conta'}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-0.5">
               {isRegistering 
-                ? 'Leva menos de 1 minuto para começar a usar a plataforma.' 
-                : 'Insira suas credenciais para acessar sua conta.'}
+                ? 'Preencha os campos abaixo para começar.' 
+                : 'Insira suas credenciais para continuar.'}
             </p>
           </div>
 
-          {/* Alerta de Erro Visual */}
+          {/* Alerta de Erro */}
           {errorMsg && (
-            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-700 text-sm animate-in fade-in duration-200">
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-700 text-xs animate-in fade-in duration-150">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <div className="flex-1 font-medium">{errorMsg}</div>
               <button 
                 type="button" 
                 onClick={() => setErrorMsg('')}
                 className="text-rose-400 hover:text-rose-700 p-0.5 rounded-md"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
 
-          {/* Formulário Principal */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="space-y-3">
             
-            {/* ETAPA DE CADASTRO: Seleção de Tipo de Conta */}
+            {/* Tipo de Perfil (Cadastro) */}
             {isRegistering && (
-              <div className="space-y-2.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Como você deseja utilizar o Mestrio?
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  
-                  {/* Opção Cliente */}
-                  <div
-                    onClick={() => setRole(UserRole.CLIENT)}
-                    className={`cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex items-center gap-3 relative ${
-                      role === UserRole.CLIENT 
-                        ? 'border-brand-600 bg-brand-50/60 shadow-xs ring-1 ring-brand-600/20' 
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
-                    }`}
-                  >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      role === UserRole.CLIENT ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      <Search className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900 leading-tight">Quero Contratar</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Buscar serviços e orçamentos</div>
-                    </div>
-                    {role === UserRole.CLIENT && (
-                      <div className="absolute top-2.5 right-2.5 text-brand-600">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                    )}
+              <div className="grid grid-cols-2 gap-2">
+                <div
+                  onClick={() => setRole(UserRole.CLIENT)}
+                  className={`cursor-pointer border-2 rounded-xl p-2 transition-all flex items-center gap-2 relative ${
+                    role === UserRole.CLIENT 
+                      ? 'border-brand-600 bg-brand-50/60 shadow-xs ring-1 ring-brand-600/20' 
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    role === UserRole.CLIENT ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <Search className="w-3.5 h-3.5" />
                   </div>
-
-                  {/* Opção Profissional */}
-                  <div
-                    onClick={() => setRole(UserRole.PROVIDER)}
-                    className={`cursor-pointer border-2 rounded-2xl p-3.5 transition-all flex items-center gap-3 relative ${
-                      role === UserRole.PROVIDER 
-                        ? 'border-brand-600 bg-brand-50/60 shadow-xs ring-1 ring-brand-600/20' 
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
-                    }`}
-                  >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      role === UserRole.PROVIDER ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      <Briefcase className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900 leading-tight">Quero Trabalhar</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Anunciar meus serviços</div>
-                    </div>
-                    {role === UserRole.PROVIDER && (
-                      <div className="absolute top-2.5 right-2.5 text-brand-600">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                    )}
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 leading-tight">Sou Cliente</div>
+                    <div className="text-[10px] text-slate-500 truncate">Contratar serviços</div>
                   </div>
                 </div>
 
-                {role === UserRole.PROVIDER && (
-                  <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4 text-brand-600 shrink-0" />
-                    Você poderá publicar anúncios, gerenciar orçamentos e receber avaliações com selo de verificação.
-                  </p>
-                )}
+                <div
+                  onClick={() => setRole(UserRole.PROVIDER)}
+                  className={`cursor-pointer border-2 rounded-xl p-2 transition-all flex items-center gap-2 relative ${
+                    role === UserRole.PROVIDER 
+                      ? 'border-brand-600 bg-brand-50/60 shadow-xs ring-1 ring-brand-600/20' 
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    role === UserRole.PROVIDER ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <Briefcase className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 leading-tight">Sou Prestador</div>
+                    <div className="text-[10px] text-slate-500 truncate">Oferecer serviços</div>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* ETAPA DE CADASTRO: Nome Completo */}
+            {/* Nome Completo (Cadastro) */}
             {isRegistering && (
               <div>
-                <label htmlFor="name" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                <label htmlFor="name" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Nome Completo
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <UserIcon className="w-4 h-4" />
                   </div>
                   <input
@@ -446,20 +411,20 @@ const Login: React.FC = () => {
                     required={isRegistering}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: João da Silva"
-                    className="block w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
+                    placeholder="Seu nome completo"
+                    className="block w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
             )}
 
-            {/* Campo E-mail */}
+            {/* E-mail */}
             <div>
-              <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              <label htmlFor="email" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
                 E-mail
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -471,15 +436,15 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu.email@exemplo.com"
-                  className="block w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
                 />
               </div>
             </div>
 
-            {/* Campo Senha */}
+            {/* Senha */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
                   Senha
                 </label>
                 {!isRegistering && (
@@ -490,14 +455,14 @@ const Login: React.FC = () => {
                       setShowForgotModal(true);
                       setResetSentSuccess(false);
                     }}
-                    className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                    className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 hover:underline"
                   >
-                    Esqueceu a senha?
+                    Esqueceu?
                   </button>
                 )}
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -509,56 +474,40 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={isRegistering ? 'Mínimo 8 caracteres com maiúscula e número' : '••••••••'}
-                  className="block w-full pl-10 pr-11 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
+                  className="block w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              {/* Indicador de Força de Senha (Somente no Cadastro) */}
+              {/* Indicador de Força de Senha Compacto */}
               {isRegistering && password && (
-                <div className="mt-2.5 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500 font-medium">Força da senha:</span>
+                <div className="mt-1.5 space-y-1">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-500">Força da senha:</span>
                     <span className={`font-bold ${strength.text}`}>{strength.label}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${strength.color} ${strength.width} transition-all duration-300`}></div>
-                  </div>
-
-                  {/* Checklist Dinâmico de Requisitos */}
-                  <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
-                    <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
-                      <Check className="w-3.5 h-3.5 shrink-0" /> 8+ caracteres
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${hasUpperCase ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
-                      <Check className="w-3.5 h-3.5 shrink-0" /> Letra maiúscula
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
-                      <Check className="w-3.5 h-3.5 shrink-0" /> Número
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${hasSpecial ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
-                      <Check className="w-3.5 h-3.5 shrink-0" /> Símbolo (!@#$)
-                    </div>
+                  <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full ${strength.color} ${strength.width} transition-all duration-200`}></div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* ETAPA DE CADASTRO: Confirmação de Senha */}
+            {/* Confirmação de Senha (Cadastro) */}
             {isRegistering && (
               <div>
-                <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                <label htmlFor="confirmPassword" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Confirmar Senha
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
@@ -570,40 +519,40 @@ const Login: React.FC = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repita sua senha"
-                    className="block w-full pl-10 pr-11 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
+                    className="block w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
                     tabIndex={-1}
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {confirmPassword && password !== confirmPassword && (
-                  <p className="text-xs text-rose-500 mt-1 font-medium">As senhas não coincidem.</p>
+                  <p className="text-[10px] text-rose-500 mt-0.5 font-medium">As senhas não coincidem.</p>
                 )}
               </div>
             )}
 
-            {/* Checkbox: Lembrar de mim (Login) / Concordar com Termos (Cadastro) */}
+            {/* Checkbox Lembrar / Termos */}
             {!isRegistering ? (
-              <div className="flex items-center">
+              <div className="flex items-center pt-0.5">
                 <input
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 rounded"
+                  className="h-3.5 w-3.5 text-brand-600 focus:ring-brand-500 border-slate-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-xs text-slate-600 select-none cursor-pointer">
+                <label htmlFor="remember-me" className="ml-2 block text-[11px] text-slate-600 select-none cursor-pointer">
                   Manter conectado neste dispositivo
                 </label>
               </div>
             ) : (
-              <div className="flex items-start">
+              <div className="flex items-start pt-0.5">
                 <input
                   id="accept-terms"
                   name="accept-terms"
@@ -611,113 +560,110 @@ const Login: React.FC = () => {
                   required
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="h-4 w-4 mt-0.5 text-brand-600 focus:ring-brand-500 border-slate-300 rounded cursor-pointer"
+                  className="h-3.5 w-3.5 mt-0.5 text-brand-600 focus:ring-brand-500 border-slate-300 rounded cursor-pointer"
                 />
-                <label htmlFor="accept-terms" className="ml-2 block text-xs text-slate-600 select-none leading-relaxed">
-                  Li e concordo com os{' '}
+                <label htmlFor="accept-terms" className="ml-2 block text-[11px] text-slate-600 select-none leading-tight">
+                  Concordo com os{' '}
                   <Link to="/terms" target="_blank" className="font-bold text-brand-600 hover:underline">
                     Termos de Uso
                   </Link>{' '}
                   e a{' '}
                   <Link to="/privacy" target="_blank" className="font-bold text-brand-600 hover:underline">
                     Política de Privacidade
-                  </Link>{' '}
-                  do Mestrio.
+                  </Link>.
                 </label>
               </div>
             )}
 
-            {/* Botão de Envio Principal */}
-            <div>
+            {/* Botão de Envio */}
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-brand-600/25 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-md shadow-brand-600/20 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-600 transition-all disabled:opacity-50"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     <span>Processando...</span>
                   </>
                 ) : (
                   <>
-                    <span>{isRegistering ? 'Criar Minha Conta Gratuita' : 'Acessar Minha Conta'}</span>
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    <span>{isRegistering ? 'Criar Conta Gratuita' : 'Entrar na Minha Conta'}</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                   </>
                 )}
               </button>
             </div>
           </form>
 
-          {/* Troca Rápida de Modo no Rodapé do Form */}
-          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-500">
-              {isRegistering ? 'Já possui uma conta cadastrada?' : 'Ainda não tem uma conta no Mestrio?'}
+          {/* Troca Rápida de Modo */}
+          <div className="mt-3 pt-3 border-t border-slate-100 text-center">
+            <p className="text-[11px] text-slate-500">
+              {isRegistering ? 'Já possui uma conta?' : 'Ainda não tem conta?'}
               <button
                 type="button"
                 onClick={() => handleTabChange(!isRegistering)}
-                className="ml-1.5 font-bold text-brand-600 hover:text-brand-800 hover:underline inline-flex items-center"
+                className="ml-1 font-bold text-brand-600 hover:text-brand-800 hover:underline"
               >
-                {isRegistering ? 'Fazer login' : 'Cadastre-se gratuitamente'}
+                {isRegistering ? 'Fazer login' : 'Cadastre-se grátis'}
               </button>
             </p>
           </div>
 
           {/* Selo de Segurança */}
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Ambiente seguro com criptografia SSL 256-bit</span>
+          <div className="mt-2.5 flex items-center justify-center gap-1 text-[10px] text-slate-400">
+            <ShieldCheck className="w-3 h-3 text-emerald-600" />
+            <span>Ambiente seguro SSL 256-bit</span>
           </div>
         </div>
       </div>
 
-      {/* ============================================================ */}
       {/* MODAL: Recuperação de Senha */}
-      {/* ============================================================ */}
       {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-slate-100 relative">
             <button
               onClick={() => setShowForgotModal(false)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+              className="absolute top-3 right-3 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
-              <Lock className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center mb-3">
+              <Lock className="w-5 h-5" />
             </div>
 
-            <h3 className="text-xl font-bold text-slate-900 tracking-tight">Recuperar sua senha</h3>
-            <p className="text-xs text-slate-500 mt-1 mb-6">
-              Digite o e-mail cadastrado na sua conta. Enviaremos um link seguro para você redefinir sua senha.
+            <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recuperar senha</h3>
+            <p className="text-xs text-slate-500 mt-0.5 mb-4">
+              Digite seu e-mail para receber as instruções de recuperação.
             </p>
 
             {resetSentSuccess ? (
-              <div className="space-y-4">
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="space-y-3">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-emerald-900">E-mail enviado com sucesso!</p>
-                    <p className="mt-1">Confira sua caixa de entrada e siga as instruções para criar uma nova senha.</p>
+                    <p className="font-bold text-emerald-900">E-mail enviado!</p>
+                    <p className="mt-0.5">Confira sua caixa de entrada para criar sua nova senha.</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(false)}
-                  className="w-full py-2.5 px-4 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
+                  className="w-full py-2 px-3 bg-slate-900 text-white rounded-lg font-bold text-xs hover:bg-slate-800 transition-colors"
                 >
                   Fechar
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
+              <form onSubmit={handleForgotPassword} className="space-y-3">
                 <div>
-                  <label htmlFor="forgot-email" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  <label htmlFor="forgot-email" className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
                     Seu E-mail
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
@@ -727,25 +673,25 @@ const Login: React.FC = () => {
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="seu.email@exemplo.com"
-                      className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
+                      className="block w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowForgotModal(false)}
-                    className="flex-1 py-2.5 px-4 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="flex-1 py-2 px-3 border border-slate-200 rounded-lg font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={sendingReset}
-                    className="flex-1 py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 py-2 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
-                    {sendingReset ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar Link'}
+                    {sendingReset ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Enviar Link'}
                   </button>
                 </div>
               </form>
