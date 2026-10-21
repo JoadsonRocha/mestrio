@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck, ExternalLink, Heart } from 'lucide-react';
+import { Menu, X, LogOut, PlusCircle, MessageSquare, User, LayoutDashboard, Settings, ShieldCheck, ExternalLink, Heart, Home, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
 import { store } from '../services/store';
@@ -330,7 +330,7 @@ export const Navbar: React.FC = () => {
  */
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-gray-900 text-white mt-auto">
+    <footer className="bg-gray-900 text-white mt-auto pb-16 sm:pb-0">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
@@ -359,5 +359,126 @@ export const Footer: React.FC = () => {
         </div>
       </div>
     </footer>
+  );
+};
+
+/**
+ * Barra de navegação inferior mobile (Bottom Navigation Bar).
+ * Fixa na parte inferior em telas pequenas (< 640px / sm:hidden),
+ * facilitando a navegação com o polegar: Início, Buscar, Anunciar/Solicitar, Mensagens e Perfil.
+ */
+export const MobileBottomNav: React.FC = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      store.getGlobalUnreadCount(user.id).then(setUnreadCount).catch(() => setUnreadCount(0));
+    } else {
+      setUnreadCount(0);
+    }
+  }, [user, location.pathname]);
+
+  const isClient = user?.role === 'CLIENT';
+  const createPath = isClient ? '/dashboard/job-requests' : '/create-ad';
+  const createLabel = isClient ? 'Pedir' : 'Anunciar';
+
+  const isHomeActive = location.pathname === '/';
+  const isSearchActive = location.pathname === '/search' || location.pathname.startsWith('/categoria');
+  const isCreateActive = location.pathname === createPath;
+  const isChatActive = location.pathname.startsWith('/dashboard/chat');
+  const isProfileActive =
+    (location.pathname.startsWith('/dashboard') && !isChatActive) ||
+    location.pathname === '/login' ||
+    location.pathname === '/profile/edit';
+
+  const navItems = [
+    {
+      to: '/',
+      label: 'Início',
+      icon: Home,
+      isActive: isHomeActive,
+    },
+    {
+      to: '/search',
+      label: 'Buscar',
+      icon: Search,
+      isActive: isSearchActive,
+    },
+    {
+      to: createPath,
+      label: createLabel,
+      icon: PlusCircle,
+      isActive: isCreateActive,
+      isPrimaryAction: true,
+    },
+    {
+      to: user ? '/dashboard/chat' : '/login',
+      label: 'Mensagens',
+      icon: MessageSquare,
+      badge: unreadCount > 0 ? unreadCount : undefined,
+      isActive: isChatActive,
+    },
+    {
+      to: user ? '/dashboard' : '/login',
+      label: user ? 'Perfil' : 'Entrar',
+      icon: User,
+      avatar: user?.avatar,
+      isActive: isProfileActive,
+    },
+  ];
+
+  return (
+    <nav
+      aria-label="Navegação inferior mobile"
+      className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/90 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
+    >
+      <div className="flex items-center justify-around h-14 px-1 py-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 transition-all active:scale-95 touch-manipulation ${
+                item.isActive ? 'text-brand-600 font-bold' : 'text-gray-500 hover:text-gray-900 font-medium'
+              }`}
+            >
+              <div className="relative flex items-center justify-center">
+                {item.avatar ? (
+                  <img
+                    src={item.avatar}
+                    alt=""
+                    className={`w-5.5 h-5.5 rounded-full object-cover border ${
+                      item.isActive ? 'border-brand-600 ring-2 ring-brand-100' : 'border-gray-200'
+                    }`}
+                  />
+                ) : (
+                  <Icon
+                    size={22}
+                    className={`transition-colors ${
+                      item.isPrimaryAction && !item.isActive ? 'text-brand-600' : ''
+                    }`}
+                  />
+                )}
+                {item.badge !== undefined && (
+                  <span className="absolute -top-1 -right-2 bg-emerald-500 text-white text-[10px] font-extrabold px-1 min-w-[16px] h-4 rounded-full flex items-center justify-center shadow-xs">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+              </div>
+              <span
+                className={`text-[10px] tracking-tight mt-0.5 truncate max-w-[62px] ${
+                  item.isActive ? 'text-brand-600 font-bold' : 'text-gray-500'
+                }`}
+              >
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 };

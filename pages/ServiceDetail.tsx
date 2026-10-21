@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye, Sparkles, Share2, Zap, ShieldCheck } from 'lucide-react';
+import { MapPin, MessageCircle, Star, Shield, Clock, Calendar, MessageSquare, CalendarCheck, X, Send, AlertTriangle, Loader2, CheckCircle, Navigation, LocateFixed, ChevronLeft, ChevronRight, ZoomIn, Heart, Eye, Sparkles, Share2, Zap, ShieldCheck, Edit3 } from 'lucide-react';
 import { store } from '../services/store';
 import { ServiceAd, Review } from '../types';
 import { RatingStars, Badge } from '../components/UI';
@@ -245,10 +245,6 @@ const ServiceDetail: React.FC = () => {
   );
 
   const handleContact = () => {
-      if (!user) {
-          navigate('/login');
-          return;
-      }
       // Sanitiza o WhatsApp do anúncio: apenas dígitos (o campo é controlado
       // pelo provider e pode conter caracteres maliciosos).
       const digits = String(ad.whatsapp || '').replace(/\D/g, '');
@@ -424,7 +420,7 @@ const ServiceDetail: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 pb-12 relative">
+    <div className="flex-1 bg-gray-50 pb-28 md:pb-12 relative">
       {/* Header Image */}
       <div className="bg-gray-900 h-64 md:h-80 w-full relative">
         <button
@@ -1058,31 +1054,50 @@ const ServiceDetail: React.FC = () => {
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 px-4 flex items-center justify-between gap-3 shadow-2xl">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] text-slate-500 font-medium">Preço do Serviço</p>
-          <p className="text-base font-extrabold text-slate-900 leading-tight">
+          <p className="text-base font-extrabold text-slate-900 leading-tight truncate">
             {ad?.price ? `R$ ${ad.price}` : 'Sob Orçamento'}
             {ad?.price ? <span className="text-[11px] font-normal text-slate-500 ml-1">/{ad.priceUnit === 'hour' ? 'hora' : ad.priceUnit === 'job' ? 'serviço' : 'est.'}</span> : null}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleContact}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
-            title="Conversar pelo WhatsApp"
-          >
-            <MessageCircle size={17} />
-            <span>WhatsApp</span>
-          </button>
+        {user?.id === ad?.providerId ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => navigate(`/edit-ad/${ad.id}`)}
+              className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
+            >
+              <Edit3 size={16} />
+              <span>Editar</span>
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/chat')}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-3.5 rounded-xl border border-slate-200 flex items-center gap-1.5 text-xs transition active:scale-95"
+            >
+              <MessageSquare size={16} />
+              <span>Mensagens</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleContact}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
+              title="Conversar pelo WhatsApp"
+            >
+              <MessageCircle size={17} />
+              <span>WhatsApp</span>
+            </button>
 
-          <button
-            onClick={handleInternalChat}
-            className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
-            title="Conversar no Chat do Mestrio"
-          >
-            <MessageSquare size={17} />
-            <span>Chat</span>
-          </button>
-        </div>
+            <button
+              onClick={handleInternalChat}
+              className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 text-xs transition active:scale-95"
+              title="Conversar no Chat do Mestrio"
+            >
+              <MessageSquare size={17} />
+              <span>Chat</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal de Compartilhamento nas Redes Sociais */}

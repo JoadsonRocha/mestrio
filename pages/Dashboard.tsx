@@ -70,8 +70,10 @@ const Dashboard: React.FC = () => {
     return active ? 'text-white' : 'text-brand-600 group-hover:text-brand-700';
   };
 
+  const isChatConversation = /^\/dashboard\/chat\/.+/.test(location.pathname);
+
   return (
-    <div className="h-full bg-gray-50 overflow-hidden">
+    <div className={`h-full bg-gray-50 overflow-hidden ${!isChatConversation ? 'pb-14 sm:pb-0' : ''}`}>
       <div className="px-3 h-full flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full min-h-0">
           

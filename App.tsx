@@ -1,7 +1,7 @@
 
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Navbar, Footer } from './components/Layout';
+import { Navbar, Footer, MobileBottomNav } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 const lazyRetry = (componentImport: () => Promise<any>) =>
   lazy(async () => {
@@ -76,6 +76,16 @@ const MainLayout: React.FC = () => {
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
   const isOwnerRoute = location.pathname.startsWith('/owner');
   const isLoginRoute = location.pathname.startsWith('/login');
+  const isServiceDetailRoute = location.pathname.startsWith('/service/');
+  const isPublicProfileRoute = location.pathname.startsWith('/profissional/');
+  const isChatConversation = /^\/dashboard\/chat\/.+/.test(location.pathname);
+
+  const showMobileBottomNav =
+    !isOwnerRoute &&
+    !isLoginRoute &&
+    !isServiceDetailRoute &&
+    !isPublicProfileRoute &&
+    !isChatConversation;
 
   useEffect(() => {
     const found = PAGE_TITLES.find(p => p.match.test(location.pathname));
@@ -132,6 +142,7 @@ const MainLayout: React.FC = () => {
         </Suspense>
       </main>
       {!isDashboardRoute && !isOwnerRoute && !isLoginRoute && <Footer />}
+      {showMobileBottomNav && <MobileBottomNav />}
     </div>
   );
 };
