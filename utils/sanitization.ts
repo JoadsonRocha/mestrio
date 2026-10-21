@@ -22,29 +22,27 @@ export function maskPhoneNumbers(text: string): string {
 }
 
 /**
- * Limpa o texto inserido pelo usuário removendo quaisquer tags HTML
- * e aplicando a máscara de ocultação de números de telefone.
+ * Limpa o texto inserido pelo usuário removendo quaisquer tags HTML,
+ * normalizando espaços e prevenindo injeções de código.
  */
 export function sanitizeText(value: string): string {
   if (!value) return '';
-  const cleaned = String(value)
+  return String(value)
     .replace(HTML_TAG_REGEX, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return maskPhoneNumbers(cleaned);
 }
 
 /**
  * Remove scripts maliciosos e injeções inline em atributos HTML (XSS preventivo)
- * enquanto mantém o texto legível e mascara contatos pessoais.
+ * enquanto mantém o texto legível.
  */
 export function sanitizeHtmlLike(value: string): string {
   if (!value) return '';
-  const cleaned = String(value)
+  return String(value)
     .replace(SCRIPT_REGEX, '')
     .replace(HTML_TAG_REGEX, '')
     .trim();
-  return maskPhoneNumbers(cleaned);
 }
 
 /**

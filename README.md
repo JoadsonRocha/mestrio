@@ -4,7 +4,8 @@
 
 A aplicação conta com integração de **Inteligência Artificial (Groq API)** para geração automática de descrições e orçamentos, e um **Dashboard de Business Intelligence (Power BI)** executivo para moderação, auditoria e métricas em tempo real.
 
-📌 **[Consulte o Documento Estratégico & Plano de Negócios de 3 Fases (PLANO_DE_NEGOCIOS.md)](file:///d:/FULLSTARK/mentrio/PLANO_DE_NEGOCIOS.md)**
+📌 **[Consulte o Documento Estratégico & Plano de Negócios de 3 Fases (PLANO_DE_NEGOCIOS.md)](file:///d:/FULLSTARK/mestrio/PLANO_DE_NEGOCIOS.md)**  
+📋 **[Consulte a Auditoria Técnica de Segurança, Usabilidade & Viabilidade (AUDITORIA_TECNICA.md)](file:///d:/FULLSTARK/mestrio/AUDITORIA_TECNICA.md)**
 
 ---
 

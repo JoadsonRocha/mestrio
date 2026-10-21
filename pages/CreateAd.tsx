@@ -210,15 +210,31 @@ const CreateAd: React.FC = () => {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {!isPendingProvider && (
+              <button 
+                onClick={async () => {
+                  try {
+                    await store.requestProviderRole();
+                    toast('Solicitação para perfil profissional enviada!', 'success');
+                    window.location.reload();
+                  } catch (e: any) {
+                    toast(e?.message || 'Erro ao solicitar perfil de profissional.', 'error');
+                  }
+                }}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
+              >
+                Ativar Perfil Profissional
+              </button>
+            )}
             <button 
               onClick={() => navigate('/perfil/editar')} 
-              className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
             >
-              Completar Meu Perfil
+              Completar Perfil
             </button>
             <button 
               onClick={() => navigate('/')} 
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+              className="bg-gray-50 hover:bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
             >
               Voltar ao Início
             </button>

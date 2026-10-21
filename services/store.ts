@@ -615,15 +615,13 @@ class Store {
     if (authError) throw authError;
 
     if (authData.user) {
+        const assignedRole = role || UserRole.PROVIDER;
         const { error: profileError } = await supabase
             .from('profiles')
             .insert([{
                 id: authData.user.id,
                 name: name,
-                // Novo profissional entra como CLIENT com solicitação pendente,
-                // até o dono aprovar (role_request = 'PROVIDER').
-                role: role === UserRole.PROVIDER ? UserRole.CLIENT : (role || UserRole.PROVIDER),
-                ...(role === UserRole.PROVIDER ? { role_request: 'PROVIDER' } : {}),
+                role: assignedRole,
                 avatar: `https://picsum.photos/seed/${email}/100/100`
             }]);
         if (profileError) console.error("Error creating profile", profileError);

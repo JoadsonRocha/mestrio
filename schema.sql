@@ -1055,7 +1055,7 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Admin lê logs de auditoria" ON audit_logs;
 CREATE POLICY "Admin lê logs de auditoria" ON audit_logs
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (auth.role() = 'authenticated' AND is_admin_allowed('view_metrics'));
 
 DROP POLICY IF EXISTS "Admin cria logs de auditoria" ON audit_logs;
 CREATE POLICY "Admin cria logs de auditoria" ON audit_logs
@@ -1081,23 +1081,8 @@ CREATE POLICY "Comunicados são públicos para leitura" ON system_broadcasts
 
 DROP POLICY IF EXISTS "Admin gerencia comunicados" ON system_broadcasts;
 CREATE POLICY "Admin gerencia comunicados" ON system_broadcasts
-  FOR ALL USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
-
--- Tabela de Anúncios Favoritados pelos Usuários
-CREATE TABLE IF NOT EXISTS user_favorites (
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  ad_id UUID REFERENCES service_ads(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  PRIMARY KEY (user_id, ad_id)
-);
-
-ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Usuário gerencia seus favoritos" ON user_favorites;
-CREATE POLICY "Usuário gerencia seus favoritos" ON user_favorites
-  FOR ALL USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  FOR ALL USING (auth.role() = 'authenticated' AND is_admin_allowed('manage_settings'))
+  WITH CHECK (auth.role() = 'authenticated' AND is_admin_allowed('manage_settings'));
 
 -- Tabela de Denúncias e Disputas (Trust & Safety)
 CREATE TABLE IF NOT EXISTS user_reports (
@@ -1119,7 +1104,8 @@ CREATE POLICY "Usuário envia denúncias" ON user_reports
 
 DROP POLICY IF EXISTS "Admin gerencia denúncias" ON user_reports;
 CREATE POLICY "Admin gerencia denúncias" ON user_reports
-  FOR ALL USING (auth.role() = 'authenticated');
+  FOR ALL USING (auth.role() = 'authenticated' AND is_admin_allowed('manage_users'))
+  WITH CHECK (auth.role() = 'authenticated' AND is_admin_allowed('manage_users'));
 
 -- Tabela de Validação KYC de Identidade
 CREATE TABLE IF NOT EXISTS kyc_documents (
@@ -1141,12 +1127,15 @@ CREATE POLICY "Usuário envia seus documentos KYC" ON kyc_documents
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Usuário lê seus documentos KYC" ON kyc_documents;
-CREATE POLICY "Usuário lê seus documentos KYC" ON kyc_documents
-  FOR SELECT USING (auth.uid() = user_id OR auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Usuário lê seus próprios documentos ou admin autorizado" ON kyc_documents;
+CREATE POLICY "Usuário lê seus próprios documentos ou admin autorizado" ON kyc_documents
+  FOR SELECT USING (auth.uid() = user_id OR is_admin_allowed('verify_providers'));
 
 DROP POLICY IF EXISTS "Admin valida documentos KYC" ON kyc_documents;
-CREATE POLICY "Admin valida documentos KYC" ON kyc_documents
-  FOR ALL USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Admin gerencia documentos KYC" ON kyc_documents;
+CREATE POLICY "Admin gerencia documentos KYC" ON kyc_documents
+  FOR ALL USING (auth.role() = 'authenticated' AND is_admin_allowed('verify_providers'))
+  WITH CHECK (auth.role() = 'authenticated' AND is_admin_allowed('verify_providers'));
 
 
 -- ==========================================
@@ -1246,6 +1235,7 @@ CREATE TABLE IF NOT EXISTS detailed_quotes (
   provider_email TEXT,
   provider_pix_key TEXT,
   provider_city TEXT,
+  client_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   client_name TEXT NOT NULL,
   client_document TEXT,
   client_phone TEXT,
@@ -1276,11 +1266,18 @@ CREATE TABLE IF NOT EXISTS detailed_quotes (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Garantir que a coluna client_id exista caso a tabela já tenha sido criada anteriormente
+ALTER TABLE detailed_quotes ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES profiles(id) ON DELETE SET NULL;
+
 ALTER TABLE detailed_quotes ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Prestadores gerenciam seus próprios orçamentos detalhados" ON detailed_quotes;
 CREATE POLICY "Prestadores gerenciam seus próprios orçamentos detalhados" ON detailed_quotes
   FOR ALL USING (auth.uid() = provider_id OR is_admin_allowed('view_metrics'));
+
+DROP POLICY IF EXISTS "Clientes visualizam orçamentos destinados a eles" ON detailed_quotes;
+CREATE POLICY "Clientes visualizam orçamentos destinados a eles" ON detailed_quotes
+  FOR SELECT USING (auth.uid() = client_id);
 
 -- Tabela de Horários e Agenda do Profissional (Professional Schedules)
 CREATE TABLE IF NOT EXISTS professional_schedules (
@@ -1370,10 +1367,13 @@ BEGIN
   FROM reviews
   WHERE reviews.ad_id = recalculate_ad_rating.ad_id;
 
+  -- Bypass autorizado para que a rotina interna possa atualizar a moderação
+  PERFORM set_config('app.skip_ad_trigger', 'on', true);
   UPDATE service_ads
   SET rating = ROUND(v_avg, 1),
       review_count = v_count
   WHERE id = recalculate_ad_rating.ad_id;
+  PERFORM set_config('app.skip_ad_trigger', 'off', true);
 END;
 $$;
 
