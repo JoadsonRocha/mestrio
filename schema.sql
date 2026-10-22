@@ -1184,8 +1184,9 @@ CREATE TABLE IF NOT EXISTS job_requests (
 ALTER TABLE job_requests ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Qualquer um visualiza pedidos de serviços abertos" ON job_requests;
-CREATE POLICY "Qualquer um visualiza pedidos de serviços abertos" ON job_requests
-  FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Usuários autenticados visualizam pedidos de serviços abertos" ON job_requests;
+CREATE POLICY "Usuários autenticados visualizam pedidos de serviços abertos" ON job_requests
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Clientes criam seus pedidos de serviços" ON job_requests;
 CREATE POLICY "Clientes criam seus pedidos de serviços" ON job_requests

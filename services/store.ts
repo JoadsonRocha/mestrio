@@ -58,7 +58,11 @@ export async function uploadImage(file: File, bucket: string = AD_IMAGES_BUCKET)
     return urlData.publicUrl;
   } catch (err: any) {
     console.warn(`[Storage Fallback] Falha no upload no bucket "${bucket}":`, err?.message || err);
-    // Fallback gracioso para Base64 data URL se o bucket não existir no Supabase
+    // Protege contra QuotaExceededError no localStorage: não armazena Base64 > 350KB
+    if (file.size > 350 * 1024) {
+      throw new Error('Falha no upload da imagem no Supabase Storage. O arquivo é muito grande para armazenamento temporário.');
+    }
+    // Fallback gracioso para Base64 data URL se o bucket não existir no Supabase e for imagem compactada
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
