@@ -3,7 +3,7 @@ const HTML_TAG_REGEX = /<[^>]*>/g;
 const SCRIPT_REGEX = /<script|javascript:|on\w+=/i;
 
 // Regex para mapeamento e detecção flexível de números de celular e telefone fixo no Brasil (com ou sem DDD/DDI)
-const PHONE_PATTERN_REGEX = /(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?(?:9\s*)?\d{4,5}[-\s\.]?\d{4}/gi;
+const PHONE_PATTERN_REGEX = /(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?(?:9\s*)?\d{4,5}[-\s.]?\d{4}/gi;
 
 /**
  * Mascara e oculta automaticamente telefones e números de contato escritos em descrições públicas.

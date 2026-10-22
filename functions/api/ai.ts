@@ -189,7 +189,7 @@ Regras Estritas:
     }
 
     return jsonResponse({ text: generateLocalDescription() });
-  } catch (err: any) {
+  } catch {
     return jsonResponse({ error: 'Erro interno ao processar requisição de IA' }, 500);
   }
 }

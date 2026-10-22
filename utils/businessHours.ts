@@ -119,7 +119,7 @@ export function extractDaysFromString(dayText: string): string[] {
       const expanded = expandDayRange(d1, d2);
       // Pega eventuais outros dias soltos (ex: "seg a sex, sab")
       const remainder = clean.replace(rangeMatch[0], '');
-      const otherSegments = remainder.split(/[,;:\/\-e\s]+/).filter(Boolean);
+      const otherSegments = remainder.split(/[,;:/e\s-]+/).filter(Boolean);
       for (const seg of otherSegments) {
         const d = normalizeDayToken(seg);
         if (d && !expanded.includes(d)) expanded.push(d);
@@ -129,7 +129,7 @@ export function extractDaysFromString(dayText: string): string[] {
   }
 
   // Se não for intervalo, separa por vírgulas, espaços, barras, etc.
-  const rawSegments = clean.split(/[,;:\/\-e\s]+/).filter(Boolean);
+  const rawSegments = clean.split(/[,;:/e\s-]+/).filter(Boolean);
   const days: string[] = [];
 
   for (const raw of rawSegments) {

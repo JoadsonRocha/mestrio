@@ -10,7 +10,6 @@ import {
   TextRun,
   HeadingLevel,
   AlignmentType,
-  BorderStyle,
   WidthType,
   ShadingType,
 } from 'docx';

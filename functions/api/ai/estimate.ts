@@ -113,7 +113,7 @@ JSON puro:`;
     } catch {
       return jsonResponse(fallback);
     }
-  } catch (err: any) {
+  } catch {
     return jsonResponse({ error: 'Erro ao gerar estimativa' }, 500);
   }
 }
