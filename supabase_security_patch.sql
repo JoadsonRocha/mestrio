@@ -76,8 +76,34 @@ CREATE POLICY "Admin gerencia comunicados" ON system_broadcasts
     AND is_admin_allowed('manage_settings')
   );
 
+-- 6. CORREÇÃO DE AVALIAÇÕES: RECÁLCULO SEGURO DE ESTRELAS E REVIEWS
+CREATE OR REPLACE FUNCTION recalculate_ad_rating(ad_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_avg NUMERIC(3,2);
+  v_count INTEGER;
+BEGIN
+  SELECT COALESCE(AVG(rating), 0), COUNT(id)
+  INTO v_avg, v_count
+  FROM reviews
+  WHERE reviews.ad_id = recalculate_ad_rating.ad_id;
+
+  -- Bypass autorizado para que a rotina interna possa atualizar a moderação
+  PERFORM set_config('app.skip_ad_trigger', 'on', true);
+  UPDATE service_ads
+  SET rating = ROUND(v_avg, 1),
+      review_count = v_count
+  WHERE id = recalculate_ad_rating.ad_id;
+  PERFORM set_config('app.skip_ad_trigger', 'off', true);
+END;
+$$;
+
 -- Notificação de sucesso
 DO $$
 BEGIN
-  RAISE NOTICE '✅ Patch de segurança do Mestrio aplicado com sucesso!';
+  RAISE NOTICE '✅ Patch de segurança e correções de banco do Mestrio aplicados com sucesso!';
 END $$;

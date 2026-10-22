@@ -53,7 +53,7 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/$/, title: 'Início' },
   { match: /^\/search/, title: 'Buscar Serviços' },
   { match: /^\/categoria\//, title: 'Categorias' },
-  { match: /^\/service\//, title: 'Detalhes do Serviço' },
+  { match: /^\/(service|servico)\//, title: 'Detalhes do Serviço' },
   { match: /^\/profissional\//, title: 'Profissional' },
   { match: /^\/create-ad/, title: 'Anunciar Serviço' },
   { match: /^\/edit-ad/, title: 'Editar Anúncio' },
@@ -76,7 +76,7 @@ const MainLayout: React.FC = () => {
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
   const isOwnerRoute = location.pathname.startsWith('/owner');
   const isLoginRoute = location.pathname.startsWith('/login');
-  const isServiceDetailRoute = location.pathname.startsWith('/service/');
+  const isServiceDetailRoute = location.pathname.startsWith('/service/') || location.pathname.startsWith('/servico/');
   const isPublicProfileRoute = location.pathname.startsWith('/profissional/');
   const isChatConversation = /^\/dashboard\/chat\/.+/.test(location.pathname);
 
@@ -115,6 +115,7 @@ const MainLayout: React.FC = () => {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/categoria/:id" element={<CategoryPage />} />
           <Route path="/service/:id" element={<ServiceDetail />} />
+          <Route path="/servico/:id" element={<ServiceDetail />} />
           <Route path="/profissional/:id" element={<PublicProfile />} />
           <Route path="/create-ad" element={<CreateAd />} />
           <Route path="/edit-ad/:id" element={<CreateAd />} />
