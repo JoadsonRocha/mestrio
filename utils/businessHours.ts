@@ -151,7 +151,7 @@ export function parseAvailabilityString(availability?: string): ScheduleBlock | 
   const clean = availability.trim();
 
   // Procura padrão de horário tipo 08:00 - 18:00 ou 08h às 18h ou 8:00 às 18:00 ou 08:00 as 18:00
-  const timeMatch = clean.match(/(\d{1,2})[:h]?(\d{2})?\s*[-àa]\s*(\d{1,2})[:h]?(\d{2})?/i);
+  const timeMatch = clean.match(/(\d{1,2})[:h]?(\d{2})?\s*(?:[-–—]|às?|as?)\s*(\d{1,2})[:h]?(\d{2})?/i);
   if (!timeMatch) {
     // Se não tem horário explícito mas cita dias ou comercial
     if (clean.toLowerCase().includes('comercial') || clean.toLowerCase().includes('seg')) {
