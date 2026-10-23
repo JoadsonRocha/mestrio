@@ -49,189 +49,236 @@ const Home: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white flex flex-col">
-      {/* Hero Section */}
-            <section role="banner" className="relative bg-brand-900 overflow-hidden min-h-[50vh] flex items-center">
-                    <div className="absolute inset-0 z-0">
-                    <div className="absolute inset-0 bg-brand-900 mix-blend-multiply opacity-85"></div>
-                    <img 
-                                                src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
-                                                srcSet="https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=70 800w,
-                                                         https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-4.0.3&auto=format&fit=crop&w=1280&q=75 1280w,
-                                                         https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80 1920w"
-                                                sizes="100vw"
-                                                className="w-full h-full object-cover" 
-                                                alt="Prestador de serviços em atendimento domiciliar"
-                                                fetchPriority="high"
-                    />
-                </div>
-        
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center h-full">
-                    <div className="inline-flex items-center py-1 px-4 rounded-full bg-brand-500/30 text-brand-200 text-xs font-bold uppercase tracking-widest mb-3 border border-brand-400/20 backdrop-blur-md">
-            <Users size={14} className="mr-2" /> Profissionais Autônomos na Sua Região
+      {/* Hero Section: Clean, Humano e de Alto Contraste */}
+      <section role="banner" className="relative bg-gradient-to-b from-blue-50/70 via-slate-50/40 to-white py-14 md:py-20 border-b border-slate-200/60">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 py-1 px-3.5 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold tracking-wide mb-5 border border-brand-200/80 shadow-2xs">
+            <Users size={14} className="text-brand-600" />
+            <span>Marketplace Local de Serviços Gerais</span>
           </div>
-                                        <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tighter mb-3 leading-[1.05]">
-                        Serviços de confiança.<br/>
-                        <span className="text-brand-400">Perto de você.</span>
-                    </h1>
-                    <p className="max-w-3xl mx-auto text-sm md:text-base text-brand-100 mb-4 leading-relaxed font-light">
-            Conectamos você a prestadores de serviços autônomos para resolver tudo em casa: elétrica, hidráulica, pintura, limpeza e muito mais.
+
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4 leading-[1.15]">
+            Encontre profissionais de confiança <br className="hidden sm:inline" />
+            <span className="text-brand-600">para cuidar da sua casa.</span>
+          </h1>
+
+          <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 mb-8 leading-relaxed font-normal">
+            Conectamos você diretamente com eletricistas, encanadores, pintores e montadores na sua região. Sem intermediação financeira e com contato direto pelo WhatsApp.
           </p>
 
-             <div className="w-full max-w-3xl mx-auto">
-             <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2 bg-white p-1.5 rounded-3xl shadow-2xl border border-white/20">
-                <div className="flex-1 relative">
-                    <label htmlFor="home-search" className="sr-only">Pesquisar serviços</label>
-                    <Search aria-hidden="true" className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
-                    <input 
-                        id="home-search"
-                        name="q"
-                        type="text" 
-                        placeholder="Encanador, Eletricista, Faxina..." 
-                        className="w-full pl-11 pr-4 py-2 md:py-2.5 rounded-2xl border-none focus:ring-0 text-gray-900 placeholder-gray-500 text-sm md:text-base"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        aria-label="Pesquisar serviços"
-                    />
-                </div>
-                <button 
-                    type="submit"
-                    aria-label="Pesquisar serviços"
-                    className="px-4 md:px-6 py-2 md:py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl transition-all shadow-xl hover:shadow-brand-500/40 flex items-center justify-center text-sm md:text-base active:scale-95"
+          {/* Barra de Pesquisa Refinada */}
+          <div className="w-full max-w-2xl mx-auto mb-6">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 bg-white p-2 rounded-2xl shadow-md border border-slate-300/80 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-100 transition-all">
+              <div className="flex-1 relative flex items-center">
+                <label htmlFor="home-search" className="sr-only">Pesquisar serviços</label>
+                <Search aria-hidden="true" className="absolute left-3.5 text-slate-400 w-5 h-5 pointer-events-none" />
+                <input 
+                  id="home-search"
+                  name="q"
+                  type="text" 
+                  placeholder="Ex: Eletricista, Encanador, Pintura, Faxina..." 
+                  className="w-full pl-11 pr-4 py-2.5 rounded-xl border-none focus:outline-none text-slate-900 placeholder-slate-400 text-sm md:text-base font-normal bg-transparent"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Pesquisar serviços"
+                />
+              </div>
+              <button 
+                type="submit"
+                aria-label="Pesquisar serviços"
+                className="px-6 py-3 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-semibold rounded-xl transition-all shadow-xs flex items-center justify-center text-sm md:text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                Buscar serviços
+              </button>
+            </form>
+
+            {/* Chips de Categorias Populares */}
+            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
+              <span className="font-medium text-slate-600">Populares:</span>
+              {[
+                { label: 'Eletricista', id: 'electrician' },
+                { label: 'Encanador', id: 'plumber' },
+                { label: 'Pintor', id: 'painter' },
+                { label: 'Faxina', id: 'cleaning' },
+                { label: 'Montador', id: 'assembly' }
+              ].map(chip => (
+                <Link
+                  key={chip.id}
+                  to={`/categoria/${chip.id}`}
+                  className="bg-white hover:bg-brand-50 text-slate-700 hover:text-brand-700 px-2.5 py-1 rounded-md border border-slate-200/90 hover:border-brand-300 transition-colors"
                 >
-                    Encontrar agora
-                </button>
-             </form>
-             <div className="mt-4 flex flex-wrap justify-center gap-6 text-brand-200 text-sm font-medium">
-                <span className="flex items-center"><CheckCircle2 size={18} className="mr-2 text-brand-400" /> Sem custos de agenciamento</span>
-                <span className="flex items-center"><CheckCircle2 size={18} className="mr-2 text-brand-400" /> WhatsApp Direto</span>
-                <span className="flex items-center"><CheckCircle2 size={18} className="mr-2 text-brand-400" /> Histórico de confiança</span>
-             </div>
+                  {chip.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Selos de Confiança */}
+          <div className="flex flex-wrap justify-center gap-y-2 gap-x-6 text-slate-600 text-xs sm:text-sm font-medium pt-2">
+            <span className="inline-flex items-center"><CheckCircle2 size={16} className="mr-1.5 text-emerald-600" /> Sem taxas de agenciamento</span>
+            <span className="inline-flex items-center"><CheckCircle2 size={16} className="mr-1.5 text-emerald-600" /> WhatsApp Direto</span>
+            <span className="inline-flex items-center"><CheckCircle2 size={16} className="mr-1.5 text-emerald-600" /> Avaliações Reais de Clientes</span>
           </div>
         </div>
       </section>
 
-      {/* Categories OLX Style */}
-      <section className="py-8 bg-white border-b border-gray-100">
+      {/* Categorias: Grid Estruturado com Cards Acolhedores */}
+      <section className="py-12 bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex overflow-x-auto pb-4 pt-2 gap-4 md:gap-8 scrollbar-hide snap-x md:justify-center">
-                {options.filter(c => c.id !== 'all').map(cat => (
-                    <Link 
-                        key={cat.id} 
-                        to={`/categoria/${cat.id}`}
-                        className="group flex flex-col items-center min-w-[84px] md:min-w-[100px] snap-start"
-                    >
-                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mb-3 group-hover:bg-brand-600 group-hover:text-white transition-all duration-300 shadow-sm border border-brand-100 group-hover:shadow-md group-hover:scale-105">
-                            {categoryIcon(cat.id)}
-                        </div>
-                        <h3 className="font-medium text-gray-700 text-[11px] md:text-sm text-center whitespace-normal leading-tight w-20 md:w-24 group-hover:text-brand-600">{cat.label}</h3>
-                    </Link>
-                ))}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Explore por categoria</h2>
+              <p className="text-slate-500 text-sm">Selecione uma especialidade para ver profissionais disponíveis</p>
             </div>
+            <Link to="/search" className="text-sm font-semibold text-brand-600 hover:text-brand-700 hidden sm:inline-flex items-center">
+              Ver todas <ArrowRight size={14} className="ml-1" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            {options.filter(c => c.id !== 'all').map(cat => (
+              <Link 
+                key={cat.id} 
+                to={`/categoria/${cat.id}`}
+                className="group flex flex-col items-center justify-center p-3.5 bg-slate-50/70 hover:bg-white rounded-2xl border border-slate-200/70 hover:border-brand-400 hover:shadow-sm transition-all duration-200 text-center"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white text-brand-600 group-hover:bg-brand-600 group-hover:text-white flex items-center justify-center mb-2.5 shadow-2xs border border-slate-200/60 group-hover:border-transparent transition-all duration-200">
+                  {categoryIcon(cat.id)}
+                </div>
+                <h3 className="font-semibold text-slate-800 text-xs md:text-sm leading-snug group-hover:text-brand-600 transition-colors">
+                  {cat.label}
+                </h3>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Featured Services (Destaques) */}
-      <section id="featured-services" aria-labelledby="featured-heading" className="py-16 md:py-20 bg-gray-50">
+      {/* Serviços em Destaque */}
+      <section id="featured-services" aria-labelledby="featured-heading" className="py-14 md:py-16 bg-slate-50/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-10 md:mb-12 gap-4">
-                <div className="text-left">
-                    <h2 id="featured-heading" className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Serviços em destaque</h2>
-                    <p className="text-gray-500 mt-1 text-sm md:text-sm font-light">Conheça os prestadores que são referência.</p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">
+                <Sparkles size={13} className="text-brand-500" /> Profissionais Recomendados
+              </div>
+              <h2 id="featured-heading" className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Serviços em destaque</h2>
+              <p className="text-slate-500 mt-1 text-sm">Prestadores bem avaliados prontos para te atender.</p>
+            </div>
+            <Link 
+              to="/search" 
+              className="group text-slate-700 font-semibold flex items-center hover:text-brand-600 bg-white px-4 py-2 rounded-xl shadow-2xs border border-slate-200/80 hover:border-brand-300 transition-all text-sm active:scale-95"
+            >
+              Ver todos os serviços <ArrowRight size={16} className="ml-1.5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+          
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-80 bg-slate-200/80 rounded-2xl"></div>
+              ))}
+            </div>
+          ) : featuredAds.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredAds.slice(0, 8).map(ad => (
+                <div key={ad.id} className="h-full">
+                  <ServiceCard ad={ad} compact />
                 </div>
-                <Link to="/search" className="group text-brand-600 font-bold flex items-center hover:text-brand-700 bg-white px-5 md:px-6 py-2.5 md:py-3 rounded-xl shadow-sm border border-gray-100 transition-all active:scale-95 text-sm md:text-base">
-                    Ver todos <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 px-4 bg-white rounded-2xl border border-slate-200/80 shadow-2xs max-w-xl mx-auto">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-brand-600 mx-auto flex items-center justify-center mb-3">
+                <Search size={22} />
+              </div>
+              <h3 className="text-base font-semibold text-slate-800 mb-1">Nenhum anúncio publicado ainda</h3>
+              <p className="text-sm text-slate-500 mb-5">Seja o primeiro prestador a divulgar seus serviços na sua região.</p>
+              <Link 
+                to="/create-ad" 
+                className="inline-flex items-center px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl text-sm transition-colors"
+              >
+                Cadastrar primeiro anúncio
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Como o Mestrio Funciona: Design Claro, Humano e Sem Clichês */}
+      <section className="py-16 md:py-20 bg-white border-t border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight mb-3">Transparência do início ao fim</h2>
+            <p className="text-slate-600 text-sm md:text-base leading-relaxed">
+              O Mestrio não cobra comissões nem retém dinheiro. A contratação é direta entre você e o profissional.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/70 hover:border-slate-300 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 font-bold text-lg flex items-center justify-center mb-4">
+                1
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Busca Direcionada</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Filtre por especialidade, localização e disponibilidade para encontrar quem realmente atende perto da sua casa.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/70 hover:border-slate-300 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 font-bold text-lg flex items-center justify-center mb-4">
+                2
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Contato sem Intermediários</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Converse por chat interno ou vá direto para o WhatsApp do profissional. Você combina prazos e valores com liberdade total.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/70 hover:border-slate-300 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 font-bold text-lg flex items-center justify-center mb-4">
+                3
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Avaliações Auditadas</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Consulte o histórico e depoimentos de quem já contratou. Após o serviço, deixe sua avaliação para fortalecer os melhores.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chamada para Ação para Prestadores e Clientes */}
+      <section className="py-12 md:py-16 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900 rounded-3xl p-8 md:p-14 text-white relative overflow-hidden shadow-xl border border-slate-800">
+            <div className="max-w-3xl relative z-10">
+              <span className="inline-block text-xs font-bold text-brand-300 uppercase tracking-wider mb-3">
+                Para Prestadores Autônomos
+              </span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-4 leading-snug">
+                Divulgue seu trabalho e conquiste novos clientes todos os dias.
+              </h2>
+              <p className="text-slate-300 text-sm sm:text-base mb-8 max-w-2xl leading-relaxed font-normal">
+                Cadastre seus serviços gratuitamente, mostre fotos dos seus trabalhos anteriores e receba pedidos de orçamento diretamente no seu WhatsApp.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3.5">
+                <Link 
+                  to="/create-ad" 
+                  className="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-6 py-3.5 rounded-xl text-center text-sm md:text-base shadow-md transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+                >
+                  Criar meu anúncio gratuito
                 </Link>
+                <Link 
+                  to="/login" 
+                  className="bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white font-semibold px-6 py-3.5 rounded-xl text-center text-sm md:text-base border border-slate-700 transition-all active:scale-[0.98]"
+                >
+                  Entrar na minha conta
+                </Link>
+              </div>
             </div>
-            
-            {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-[380px] bg-gray-200 rounded-2xl"></div>)}
-                </div>
-            ) : featuredAds.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {featuredAds.map(ad => (
-                        <div key={ad.id} className="scale-95 origin-top">
-                           <ServiceCard ad={ad} compact />
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
-                    <p className="text-gray-400">Nenhum anúncio em destaque no momento.</p>
-                </div>
-            )}
-        </div>
-      </section>
-
-
-
-      {/* How it Works Section (Explanation) */}
-      <section className="py-28 bg-gray-900 text-white overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-600/10 blur-[120px] rounded-full -mr-64 -mt-64"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-brand-400/5 blur-[120px] rounded-full -ml-64 -mb-64"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="text-center mb-20">
-                <h2 className="text-4xl font-bold mb-4 tracking-tight">Transparência do início ao fim</h2>
-                <p className="text-gray-400 text-lg max-w-2xl mx-auto font-light">Entenda como o Mestrio facilita a conexão entre você e o prestador de serviços.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
-                <div className="relative group">
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-brand-600 rounded-2xl flex items-center justify-center mb-6 md:mb-8 text-white font-bold text-xl md:text-2xl group-hover:rotate-12 transition-transform shadow-[0_10px_30px_rgba(124,58,237,0.3)]">
-                        1
-                    </div>
-                    <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Busca Facilitada</h3>
-                    <p className="text-gray-400 leading-relaxed font-light text-sm md:text-base">
-                        Use filtros de categoria, preço e localização para achar exatamente quem você precisa. Sem anúncios irrelevantes.
-                    </p>
-                </div>
-
-                <div className="relative group">
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-brand-600 rounded-2xl flex items-center justify-center mb-6 md:mb-8 text-white font-bold text-xl md:text-2xl group-hover:rotate-12 transition-transform shadow-[0_10px_30px_rgba(124,58,237,0.3)]">
-                        2
-                    </div>
-                    <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Contato Direto</h3>
-                    <p className="text-gray-400 leading-relaxed font-light text-sm md:text-base">
-                        Não intermediamos o seu dinheiro. Converse via chat interno ou vá direto para o WhatsApp do profissional para fechar o orçamento.
-                    </p>
-                </div>
-
-                <div className="relative group">
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-brand-600 rounded-2xl flex items-center justify-center mb-6 md:mb-8 text-white font-bold text-xl md:text-2xl group-hover:rotate-12 transition-transform shadow-[0_10px_30px_rgba(124,58,237,0.3)]">
-                        3
-                    </div>
-                    <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Avaliação Real</h3>
-                    <p className="text-gray-400 leading-relaxed font-light text-sm md:text-base">
-                        Após o serviço, deixe sua opinião. Isso ajuda outros usuários a contratarem com segurança e premia os melhores profissionais.
-                    </p>
-                </div>
-            </div>
-        </div>
-      </section>
-
-
-
-      {/* Demo Call to Action */}
-      <section className="py-8 md:py-12 mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-brand-600 rounded-3xl md:rounded-[3rem] p-6 md:p-12 text-center text-white relative overflow-hidden shadow-[0_30px_60px_-15px_rgba(124,58,237,0.4)]">
-                <div className="absolute top-0 right-0 w-[200px] md:w-[300px] h-[200px] md:h-[300px] bg-white/10 rounded-full -mr-16 -mt-16 blur-[60px]"></div>
-                <div className="absolute bottom-0 left-0 w-[200px] md:w-[300px] h-[200px] md:h-[300px] bg-black/10 rounded-full -ml-16 -mb-16 blur-[60px]"></div>
-                
-                <h2 className="text-2xl md:text-5xl font-bold mb-4 md:mb-6 relative z-10 tracking-tight leading-tight">Quer fazer parte da<br/>nossa rede?</h2>
-                <p className="text-brand-100 text-base md:text-xl mb-8 md:mb-10 max-w-3xl mx-auto relative z-10 font-light leading-relaxed">
-                    Estamos em fase beta (Demo). Você pode anunciar seus serviços agora mesmo e testar todas as funcionalidades gratuitamente.
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-4 md:gap-6 relative z-10">
-                    <Link to="/create-ad" className="bg-white text-brand-600 font-bold px-8 md:px-12 py-4 md:py-5 rounded-2xl md:rounded-[2rem] hover:bg-gray-50 transition-all text-lg md:text-xl shadow-2xl active:scale-95">
-                        Criar meu anúncio
-                    </Link>
-                    <Link to="/login" className="bg-brand-700 text-white font-bold px-8 md:px-12 py-4 md:py-5 rounded-2xl md:rounded-[2rem] hover:bg-brand-800 transition-all text-lg md:text-xl border border-brand-500/50 active:scale-95">
-                        Testar como profissional
-                    </Link>
-                </div>
-            </div>
+          </div>
         </div>
       </section>
     </div>

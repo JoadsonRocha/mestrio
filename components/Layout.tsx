@@ -62,10 +62,17 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold text-brand-600 tracking-tight">Mestrio</span>
+            <Link to="/" className="flex-shrink-0 flex items-center gap-2.5 group">
+              <img 
+                src="/favicon.png" 
+                alt="Mestrio Logo" 
+                className="w-8 h-8 rounded-lg shadow-xs group-hover:scale-105 transition-transform" 
+              />
+              <span className="text-xl font-bold text-gray-900 tracking-tight group-hover:text-brand-600 transition-colors">
+                Mestrio
+              </span>
             </Link>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <div className="hidden sm:ml-8 sm:flex sm:space-x-6">
               <Link to="/" className={`${isActive('/')} inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium`}>
                 Início
               </Link>
@@ -324,38 +331,46 @@ export const Navbar: React.FC = () => {
   );
 };
 
-/**
- * Rodapé principal da aplicação (Footer).
- * Contém links rápidos, informações de contato e direitos autorais.
- */
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-gray-900 text-white mt-auto pb-16 sm:pb-0">
+    <footer className="bg-slate-900 text-slate-300 mt-auto pb-16 sm:pb-0 border-t border-slate-800">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <h3 className="text-xl font-bold text-brand-400 mb-4">Mestrio</h3>
-            <p className="text-gray-400 text-sm">
-              Conectando clientes a prestadores de serviços autônomos de serviços gerais na sua região. Serviço de qualidade, perto de você.
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-2.5 mb-3">
+              <img src="/favicon.png" alt="Mestrio Logo" className="w-7 h-7 rounded-md" />
+              <span className="text-xl font-bold text-white tracking-tight">Mestrio</span>
+            </div>
+            <p className="text-slate-400 text-sm max-w-sm leading-relaxed mb-4">
+              A plataforma que conecta clientes aos melhores prestadores de serviços autônomos da sua região. Contato direto pelo WhatsApp, sem intermediários e com avaliações auditadas.
             </p>
+            <div className="inline-flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-3 py-1.5 rounded-full font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Plataforma 100% gratuita para clientes e profissionais
+            </div>
           </div>
           <div>
-            <h4 className="text-lg font-semibold mb-4">Links Rápidos</h4>
-            <ul className="space-y-2 text-gray-400 text-sm">
-              <li><Link to="/search" className="hover:text-white">Buscar Serviços</Link></li>
-              <li><Link to="/create-ad" className="hover:text-white">Anunciar</Link></li>
-              <li><Link to="/terms" className="hover:text-white">Termos de Uso</Link></li>
-              <li><Link to="/privacy" className="hover:text-white">Política de Privacidade</Link></li>
+            <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-200 mb-4">Serviços</h4>
+            <ul className="space-y-2.5 text-slate-400 text-sm">
+              <li><Link to="/search" className="hover:text-white transition-colors">Buscar Serviços</Link></li>
+              <li><Link to="/create-ad" className="hover:text-white transition-colors">Anunciar Gratuitamente</Link></li>
+              <li><Link to="/categoria/electrician" className="hover:text-white transition-colors">Eletricistas</Link></li>
+              <li><Link to="/categoria/plumber" className="hover:text-white transition-colors">Encanadores</Link></li>
+              <li><Link to="/categoria/painter" className="hover:text-white transition-colors">Pintores</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-lg font-semibold mb-4">Contato</h4>
-            <p className="text-gray-400 text-sm">suporte@mestrio.com.br</p>
-            <p className="text-gray-400 text-sm mt-2">São Paulo, Brasil</p>
+            <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-200 mb-4">Institucional</h4>
+            <ul className="space-y-2.5 text-slate-400 text-sm">
+              <li><Link to="/terms" className="hover:text-white transition-colors">Termos de Uso</Link></li>
+              <li><Link to="/privacy" className="hover:text-white transition-colors">Política de Privacidade (LGPD)</Link></li>
+              <li><span className="text-slate-500">São Paulo, Brasil</span></li>
+            </ul>
           </div>
         </div>
-        <div className="mt-8 border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-          &copy; {new Date().getFullYear()} Mestrio. Todos os direitos reservados.
+        <div className="mt-10 border-t border-slate-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <p>&copy; {new Date().getFullYear()} Mestrio. Conectando pessoas e serviços com transparência.</p>
+          <p className="text-slate-500">Desenvolvido com foco em confiança e segurança.</p>
         </div>
       </div>
     </footer>

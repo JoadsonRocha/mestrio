@@ -54,30 +54,36 @@ export const ServiceCard: React.FC<{ ad: ServiceAd; compact?: boolean }> = ({ ad
   const businessStatus = getBusinessStatus(ad.availability);
 
   return (
-    <Link to={`/service/${ad.id}`} className="group bg-white rounded-xl shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-100 flex flex-col h-full">
-      <div className={`relative ${compact ? 'h-[82px] md:h-[126px]' : 'aspect-video'} overflow-hidden bg-gray-100`}>
-        <img 
-          src={ad.images[0]} 
-          alt={ad.title} 
-          loading="lazy" 
-          decoding="async"
-          className="w-full h-full object-contain bg-gray-50 group-hover:scale-105 transition-transform duration-300"
-        />
+    <Link to={`/service/${ad.id}`} className="group bg-white rounded-2xl shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200/70 hover:border-brand-300 flex flex-col h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+      <div className={`relative ${compact ? 'h-[100px] md:h-[140px]' : 'aspect-[16/10]'} overflow-hidden bg-slate-100`}>
+        {ad.images && ad.images[0] ? (
+          <img 
+            src={ad.images[0]} 
+            alt={ad.title} 
+            loading="lazy" 
+            decoding="async"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+            <span className="text-xs font-medium">Sem foto</span>
+          </div>
+        )}
 
-        {/* Tag em Tempo Real: Atendendo Agora / 24h / Fechado */}
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur-xs text-gray-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-2xs border border-gray-200/80">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${businessStatus.isOpen ? 'bg-emerald-500 ring-2 ring-emerald-300 animate-pulse' : 'bg-gray-400'}`}></span>
-          <span className={businessStatus.isOpen ? 'text-emerald-800' : 'text-gray-600'}>
+        {/* Tag de Disponibilidade: Atendendo Agora / Fechado */}
+        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm text-slate-800 text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-xs border border-slate-200/80">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${businessStatus.isOpen ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-400'}`}></span>
+          <span className={businessStatus.isOpen ? 'text-emerald-700 font-bold' : 'text-slate-600'}>
             {businessStatus.shortBadge}
           </span>
         </div>
 
         {ad.isPremium && (
-          <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md shadow-xs flex items-center z-10">
-            <Star size={12} className="mr-1 fill-current" /> Destaque
+          <div className="absolute top-2.5 right-2.5 bg-amber-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-xs flex items-center z-10">
+            <Star size={11} className="mr-1 fill-current" /> Destaque
           </div>
         )}
-        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-xs text-white text-xs px-2 py-1 rounded">
+        <div className="absolute bottom-2.5 left-2.5 bg-slate-900/80 backdrop-blur-sm text-white text-[11px] font-medium px-2.5 py-0.5 rounded-md">
             {options.find(c => c.id === ad.category)?.label || ad.category}
         </div>
       </div>
