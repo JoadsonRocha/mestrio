@@ -507,7 +507,7 @@ class Store {
       // 3. Fallback: Recupera dados do prestador a partir de seus anúncios publicados
       const { data: adData } = await supabase
         .from('service_ads')
-        .select('provider_id, location, is_certified, profiles!provider_id(*)')
+        .select('provider_id, location, profiles!provider_id(*)')
         .eq('provider_id', userId)
         .limit(1)
         .maybeSingle();
@@ -522,7 +522,7 @@ class Store {
           avatar: prof?.avatar,
           location: prof?.location || adData.location,
           bio: prof?.bio || '',
-          isCertified: Boolean(prof?.is_certified ?? adData.is_certified),
+          isCertified: Boolean(prof?.is_certified),
           instagram: prof?.instagram || socialLinks.instagram || '',
           facebook: prof?.facebook || socialLinks.facebook || '',
           linkedin: prof?.linkedin || socialLinks.linkedin || '',
