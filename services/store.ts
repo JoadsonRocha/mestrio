@@ -28,7 +28,7 @@ export interface GetAdsParams {
  *   WHERE id = 'SEU_AUTH_UID';
  */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://kznwivlulavmtaiqleqe.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkYnRrbXRqdGtpZGZlc2dhbGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MjAwMDAwMDAwMH0.placeholder_anon_key';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

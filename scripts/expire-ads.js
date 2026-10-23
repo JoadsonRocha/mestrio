@@ -9,7 +9,7 @@ if (!serviceKey) {
   process.exit(1);
 }
 
-const url = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+const url = process.env.VITE_SUPABASE_URL || 'https://kznwivlulavmtaiqleqe.supabase.co';
 const supabase = createClient(url, serviceKey);
 
 const now = new Date().toISOString();

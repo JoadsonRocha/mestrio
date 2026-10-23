@@ -324,7 +324,7 @@ JSON puro:`;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada no servidor.');
 
-    const url = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+    const url = process.env.VITE_SUPABASE_URL || 'https://kznwivlulavmtaiqleqe.supabase.co';
     const supabase = createClient(url, serviceKey);
     const now = new Date().toISOString();
 
@@ -370,7 +370,7 @@ JSON puro:`;
    */
   async function ensureStorageBuckets() {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const url = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+    const url = process.env.VITE_SUPABASE_URL || 'https://kznwivlulavmtaiqleqe.supabase.co';
     if (!serviceKey || !url) return;
 
     try {
@@ -476,7 +476,7 @@ JSON puro:`;
       const baseUrl = `${protocol}://${host}`;
 
       try {
-        const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://kznwivlulavmtaiqleqe.supabase.co';
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         if (supabaseUrl && serviceKey) {

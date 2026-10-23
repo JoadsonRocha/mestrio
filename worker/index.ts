@@ -30,7 +30,7 @@ interface Env {
   CRON_SECRET?: string;
 }
 
-const DEFAULT_SUPABASE_URL = 'https://tdbtkmtjtkidfesgalgk.supabase.co';
+const DEFAULT_SUPABASE_URL = 'https://kznwivlulavmtaiqleqe.supabase.co';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
